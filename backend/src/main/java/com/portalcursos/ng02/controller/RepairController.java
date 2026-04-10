@@ -1,0 +1,104 @@
+package com.portalcursos.ng02.controller;
+
+import com.portalcursos.ng02.dto.RepairTicketDTO;
+import com.portalcursos.ng02.model.RepairTicket;
+import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.repository.RepairRepository;
+import com.portalcursos.ng02.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.lang.NonNull;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RestController
+@RequestMapping("/api/repairs")
+public class RepairController {
+
+    private static final Logger logger = LoggerFactory.getLogger(RepairController.class);
+
+    @Autowired
+    RepairRepository repairRepository;
+
+    @Autowired
+    UserRepository userRepository;
+
+    private RepairTicketDTO convertToDTO(RepairTicket ticket) {
+        return RepairTicketDTO.builder()
+                .id(ticket.getId())
+                .title(ticket.getTitle())
+                .description(ticket.getDescription())
+                .location(ticket.getLocation())
+                .status(ticket.getStatus())
+                .photoUrls(ticket.getPhotoUrls())
+                .createdAt(ticket.getCreatedAt())
+                .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
+                .build();
+    }
+
+    @GetMapping({"", "/tickets"})
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
+    public List<RepairTicketDTO> getAllTickets() {
+        logger.info("[REPAIR API] Buscando todos os tickets de reparo...");
+        return repairRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @PostMapping({"", "/tickets"})
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
+    public ResponseEntity<?> createTicket(@RequestBody @NonNull RepairTicket ticket) {
+        logger.info("[REPAIR API] Iniciando criação de ticket: {}", ticket.getTitle());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isPresent()) {
+            ticket.setReportedBy(user.get());
+            logger.info("[REPAIR API] Ticket associado ao usuário: {}", username);
+        } else {
+            logger.warn("[REPAIR API] Usuário autenticado '{}' não encontrado no banco de dados!", username);
+        }
+
+        RepairTicket savedTicket = repairRepository.save(ticket);
+        logger.info("[REPAIR API] Ticket ID {} salvo com sucesso.", savedTicket.getId());
+        return ResponseEntity.ok(convertToDTO(savedTicket));
+    }
+
+    @PostMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
+    public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
+        logger.info("[REPAIR API] Upload de foto para ticket ID: {}", id);
+        Optional<RepairTicket> ticketOptional = repairRepository.findById(id);
+        
+        if (ticketOptional.isPresent()) {
+            RepairTicket t = ticketOptional.get();
+            if (t.getPhotoUrls().size() >= 4) {
+                logger.warn("[REPAIR API] Limite de fotos atingido para o ticket {}", id);
+                return ResponseEntity.badRequest().body("Limite de 4 fotos por ticket atingido.");
+            }
+            
+            // Simulação de salvamento de arquivo (Em produção usaria S3 ou similar)
+            String fileName = "repair_" + id + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            t.getPhotoUrls().add("/uploads/repairs/" + fileName);
+            repairRepository.save(t);
+            
+            logger.info("[REPAIR API] Foto adicionada com sucesso ao ticket {}", id);
+            return ResponseEntity.ok(convertToDTO(t));
+        }
+        
+        logger.error("[REPAIR API] Tentativa de upload para ticket inexistente: {}", id);
+        return ResponseEntity.notFound().build();
+    }
+}

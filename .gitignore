@@ -1,0 +1,39 @@
+# Dependências
+node_modules/
+backend/target/
+frontend/.next/
+frontend/out/
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs e Temporários
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Variáveis de Ambiente (Segurança)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Java binários e builds
+backend/bin/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven Wrapper desnecessário no repo (opcional, mas comum manter script)
+# .mvn/
+
+# Outros
+dist/
+build/

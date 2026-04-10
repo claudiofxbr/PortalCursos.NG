@@ -1,0 +1,225 @@
+package com.portalcursos.ng02.controller;
+
+import com.portalcursos.ng02.dto.LoginRequest;
+import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.dto.SignupRequest;
+import com.portalcursos.ng02.model.Role;
+import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.repository.RoleRepository;
+import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.security.JwtUtils;
+import com.portalcursos.ng02.service.UserDetailsImpl;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+
+import com.portalcursos.ng02.model.UserSession;
+import com.portalcursos.ng02.repository.UserSessionRepository;
+
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
+    @Autowired
+    AuthenticationManager authenticationManager;
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    RoleRepository roleRepository;
+
+    @Autowired
+    PasswordEncoder encoder;
+
+    @Autowired
+    JwtUtils jwtUtils;
+
+    @Autowired
+    UserSessionRepository userSessionRepository;
+
+    @PostMapping("/signin")
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        logger.info("[AUTH API] [SIGNIN] Tentativa de login: {}", loginRequest.getUsername());
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            User user = userRepository.findById(userDetails.getId())
+                    .orElseThrow(() -> new RuntimeException("Erro: Usuário não encontrado."));
+
+            // 1. Gerar Tokens
+            String jwt = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
+            String refreshTokenStr = UUID.randomUUID().toString();
+
+            // 2. Persistir Sessão no Banco
+            UserSession session = UserSession.builder()
+                    .user(user)
+                    .refreshToken(refreshTokenStr)
+                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS)) // 7 dias
+                    .userAgent("Web Browser")
+                    .ipAddress("0.0.0.0")
+                    .build();
+            userSessionRepository.save(session);
+
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .collect(Collectors.toList());
+
+            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso. Sessão criada.", loginRequest.getUsername());
+
+            return ResponseEntity.ok(new com.portalcursos.ng02.dto.JwtResponse(jwt, refreshTokenStr, userDetails.getId(),
+                    userDetails.getUsername(), userDetails.getEmail(), roles));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            logger.error("[AUTH API] [FAILURE] Falha na autenticação para {}: {}", loginRequest.getUsername(), e.getMessage());
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Erro de Autenticação: Usuário ou senha inválidos."));
+        } catch (Exception e) {
+            logger.error("[AUTH API] [ERROR] Erro inesperado no login: ", e);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Erro interno no servidor de autenticação."));
+        }
+    }
+
+    @PostMapping("/refreshtoken")
+    public ResponseEntity<?> refreshtoken(@Valid @RequestBody com.portalcursos.ng02.dto.TokenRefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        if ((refreshToken != null) && (refreshToken.length() > 0)) {
+            return userSessionRepository.findByRefreshToken(refreshToken)
+                    .map(session -> {
+                        // Verificar expiração
+                        if (session.getExpiryDate().isBefore(Instant.now())) {
+                            userSessionRepository.delete(session);
+                            return ResponseEntity.status(403).body(new MessageResponse("Refresh token expirado. Faça login novamente."));
+                        }
+
+                        User user = session.getUser();
+                        String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+
+                        return ResponseEntity.ok(new com.portalcursos.ng02.dto.TokenRefreshResponse(token, refreshToken));
+                    })
+                    .orElse(ResponseEntity.status(403).body(new MessageResponse("Refresh token não encontrado no banco.")));
+        }
+
+        return ResponseEntity.badRequest().body(new MessageResponse("Refresh Token é obrigatório."));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body(new MessageResponse("Não autenticado."));
+        }
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        return ResponseEntity.ok(new com.portalcursos.ng02.dto.UserInfoResponse(
+                userDetails.getId(),
+                userDetails.getUsername(),
+                userDetails.getEmail(),
+                userDetails.getAuthorities().stream()
+                        .map(item -> item.getAuthority())
+                        .collect(Collectors.toList())));
+    }
+
+    @PostMapping("/signout")
+    public ResponseEntity<?> logoutUser(@Valid @RequestBody com.portalcursos.ng02.dto.TokenRefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+        
+        if (refreshToken != null) {
+            userSessionRepository.findByRefreshToken(refreshToken)
+                .ifPresent(userSessionRepository::delete);
+        }
+
+        return ResponseEntity.ok(new MessageResponse("Logout realizado com sucesso."));
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
+        }
+
+        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Email is already in use!"));
+        }
+
+        // Create new user's account
+        User user = User.builder()
+                .username(signUpRequest.getUsername())
+                .email(signUpRequest.getEmail())
+                .password(encoder.encode(signUpRequest.getPassword()))
+                .build();
+
+        Set<String> strRoles = signUpRequest.getRole();
+        Set<Role> roles = new HashSet<>();
+
+        if (strRoles == null) {
+            Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
+                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(userRole);
+        } else {
+            strRoles.forEach(role -> {
+                switch (role) {
+                    case "admin":
+                        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
+                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(adminRole);
+
+                        break;
+                    case "staff":
+                        Role modRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA)
+                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(modRole);
+
+                        break;
+                    case "teacher":
+                        Role teacherRole = roleRepository.findByName(Role.ERole.ROLE_PROFESSOR)
+                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(teacherRole);
+
+                        break;
+                    default:
+                        Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
+                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(userRole);
+                }
+            });
+        }
+
+        user.setRoles(roles);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    }
+}
