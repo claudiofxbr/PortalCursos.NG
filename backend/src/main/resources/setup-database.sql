@@ -123,7 +123,10 @@ CREATE TABLE IF NOT EXISTS courses (
     monthly_fee DOUBLE PRECISION,
     active BOOLEAN DEFAULT TRUE,
     code VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT
 );
 
 -- 6. FINANCEIRO E MANUTENÇÃO (PADRONIZADAS)
@@ -143,6 +146,7 @@ CREATE TABLE IF NOT EXISTS payments (
     creator_name VARCHAR(255),
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
+    student_photo_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

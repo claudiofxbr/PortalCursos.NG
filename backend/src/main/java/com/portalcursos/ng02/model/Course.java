@@ -64,6 +64,11 @@ public class Course {
     private String coordinatorName;
     private Double monthlyFee;
 
+    // Auditoria de Emissor (Foto 3x4 e Cargo)
+    private String creatorName;
+    private String creatorPosition;
+    private String creatorPhotoUrl;
+
     public enum ENivelPosGraduacao {
         LATO_SENSU,
         STRICTO_SENSU,

@@ -19,18 +19,39 @@ export default function FinancePage() {
   const [showPaymentModal, setShowPaymentModal] = useState<any | null>(null);
   
   // Estado para formulário de nova cobrança
-  const [newCharge, setNewCharge] = useState({
-    amount: '',
-    dueDate: new Date().toISOString().split('T')[0],
-    studentId: '',
-    category: 'TUITION' as any,
-    secretaryProcessType: 'OTHER' as any,
     description: ''
   });
+  
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [isSearchingStudent, setIsSearchingStudent] = useState(false);
 
   useEffect(() => {
     fetchFinanceData();
   }, [activeTab]);
+
+  useEffect(() => {
+    const searchStudent = async () => {
+        if (!newCharge.studentId || newCharge.studentId.length < 1) {
+            setSelectedStudent(null);
+            return;
+        }
+        
+        setIsSearchingStudent(true);
+        try {
+            const endpoint = activeTab === 'GRADUATION' ? `/v1/students/${newCharge.studentId}` : `/api/v1/postgrad-students/${newCharge.studentId}`;
+            // Ajuste de prefixo conforme a API
+            const res = await api.get(endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint);
+            setSelectedStudent(res.data);
+        } catch (e) {
+            setSelectedStudent(null);
+        } finally {
+            setIsSearchingStudent(false);
+        }
+    };
+
+    const timer = setTimeout(searchStudent, 800);
+    return () => clearTimeout(timer);
+  }, [newCharge.studentId, activeTab]);
 
   const fetchFinanceData = async () => {
     try {
@@ -256,33 +277,76 @@ export default function FinancePage() {
                   <div className="glass-panel" style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '1.5rem', 
-                      padding: '1.2rem', 
-                      marginBottom: '2rem',
-                      background: 'linear-gradient(135deg, rgba(26, 35, 126, 0.05), rgba(0, 150, 136, 0.05))',
-                      border: '1px solid rgba(26, 35, 126, 0.1)',
+                      gap: '1rem', 
+                      padding: '1rem', 
+                      marginBottom: '1rem',
+                      background: 'rgba(212, 175, 55, 0.05)',
+                      border: '1px solid rgba(212, 175, 55, 0.2)',
                       borderRadius: '16px'
                   }}>
                       <div style={{ 
-                          width: '60px', 
-                          height: '80px', 
-                          borderRadius: '8px', 
+                          width: '50px', 
+                          height: '66px', 
+                          borderRadius: '6px', 
                           overflow: 'hidden',
-                          border: '3px solid white',
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                          border: '2px solid var(--secondary-color)',
+                          backgroundColor: '#000',
                           flexShrink: 0
                       }}>
                           {user?.fotoUrl ? (
                               <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
-                              <div style={{ width: '100%', height: '100%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>
                           )}
                       </div>
-                      <div>
-                          <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>Emissor Autorizado</p>
-                          <h4 style={{ margin: '2px 0', fontSize: '1.1rem', fontWeight: 800 }}>{user?.username || 'Funcionário'}</h4>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>{user?.position || 'Departamento Financeiro'}</p>
+                      <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>Emissor Auditor</p>
+                          <h4 style={{ margin: '0', fontSize: '0.95rem', fontWeight: 800 }}>{user?.username || 'Funcionário'}</h4>
+                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7 }}>{user?.position || 'Financeiro'}</p>
                       </div>
+                  </div>
+
+                  {/* IDENTIFICAÇÃO DO BENEFICIÁRIO (ALUNO) - AUDITORIA CRUZADA */}
+                  <div className="glass-panel" style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem', 
+                      padding: '1rem', 
+                      marginBottom: '2rem',
+                      background: selectedStudent ? 'rgba(46, 204, 113, 0.05)' : 'rgba(0,0,0,0.02)',
+                      border: selectedStudent ? '1px solid #2ecc71' : '1px solid #eee',
+                      borderRadius: '16px',
+                      transition: 'all 0.3s ease'
+                  }}>
+                      <div style={{ 
+                          width: '50px', 
+                          height: '66px', 
+                          borderRadius: '6px', 
+                          overflow: 'hidden',
+                          border: selectedStudent ? '2px solid #2ecc71' : '1px solid #ddd',
+                          backgroundColor: '#f5f5f5',
+                          flexShrink: 0
+                      }}>
+                          {selectedStudent?.fotoUrl ? (
+                              <img src={selectedStudent.fotoUrl} alt="Aluno" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎓</div>
+                          )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: selectedStudent ? '#27ae60' : '#888', textTransform: 'uppercase' }}>Beneficiário Auditado</p>
+                          {isSearchingStudent ? (
+                              <span style={{ fontSize: '0.9rem', opacity: 0.5 }}>Buscando aluno...</span>
+                          ) : selectedStudent ? (
+                              <>
+                                <h4 style={{ margin: '0', fontSize: '0.95rem', fontWeight: 800 }}>{selectedStudent.fullName}</h4>
+                                <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7 }}>CPF: {selectedStudent.cpf}</p>
+                              </>
+                          ) : (
+                              <span style={{ fontSize: '0.9rem', opacity: 0.5 }}>Aguardando ID do Aluno</span>
+                          )}
+                      </div>
+                      {selectedStudent && <div style={{ color: '#2ecc71', fontSize: '1.2rem' }}>✓</div>}
                   </div>
                   
                   <form onSubmit={handleCreateCharge}>

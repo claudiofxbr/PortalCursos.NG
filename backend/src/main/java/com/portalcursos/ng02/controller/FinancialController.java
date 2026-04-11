@@ -81,10 +81,12 @@ public class FinancialController {
             Optional<Student> student = studentRepository.findById(request.getStudentId());
             if (student.isEmpty()) return ResponseEntity.badRequest().body("Estudante de graduação não encontrado");
             paymentBuilder.student(student.get());
+            paymentBuilder.studentPhotoUrl(student.get().getFotoUrl());
         } else {
             Optional<PostgradStudent> postgradStudent = postgradStudentRepository.findById(request.getStudentId());
             if (postgradStudent.isEmpty()) return ResponseEntity.badRequest().body("Estudante de pós-graduação não encontrado");
             paymentBuilder.postgradStudent(postgradStudent.get());
+            paymentBuilder.studentPhotoUrl(postgradStudent.get().getFotoUrl());
         }
 
         Payment saved = paymentRepository.save(paymentBuilder.build());

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '@/app/services/api';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface Course {
     id: string;
@@ -60,6 +61,7 @@ const SELECT_STYLE = {
 };
 
 export default function CoursesPage() {
+    const { user } = useAuth();
     const [courses, setCourses] = useState<Course[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -306,9 +308,47 @@ export default function CoursesPage() {
                         )}
                     </div>
 
+                    {/* SEÇÃO DE AUDITORIA VISUAL (EMISSOR) - RASTREABILIDADE TOTAL */}
+                    <div style={{
+                        ...SECTION_STYLE,
+                        border: '1px solid var(--secondary-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1.5rem',
+                        backgroundColor: 'rgba(212, 175, 55, 0.05)',
+                        marginTop: '2rem'
+                    }}>
+                        <div style={{
+                            width: '90px',
+                            height: '120px',
+                            border: '3px solid var(--secondary-color)',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: '#000',
+                            flexShrink: 0,
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                        }}>
+                            {user?.fotoUrl ? (
+                                <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', textAlign: 'center', opacity: 0.5 }}>SEM FOTO</div>
+                            )}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <h4 style={{ margin: '0 0 0.3rem 0', color: 'var(--secondary-color)', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Rastreabilidade do Emissor
+                            </h4>
+                            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{user?.username || 'Sessão Expirada'}</p>
+                            <p style={{ margin: '0.2rem 0 0 0', opacity: 0.7, fontSize: '0.9rem', color: 'var(--secondary-color)' }}>{user?.position || 'CARGO NÃO IDENTIFICADO'}</p>
+                            <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', opacity: 0.5, fontStyle: 'italic' }}>
+                                A foto e credenciais acima serão persistidas no registro deste curso para auditoria institucional permanente (V30.7-QUANTUM).
+                            </div>
+                        </div>
+                    </div>
+
                     <div style={{ textAlign: 'right', marginBottom: '3rem' }}>
                         <button type="submit" disabled={submitting} style={{ padding: '1.1rem 3.5rem', borderRadius: '12px', backgroundColor: 'var(--secondary-color)', color: '#000', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1rem', boxShadow: '0 8px 15px rgba(0,0,0,0.3)' }}>
-                            {submitting ? '⏳ Processando Registro MEC...' : '💾 Finalizar e Registrar Curso'}
+                            {submitting ? '⏳ Processando Auditoria MEC...' : '💾 Finalizar e Auditar Curso'}
                         </button>
                     </div>
                 </form>
