@@ -52,6 +52,7 @@ export default function GraduationPage() {
     const [students, setStudents] = useState<GradStudent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [showForm, setShowForm] = useState(false);
     const [editingStudent, setEditingStudent] = useState<GradStudent | null>(null);
 
     // Form State
