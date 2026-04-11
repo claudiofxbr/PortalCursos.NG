@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import PhotoUpload3x4 from '../components/PhotoUpload3x4';
+import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
 // Auxiliar para tradução de status vindo do Backend (EN) para o Usuário (PT-BR)
 const statusMap: Record<string, { label: string, color: string }> = {
@@ -331,7 +331,7 @@ export default function RepairsPage() {
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#333', marginBottom: '10px' }}>EVIDÊNCIA VISUAL (3X4)</label>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                   <PhotoUpload3x4 
-                    onPhotoSelect={(file) => setMainPhotoFile(file)}
+                    onPhotoSelected={(file) => setMainPhotoFile(file)}
                     label="Clique para anexar foto principal"
                   />
                 </div>

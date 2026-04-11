@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
-import PhotoUpload3x4 from '@/app/components/PhotoUpload3x4';
+import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
 interface Role {
     id: number;
@@ -227,7 +227,7 @@ export default function UsersManagementPage() {
 
                         <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
                             <PhotoUpload3x4 
-                                onPhotoSelect={(file) => setFormData({...formData, foto3x4File: file})}
+                                onPhotoSelected={(file) => setFormData({...formData, foto3x4File: file})}
                                 label="Foto do Colaborador (3x4)"
                             />
                         </div>

@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle
+} from 'lucide-react';
 import { toast } from "sonner";
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 
