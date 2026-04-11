@@ -167,64 +167,75 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        logger.info("[OMEGA-AUTH] [SIGNUP] Tentativa de registro: {} ({})", 
+            signUpRequest.getUsername(), signUpRequest.getEmail());
+
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+            logger.warn("[OMEGA-AUTH] [SIGNUP-FAILURE] Username já em uso: {}", signUpRequest.getUsername());
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: Username is already taken!"));
+                    .body(new MessageResponse("Erro: O nome de usuário já está sendo utilizado!"));
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            logger.warn("[OMEGA-AUTH] [SIGNUP-FAILURE] Email já em uso: {}", signUpRequest.getEmail());
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: Email is already in use!"));
+                    .body(new MessageResponse("Erro: O endereço de email já está sendo utilizado!"));
         }
 
-        // Create new user's account
-        User user = User.builder()
-                .username(signUpRequest.getUsername())
-                .email(signUpRequest.getEmail())
-                .password(encoder.encode(signUpRequest.getPassword()))
-                .build();
+        try {
+            // Create new user's account
+            User user = User.builder()
+                    .username(signUpRequest.getUsername())
+                    .email(signUpRequest.getEmail())
+                    .password(encoder.encode(signUpRequest.getPassword()))
+                    .build();
 
-        Set<String> strRoles = signUpRequest.getRole();
-        Set<Role> roles = new HashSet<>();
+            Set<String> strRoles = signUpRequest.getRole();
+            Set<Role> roles = new HashSet<>();
 
-        if (strRoles == null) {
-            Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-        } else {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "admin":
-                        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
+            if (strRoles == null || strRoles.isEmpty()) {
+                Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
+                        .orElseThrow(() -> new RuntimeException("Erro: Papel ROLE_ALUNO não encontrado no banco."));
+                roles.add(userRole);
+            } else {
+                strRoles.forEach(role -> {
+                    switch (role.toLowerCase()) {
+                        case "admin":
+                            Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
+                                    .orElseThrow(() -> new RuntimeException("Erro: Papel ROLE_ADMIN não encontrado."));
+                            roles.add(adminRole);
+                            break;
+                        case "staff":
+                            Role modRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA)
+                                    .orElseThrow(() -> new RuntimeException("Erro: Papel ROLE_SECRETARIA não encontrado."));
+                            roles.add(modRole);
+                            break;
+                        case "teacher":
+                            Role teacherRole = roleRepository.findByName(Role.ERole.ROLE_PROFESSOR)
+                                    .orElseThrow(() -> new RuntimeException("Erro: Papel ROLE_PROFESSOR não encontrado."));
+                            roles.add(teacherRole);
+                            break;
+                        default:
+                            Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
+                                    .orElseThrow(() -> new RuntimeException("Erro: Papel padrão não encontrado."));
+                            roles.add(userRole);
+                    }
+                });
+            }
 
-                        break;
-                    case "staff":
-                        Role modRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(modRole);
+            user.setRoles(roles);
+            userRepository.save(user);
 
-                        break;
-                    case "teacher":
-                        Role teacherRole = roleRepository.findByName(Role.ERole.ROLE_PROFESSOR)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(teacherRole);
-
-                        break;
-                    default:
-                        Role userRole = roleRepository.findByName(Role.ERole.ROLE_ALUNO)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
-                }
-            });
+            logger.info("[OMEGA-AUTH] [SIGNUP-SUCCESS] Usuário {} registrado com sucesso via Hostinger.", signUpRequest.getUsername());
+            return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso no Protocolo OMEGA!"));
+            
+        } catch (Exception e) {
+            logger.error("[OMEGA-AUTH] [SIGNUP-ERROR] Falha crítica ao salvar usuário: ", e);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Erro interno no banco de dados Neon ao criar usuário. Tente novamente em instantes."));
         }
-
-        user.setRoles(roles);
-        userRepository.save(user);
-
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 }

@@ -38,6 +38,8 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+
+        try {
             String jwt = parseJwt(request);
             if (jwt != null) {
                 if (jwtUtils.validateJwtToken(jwt)) {

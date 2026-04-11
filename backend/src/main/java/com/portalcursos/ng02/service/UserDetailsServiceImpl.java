@@ -12,21 +12,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UserDetailsServiceImpl.class);
+
     @Autowired
     UserRepository userRepository;
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
-        System.out.println("[AUTH DEBUG] Buscando usuario: " + usernameOrEmail);
+        logger.info("[OMEGA-AUTH] Buscando credenciais para: {}", usernameOrEmail);
+        
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username or email: " + usernameOrEmail));
+                .orElseThrow(() -> {
+                    logger.warn("[OMEGA-AUTH] Usuário não encontrado: {}", usernameOrEmail);
+                    return new UsernameNotFoundException("User Not Found with username or email: " + usernameOrEmail);
+                });
 
-        System.out.println("[AUTH DEBUG] Usuario encontrado: " + user.getUsername());
-        System.out.println("[AUTH DEBUG] Roles carregadas: " + user.getRoles().size());
-        user.getRoles().forEach(r -> System.out.println("   -> Role: " + r.getName()));
-
+        logger.info("[OMEGA-AUTH] Usuário autenticado: {}. Papéis ativos: {}", user.getUsername(), user.getRoles().size());
+        
         return UserDetailsImpl.build(user);
     }
 

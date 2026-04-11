@@ -28,8 +28,9 @@ public class DatabaseResilienceComponent {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
-    private static final int MAX_ATTEMPTS = 12; // 12 tentivas * 10s = 120s (tempo de cold start do Neon)
-    private static final int SLEEP_TIME = 10000; // 10 segundos
+    private static final int INITIAL_SLEEP_TIME = 5000; // 5 segundos inicial
+    private static final int MAX_SLEEP_TIME = 20000;    // Máximo de 20 segundos entre tentativas
+    private static final int TOTAL_WAIT_TARGET_MS = 150000; // 150 segundos total de paciência cloud
 
     private static volatile boolean databaseReady = false;
 
@@ -39,44 +40,57 @@ public class DatabaseResilienceComponent {
 
     @PostConstruct
     public void startHealthCheck() {
-        logger.info("[V30.0-SUPREME] Iniciando Monitor de Resiliência de Dados...");
-        new Thread(this::checkDatabaseConnection, "Neon-Supreme-Monitor").start();
+        logger.info("[OMEGA-SUPREME] Iniciando Monitor de Resiliência de Dados (Exponential Backoff)...");
+        new Thread(this::checkDatabaseConnection, "Neon-Omega-Monitor").start();
     }
 
     private void checkDatabaseConnection() {
+        int currentSleep = INITIAL_SLEEP_TIME;
+        long totalWaited = 0;
         int attempt = 1;
-        while (attempt <= MAX_ATTEMPTS && !databaseReady) {
+
+        while (totalWaited < TOTAL_WAIT_TARGET_MS && !databaseReady) {
             String maskedUrl = dbUrl.replaceAll(":[^/@]+@", ":****@");
-            logger.info("[V30.0-SUPREME] Tentativa {}/{} - Verificando conexão: {}", attempt, MAX_ATTEMPTS, maskedUrl);
+            logger.info("[OMEGA-SUPREME] Tentativa {} - Verificando conexão: {}", attempt, maskedUrl);
             
             try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword)) {
                 if (connection.isValid(5)) {
                     // Deep Health Check: Verificar se pelo menos a tabela 'users' existe
                     try (var statement = connection.createStatement()) {
                         statement.executeQuery("SELECT 1 FROM users LIMIT 1");
-                        logger.info("[V30.0-SUPREME] SUCESSO: Banco Neon e Esquema validados na tentativa {}!", attempt);
+                        logger.info("[OMEGA-SUPREME] SUCESSO: Banco Neon e Esquema OMEGA validados!");
                         databaseReady = true;
+                        
+                        // Registro de Telemetria Interna
+                        try {
+                            statement.executeUpdate("INSERT INTO system_telemetry (component, status, latency_ms, details) " +
+                                    "VALUES ('DATABASE', 'UP', " + totalWaited + ", 'Resiliência concluída com sucesso')");
+                        } catch (Exception e) { /* Ignorar se a tabela de telemetria falhar */ }
                     } catch (SQLException schemaEx) {
-                        logger.warn("[V30.0-SUPREME] Conectado, mas esquema (tabelas) ainda não detectado. Aguardando inicialização SQL...");
+                        logger.warn("[OMEGA-SUPREME] Conectado, mas esquema ainda não detectado. Aguardando DDL de inicialização...");
                     }
                 }
             } catch (SQLException e) {
-                logger.warn("[V30.0-SUPREME] Infraestrutura Cloud em aquecimento (Cold Start). Erro: {}", e.getMessage());
+                logger.warn("[OMEGA-SUPREME] Infraestrutura Cloud em aquecimento. Erro: {}", e.getMessage());
             }
 
             if (!databaseReady) {
                 try {
-                    Thread.sleep(SLEEP_TIME);
+                    logger.info("[OMEGA-SUPREME] Aguardando {}ms antes da próxima tentativa...", currentSleep);
+                    Thread.sleep(currentSleep);
+                    totalWaited += currentSleep;
+                    // Exponential Backoff com limitador
+                    currentSleep = Math.min(currentSleep + 5000, MAX_SLEEP_TIME); 
+                    attempt++;
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     return;
                 }
-                attempt++;
             }
         }
 
         if (!databaseReady) {
-            logger.error("[V30.0-SUPREME] CRÍTICO: Banco de dados ou esquema inacessível após {}s.", (MAX_ATTEMPTS * SLEEP_TIME / 1000));
+            logger.error("[OMEGA-SUPREME] CRÍTICO: Banco de dados inacessível após {}s.", totalWaited / 1000);
         }
     }
 }

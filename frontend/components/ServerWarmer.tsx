@@ -12,19 +12,27 @@ export default function ServerWarmer() {
     useEffect(() => {
         const warmInfrastructure = async () => {
             try {
-                console.log(`[V30.0-SUPREME] Iniciando sincronização de infraestrutura...`);
+                console.log(`[OMEGA-SUPREME] Despertando Cluster de Dados...`);
                 const health = await checkServerHealth();
-                console.info('[V30.0-SUPREME] Canal de dados estabelecido com sucesso.');
+                console.info('[OMEGA-SUPREME] Estação de trabalho sincronizada com Neon Cloud.');
                 
-                // Dispara evento de sucesso para componentes interessados
-                window.dispatchEvent(new CustomEvent('SUPREME_HEALTH', { detail: { isHealthy: true, isBooting: false, ...health } }));
-            } catch (error) {
-                console.warn('[V30.0-SUPREME] Infraestrutura em Cold Start. Motor de resiliência ativo.');
+                // Dispara evento de saúde unificado OMEGA
+                window.dispatchEvent(new CustomEvent('OMEGA_HEALTH', { 
+                    detail: { 
+                        isHealthy: true, 
+                        isBooting: false,
+                        isSynchronizing: health.status === 'SYNCHRONIZING',
+                        ...health 
+                    } 
+                }));
+            } catch (error: any) {
+                console.warn('[OMEGA-SUPREME] Cluster em estágio de Cold Start. Ativando escudos de resiliência.');
+                // O Interceptor no api.ts já dispara o OMEGA_BOOTING, não precisamos duplicar aqui
             }
         };
 
-        // Delay estratégico para não competir com a hidratação inicial do Next.js
-        const timer = setTimeout(warmInfrastructure, 2000);
+        // Delay estratégico para estabilidade de hidratação
+        const timer = setTimeout(warmInfrastructure, 1500);
         return () => clearTimeout(timer);
     }, []);
 

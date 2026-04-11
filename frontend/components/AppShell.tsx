@@ -20,11 +20,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         setIsMounted(true);
 
-        // Redirecionamento de segurança SIGMA-V18.3
+        // Redirecionamento de segurança OMEGA-V30.2
         if (!isLoading && !isAuthenticated && !isPublicRoute) {
             const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('accessToken');
             if (!hasToken) {
-                console.warn("[SIGMA-V18.3] Rota protegida detectada (No Token). Redirecionando para login...");
+                console.warn("[OMEGA-V30.2] Rota protegida detectada (No Token). Redirecionando para login...");
                 router.replace('/auth/signin');
             }
         }
@@ -49,12 +49,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 minHeight: '100vh', backgroundColor: 'var(--sidebar-bg)',
                 flexDirection: 'column', gap: '1rem'
             }}>
-                <div className="vita-spinner" />
+                <div className="omega-spinner" />
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-                    Sincronização Adaptativa em curso (SIGMA-V18.3)...
+                    Sincronização Adaptativa OMEGA...
                 </p>
                 <style>{`
-                    .vita-spinner {
+                    .omega-spinner {
                         width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
                         border-top: 3px solid var(--secondary-color); borderRadius: 50%;
                         animation: spin 0.8s linear infinite;
@@ -82,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <div style={{ marginBottom: '3rem' }}>
                     <h1 style={{ color: 'var(--secondary-color)', fontSize: '1.5rem', fontFamily: "'Inter Tight', sans-serif" }}>
                         PortalCursos<br />
-                        <small style={{ fontSize: '0.8rem', opacity: 0.8, letterSpacing: '1px' }}>NG - V20.0 ULTRA</small>
+                        <small style={{ fontSize: '0.8rem', opacity: 0.8, letterSpacing: '1px' }}>OMEGA-SUPREME V30.2</small>
                     </h1>
                 </div>
 

@@ -6,7 +6,7 @@
 
 import axios from 'axios';
 
-export const V_BUILD_ID = "V30.0-SUPREME";
+export const V_BUILD_ID = "V30.3-OMEGA";
 
 const getBaseUrl = () => {
     if (typeof window !== 'undefined') {
@@ -15,7 +15,8 @@ const getBaseUrl = () => {
             return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/';
         }
     }
-    return 'https://portalcursos-backend.onrender.com/api/';
+    // Prioridade para Hostinger, fallback para Render
+    return process.env.NEXT_PUBLIC_API_URL || 'https://portalcursos-backend.onrender.com/api/';
 };
 
 export const API_BASE_URL = getBaseUrl();
@@ -23,12 +24,13 @@ export const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
 
-// Estado Global V30.0
+// Estado Global OMEGA V30.2
 if (typeof window !== 'undefined') {
-    (window as any).PC_SUPREME_STATUS = {
+    (window as any).PC_OMEGA_STATUS = {
         lastCheck: Date.now(),
         isHealthy: false,
         isBooting: false,
+        isSynchronizing: false,
         dbStatus: 'UNKNOWN',
         attempt: 0,
         version: V_BUILD_ID
@@ -37,10 +39,10 @@ if (typeof window !== 'undefined') {
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: isLocalhost ? 15000 : 120000, 
+    timeout: isLocalhost ? 20000 : 150000, 
     headers: {
         'X-Build-ID': V_BUILD_ID,
-        'X-Protocol': 'SUPREME-RESILIENCE-30'
+        'X-Protocol': 'OMEGA-SUPREME-30.3'
     }
 });
 
@@ -55,15 +57,16 @@ api.interceptors.request.use((config) => {
     return config;
 }, (error) => Promise.reject(error));
 
-// Interceptor de Response: Inteligência SUPREME
+// Interceptor de Response: Inteligência OMEGA
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            const status = (window as any).PC_SUPREME_STATUS;
+            const status = (window as any).PC_OMEGA_STATUS;
             status.isHealthy = true;
             status.isBooting = false;
+            status.isSynchronizing = response.data?.status === 'SYNCHRONIZING';
             status.dbStatus = response.data?.diagnostics?.database || 'CONNECTED';
-            window.dispatchEvent(new CustomEvent('SUPREME_HEALTH', { detail: status }));
+            window.dispatchEvent(new CustomEvent('OMEGA_HEALTH', { detail: status }));
         }
         return response;
     },
@@ -71,21 +74,22 @@ api.interceptors.response.use(
         const { response, config } = error;
         const status = response?.status;
 
-        // Erro de Rede ou Cold Start (Render Free Tier)
+        // Erro de Rede ou Cold Start (503 Service Unavailable / 502 Bad Gateway)
         if (!response || status === 502 || status === 503 || status === 504 || error.code === 'ECONNABORTED') {
             
             config._retryCount = config._retryCount || 0;
-            const maxRetries = 12; 
+            const maxRetries = 15; 
             
             if (config._retryCount < maxRetries) {
                 config._retryCount++;
-                const delay = Math.min(1000 * Math.pow(1.6, config._retryCount), 20000);
+                // Backoff Exponencial mais suave para não sobrecarregar o boot
+                const delay = Math.min(2000 * Math.pow(1.4, config._retryCount), 30000);
                 
                 if (typeof window !== 'undefined') {
-                    const supreme = (window as any).PC_SUPREME_STATUS;
-                    supreme.isBooting = true;
-                    supreme.attempt = config._retryCount;
-                    window.dispatchEvent(new CustomEvent('SUPREME_BOOTING', { detail: supreme }));
+                    const omega = (window as any).PC_OMEGA_STATUS;
+                    omega.isBooting = true;
+                    omega.attempt = config._retryCount;
+                    window.dispatchEvent(new CustomEvent('OMEGA_BOOTING', { detail: omega }));
                 }
 
                 await new Promise(resolve => setTimeout(resolve, delay));

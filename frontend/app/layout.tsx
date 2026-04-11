@@ -5,11 +5,11 @@ import { ThemeProvider } from "./context/ThemeContext";
 import AuthModal from "../components/AuthModal";
 import AppShell from "../components/AppShell";
 import ServerWarmer from "../components/ServerWarmer";
-import InfrastructureIndicator from "../components/InfrastructureIndicator";
+import ConnectivityGuard from "../components/ConnectivityGuard";
 
 export const metadata: Metadata = {
-  title: "PortalCursos NG-02 | Pós-Graduação",
-  description: "Sistema Premium de Gestão para Pós-Graduação",
+  title: "PortalCursos OMEGA-SUPREME | Pós-Graduação",
+  description: "Sistema de Alta Resiliência Institucional",
 };
 
 export default function RootLayout({
@@ -23,11 +23,12 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <ServerWarmer />
-            <InfrastructureIndicator />
-            <AuthModal />
-            <AppShell>
-              {children}
-            </AppShell>
+            <ConnectivityGuard>
+              <AuthModal />
+              <AppShell>
+                {children}
+              </AppShell>
+            </ConnectivityGuard>
           </AuthProvider>
         </ThemeProvider>
       </body>
