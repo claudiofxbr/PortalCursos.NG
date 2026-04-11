@@ -16,9 +16,11 @@ import org.hibernate.annotations.Where;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
 @SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class Course {
+public class Course extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -69,11 +71,7 @@ public class Course {
     private String coordinatorName;
     private Double monthlyFee;
 
-    // Auditoria de Emissor (Foto 3x4 e Cargo)
-    private String creatorName;
-    private String creatorPosition;
-    private String creatorPhotoUrl;
-    private boolean active = true;
+    private Double monthlyFee;
 
     public enum ENivelPosGraduacao {
         LATO_SENSU,

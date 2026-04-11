@@ -9,9 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
+import com.portalcursos.ng02.repository.StudentDocumentRepository;
+import com.portalcursos.ng02.repository.PaymentRepository;
+import org.springframework.http.HttpStatus;
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -27,6 +27,8 @@ public class GradStudentController {
 
     private final StudentRepository studentRepository;
     private final StaffMemberRepository staffMemberRepository;
+    private final StudentDocumentRepository documentRepository;
+    private final PaymentRepository paymentRepository;
     private final StorageService storageService;
 
     @GetMapping
@@ -105,11 +107,20 @@ public class GradStudentController {
             Student savedStudent = studentRepository.save(student);
 
             // Processar Documentos usando o StorageService unificado
-            String fotoPath = addDocumentAndReturnPath(savedStudent, foto3x4, EDocumentType.FOTO_3X4);
+            String fotoPath = storageService.store(foto3x4, "fotos-perfil");
             if (fotoPath != null) {
-                savedStudent.setFotoUrl(fotoPath);
+                savedStudent.setFotoMatricula(fotoPath);
+                // Adicionar foto como documento oficial para auditoria
+                StudentDocument photoDoc = StudentDocument.builder()
+                        .documentType(EDocumentType.RG) // Placeholder ou criar tipo FOTO_PERFIL
+                        .filePath(fotoPath)
+                        .status(EDocumentStatus.PENDING)
+                        .student(savedStudent)
+                        .build();
+                savedStudent.getDocuments().add(photoDoc);
             }
-            addDocument(savedStudent, rgCpf, EDocumentType.RG);
+            
+            addDocument(student, rgCpf, EDocumentType.RG);
             addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
             addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
             addDocument(savedStudent, historicoEM, EDocumentType.HISTORICO_EM);
@@ -178,9 +189,9 @@ public class GradStudentController {
 
             if (foto3x4 != null && !foto3x4.isEmpty()) {
                 try {
-                    storageService.delete(student.getFotoUrl());
-                    String fileName = storageService.store(foto3x4, "grad-students/perfil");
-                    student.setFotoUrl(fileName);
+                    storageService.delete(student.getFotoMatricula());
+                    String fileName = storageService.store(foto3x4, "fotos-perfil");
+                    student.setFotoMatricula(fileName);
                 } catch (IOException e) {
                     // Log error
                 }
@@ -211,10 +222,78 @@ public class GradStudentController {
         if (id == null) return ResponseEntity.badRequest().build();
         return studentRepository.findById(id)
                 .map(student -> {
+                    // Auditoria SUPREME na remoção
+                    injectAuditStamps(student);
                     studentRepository.delete(student);
                     return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // --- PROCEDIMENTOS CRUD EXPANDIDOS (V31.1-ULTRA) ---
+
+    @PatchMapping("/documents/{docId}/status")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<?> updateDocumentStatus(
+            @PathVariable Long docId,
+            @RequestParam("status") EDocumentStatus status,
+            @RequestParam(value = "reason", required = false) String reason) {
+        
+        return documentRepository.findById(docId).map(doc -> {
+            doc.setStatus(status);
+            doc.setRejectionReason(reason);
+            documentRepository.save(doc);
+            
+            // Se for a foto de perfil, atualizar também a foto do aluno
+            if (doc.getFilePath().contains("fotos-perfil")) {
+                doc.getStudent().setFotoMatricula(doc.getFilePath());
+            }
+
+            return ResponseEntity.ok(new MessageResponse("Status do documento atualizado: " + status));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/generate-fee")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<?> generateEnrollmentFee(@PathVariable Long id) {
+        return studentRepository.findById(id).map(student -> {
+            // Verificar se já existe taxa de matrícula ativa
+            boolean exists = student.getPayments().stream()
+                    .anyMatch(p -> p.getCategory() == Payment.EPaymentCategory.ENROLLMENT_FEE && p.isActive());
+            
+            if (exists) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Taxa de matrícula já gerada anteriormente."));
+            }
+
+            Payment fee = Payment.builder()
+                    .student(student)
+                    .amount(new java.math.BigDecimal("150.00")) // Valor padrão ou configure dinâmico
+                    .dueDate(java.time.LocalDate.now().plusDays(5))
+                    .status(Payment.EPaymentStatus.PENDING)
+                    .category(Payment.EPaymentCategory.ENROLLMENT_FEE)
+                    .academicLevel(Payment.EAcademicLevel.GRADUATION)
+                    .description("Taxa de Matrícula - Processo Acadêmico Robust")
+                    .active(true)
+                    .build();
+            
+            // Injetar auditoria SUPREME na geração da taxa
+            injectAuditStampsInPayment(fee);
+            paymentRepository.save(fee);
+
+            return ResponseEntity.ok(new MessageResponse("Taxa de matrícula gerada com sucesso para " + student.getFullName()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private void injectAuditStampsInPayment(Payment p) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                p.setCreatorName(staff.getFullName());
+                p.setCreatorPosition(staff.getPosition());
+                p.setCreatorPhotoUrl(staff.getFotoUrl());
+            });
+        }
     }
 
     /**

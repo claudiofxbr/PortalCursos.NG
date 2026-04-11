@@ -65,8 +65,8 @@ public class Student extends BaseAuditEntity {
     @Builder.Default
     private java.util.List<StudentDocument> documents = new java.util.ArrayList<>();
 
-    @Column(name = "foto_url")
-    private String fotoUrl;
+    @Column(name = "foto_matricula")
+    private String fotoMatricula;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")

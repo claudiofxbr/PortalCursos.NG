@@ -16,11 +16,8 @@ import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
 import { AuditStamp } from '@/app/components/AuditStamp';
 
-interface StudentDocument {
-    id: number;
-    documentType: string;
-    filePath: string;
     status: string;
+    rejectionReason?: string;
 }
 
 interface GradStudent {
@@ -37,10 +34,11 @@ interface GradStudent {
     formaIngresso: string;
     tipoCota: string;
     documents: StudentDocument[];
+    fotoMatricula?: string;
+    registrationDate?: string;
     creatorName?: string;
     creatorPosition?: string;
     creatorPhotoUrl?: string;
-    registrationDate?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -140,29 +138,42 @@ export default function GraduationPage() {
         e.preventDefault();
         if (!editingStudent) return;
         setSubmitting(true);
-        
-        const form = new FormData();
-        form.append('fullName', editingStudent.fullName);
-        form.append('phone', editingStudent.phone);
-        form.append('address', editingStudent.address);
-        form.append('currentCourse', editingStudent.currentCourse);
-        form.append('enrollmentStatus', editingStudent.enrollmentStatus);
-        
-        const photoFile = (files as any).foto3x4_update;
-        if (photoFile) form.append('foto3x4', photoFile);
-
         try {
-            await api.put(`v1/grad-students/${editingStudent.id}`, form, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success('✅ Registro acadêmico atualizado com sucesso!');
+            await api.put(`v1/grad-students/${editingStudent.id}`, editingStudent);
+            toast.success('Dados atualizados!');
             setEditingStudent(null);
             loadStudents();
-        } catch (e: any) {
-            toast.error(e?.response?.data?.message || 'Erro ao atualizar dados.');
-        } finally {
-            setSubmitting(false);
+        } catch (e) { toast.error('Erro ao atualizar.'); }
+        finally { setSubmitting(false); }
+    };
+
+    const handleDocumentAudit = async (docId: number, status: string) => {
+        try {
+            await api.patch(`v1/grad-students/documents/${docId}/status?status=${status}`);
+            toast.success(`Documento ${status === 'APPROVED' ? 'aprovado' : 'rejeitado'}!`);
+            // Recarregar os dados do aluno atual no modal
+            if (viewingStudent) {
+                const updated = await api.get(`v1/grad-students/${viewingStudent.id}`);
+                setViewingStudent(updated.data);
+                loadStudents();
+            }
+        } catch (e) {
+            toast.error('Erro ao processar auditoria do documento.');
         }
+    };
+
+    const handleGenerateFee = async (studentId: number) => {
+        try {
+            const res = await api.post(`v1/grad-students/${studentId}/generate-fee`);
+            toast.success(res.data.message);
+            // Opcional: recarregar dados
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Erro ao gerar taxa.');
+        }
+    };
+
+    const handlePrintEnrollment = () => {
+        window.print();
     };
 
     const resetForm = () => {
@@ -370,9 +381,9 @@ export default function GraduationPage() {
                                     <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                {(s as any).fotoUrl ? (
+                                                {s.fotoMatricula ? (
                                                     <img 
-                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} 
+                                                        src={`${BASE_URL}/uploads/fotos-perfil/${s.fotoMatricula}`} 
                                                         alt={s.fullName} 
                                                         style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
@@ -395,7 +406,7 @@ export default function GraduationPage() {
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
-                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : undefined}
+                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/${s.creatorPhotoUrl}` : undefined}
                                                 date={s.registrationDate}
                                             />
                                         </td>
@@ -512,6 +523,70 @@ export default function GraduationPage() {
                 </div>
             )}
 
+            {/* TEMPLATE DE IMPRESSÃO (Oculto na UI, Visível no Print) */}
+            <div id="print-area" style={{ display: 'none' }}>
+                {viewingStudent && (
+                    <div style={{ padding: '40px', color: '#000', backgroundColor: '#fff', minHeight: '100vh', fontFamily: 'serif' }}>
+                        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '20px', marginBottom: '30px' }}>
+                            <h1 style={{ margin: 0, fontSize: '24px' }}>PORTAL CURSOS NG - SISTEMA ACADÊMICO</h1>
+                            <p style={{ margin: '5px 0', fontSize: '14px' }}>Atestado de Matrícula Oficial - Protocolo V30.9-SUPREME</p>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
+                            <div style={{ width: '120px', height: '160px', border: '1px solid #ddd', overflow: 'hidden' }}>
+                                {viewingStudent.fotoMatricula && (
+                                    <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                )}
+                            </div>
+                            <div style={{ flexGrow: 1 }}>
+                                <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>DADOS DO DISCENTE</h2>
+                                <p><strong>NOME:</strong> {viewingStudent.fullName}</p>
+                                <p><strong>RA (MATRÍCULA):</strong> {viewingStudent.registrationNumber}</p>
+                                <p><strong>CPF:</strong> {viewingStudent.cpf}</p>
+                                <p><strong>CURSO:</strong> {viewingStudent.currentCourse}</p>
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '40px' }}>
+                            <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>SITUAÇÃO ACADÊMICA</h2>
+                            <p>Declaramos para os devidos fins que o aluno acima citado encontra-se regularmente <strong>{(viewingStudent.enrollmentStatus === 'APROVADO' ? 'MATRICULADO' : 'EM PROCESSO DE ADMISSÃO')}</strong> nesta instituição de ensino.</p>
+                        </div>
+
+                        <div style={{ marginTop: '100px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                            <div style={{ textAlign: 'center', width: '250px' }}>
+                                <div style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}></div>
+                                <p style={{ fontSize: '12px' }}>Assinatura do Aluno</p>
+                            </div>
+                            <div style={{ textAlign: 'center', width: '250px' }}>
+                                <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>{viewingStudent.creatorName || 'Secretaria Acadêmica'}</div>
+                                <div style={{ borderBottom: '1px solid #000', marginBottom: '5px' }}></div>
+                                <p style={{ fontSize: '12px' }}>{viewingStudent.creatorPosition || 'Responsável pelo Registro'}</p>
+                            </div>
+                        </div>
+
+                        <div style={{ position: 'absolute', bottom: '40px', left: '40px', right: '40px', fontSize: '10px', color: '#666', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+                            Este atestado foi gerado digitalmente em {new Date().toLocaleString('pt-BR')} e possui validade de 30 dias.
+                            <br/>Código de Verificação: {viewingStudent.registrationNumber}-{new Date().getTime()}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <style jsx global>{`
+                @media print {
+                    body * { visibility: hidden; }
+                    #print-area, #print-area * { visibility: visible; }
+                    #print-area { 
+                        position: absolute; 
+                        left: 0; 
+                        top: 0; 
+                        width: 100%; 
+                        display: block !important;
+                    }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
+
             {/* MODAL: Visualização Detalhada (Procedimento R) */}
             {viewingStudent && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
@@ -519,11 +594,11 @@ export default function GraduationPage() {
                         <div style={{ padding: '2.5rem', display: 'flex', gap: '2.5rem' }}>
                             {/* Lateral: Foto e Matrícula */}
                             <div style={{ width: '220px', flexShrink: 0 }}>
-                                <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
-                                    {(viewingStudent as any).fotoUrl ? (
-                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${(viewingStudent as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--secondary-color)', marginBottom: '1.5rem' }}>
+                                    {viewingStudent.fotoMatricula ? (
+                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoMatricula}`} alt="Foto 3x4" style={{ width: '100%', height: '100%', objectPosition: 'center', objectFit: 'cover' }} />
                                     ) : (
-                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
+                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}><User size={30} /></div>
                                     )}
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
@@ -544,7 +619,7 @@ export default function GraduationPage() {
                                     <button onClick={() => setViewingStudent(null)} style={{ padding: '0.8rem', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                     <div>
                                         <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <GraduationCap size={14} /> Acadêmico
@@ -554,16 +629,65 @@ export default function GraduationPage() {
                                             <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Forma de Ingresso</div><div style={{ fontWeight: 500 }}>{viewingStudent.formaIngresso}</div></div>
                                             <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Data de Cadastro</div><div style={{ fontWeight: 500 }}>{viewingStudent.registrationDate ? new Date(viewingStudent.registrationDate).toLocaleDateString('pt-BR') : '---'}</div></div>
                                         </div>
+
+                                        <div style={{ marginTop: '2rem' }}>
+                                            <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1rem' }}>Ações de Processo</h4>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem' }}>
+                                                <button 
+                                                    onClick={() => handleGenerateFee(viewingStudent.id)}
+                                                    style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    💸 Gerar Taxa Matrícula
+                                                </button>
+                                                <button 
+                                                    onClick={handlePrintEnrollment}
+                                                    style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                    🖨️ Imprimir Atestado
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div>
                                         <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <FileText size={14} /> Pessoal & Contato
+                                            <FileText size={14} /> Auditoria de Documentos
                                         </h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>E-mail</div><div style={{ fontWeight: 500 }}>{viewingStudent.email}</div></div>
-                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>CPF</div><div style={{ fontWeight: 500 }}>{viewingStudent.cpf}</div></div>
-                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Telefone</div><div style={{ fontWeight: 500 }}>{viewingStudent.phone}</div></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                            {viewingStudent.documents && viewingStudent.documents.length > 0 ? (
+                                                viewingStudent.documents.map((doc) => (
+                                                    <div key={doc.id} style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                                            <div style={{ color: doc.status === 'APPROVED' ? '#2ecc71' : doc.status === 'REJECTED' ? '#e74c3c' : '#f0a500' }}>
+                                                                <FileText size={18} />
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{doc.documentType}</div>
+                                                                <div style={{ fontSize: '0.7rem', opacity: 0.4 }}>Status: {doc.status}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <a href={`${BASE_URL}/uploads/grad-students/${doc.filePath}`} target="_blank" rel="noreferrer" style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }} title="Ver Arquivo">
+                                                                <Upload size={14} style={{ transform: 'rotate(180deg)' }} />
+                                                            </a>
+                                                            <button 
+                                                                onClick={() => handleDocumentAudit(doc.id, 'APPROVED')}
+                                                                style={{ width: '32px', height: '32px', borderRadius: '6px', background: doc.status === 'APPROVED' ? '#2ecc71' : 'rgba(46,204,113,0.1)', color: doc.status === 'APPROVED' ? '#000' : '#2ecc71', border: 'none', cursor: 'pointer' }}
+                                                                title="Aprovar"
+                                                            >
+                                                                ✓
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDocumentAudit(doc.id, 'REJECTED')}
+                                                                style={{ width: '32px', height: '32px', borderRadius: '6px', background: doc.status === 'REJECTED' ? '#e74c3c' : 'rgba(231,76,60,0.1)', color: doc.status === 'REJECTED' ? '#fff' : '#e74c3c', border: 'none', cursor: 'pointer' }}
+                                                                title="Rejeitar"
+                                                            >
+                                                                ✗
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : <div style={{ opacity: 0.3, fontSize: '0.8rem', textAlign: 'center', padding: '1rem' }}>Nenhum documento anexado.</div>}
                                         </div>
                                     </div>
                                 </div>
@@ -574,7 +698,7 @@ export default function GraduationPage() {
                                     <AuditStamp 
                                         name={viewingStudent.creatorName}
                                         position={viewingStudent.creatorPosition}
-                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${viewingStudent.creatorPhotoUrl}` : undefined}
+                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/${viewingStudent.creatorPhotoUrl}` : undefined}
                                         date={viewingStudent.registrationDate}
                                     />
                                 </div>

@@ -65,17 +65,8 @@ public class FinancialController {
                 .academicLevel(request.getAcademicLevel())
                 .description(request.getDescription());
 
-        // Injetar dados do emissor (Usuário logado)
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
-            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-            java.util.Optional<com.portalcursos.ng02.model.StaffMember> staff = staffMemberRepository.findByUserId(userDetails.getId());
-            if (staff.isPresent()) {
-                paymentBuilder.creatorName(staff.get().getFullName());
-                paymentBuilder.creatorPosition(staff.get().getPosition());
-                paymentBuilder.creatorPhotoUrl(staff.get().getFotoUrl());
-            }
-        }
+        // Injetar auditoria SUPREME
+        injectAuditStamps(paymentBuilder);
 
         if (request.getAcademicLevel() == Payment.EAcademicLevel.GRADUATION) {
             Optional<Student> student = studentRepository.findById(request.getStudentId());
@@ -103,29 +94,41 @@ public class FinancialController {
             payment.setSecretaryProcessType(request.getSecretaryProcessType());
             payment.setDescription(request.getDescription());
 
-            // Auditoria de quem editou
-            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
-                com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                    payment.setCreatorName(staff.getFullName());
-                    payment.setCreatorPosition(staff.getPosition());
-                    payment.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
+            // Auditoria SUPREME na edição
+            injectAuditStamps(payment);
 
             return ResponseEntity.ok(paymentRepository.save(payment));
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/invoices/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
-        if (paymentRepository.existsById(id)) {
-            paymentRepository.deleteById(id);
+        return paymentRepository.findById(id).map(payment -> {
+            // Auditoria SUPREME antes de desativar (Soft Delete)
+            injectAuditStamps(payment);
+            paymentRepository.save(payment); // Salva quem deletou
+            paymentRepository.delete(payment); // Executa o SQLDelete (active = false)
             return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private void injectAuditStamps(Object p) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
+            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                if (p instanceof Payment.PaymentBuilder) {
+                    ((Payment.PaymentBuilder<?, ?>) p).creatorName(staff.getFullName());
+                    ((Payment.PaymentBuilder<?, ?>) p).creatorPosition(staff.getPosition());
+                    ((Payment.PaymentBuilder<?, ?>) p).creatorPhotoUrl(staff.getFotoUrl());
+                } else if (p instanceof Payment) {
+                    ((Payment) p).setCreatorName(staff.getFullName());
+                    ((Payment) p).setCreatorPosition(staff.getPosition());
+                    ((Payment) p).setCreatorPhotoUrl(staff.getFotoUrl());
+                }
+            });
         }
-        return ResponseEntity.notFound().build();
     }
 
     // DTO estático para a requisição
