@@ -336,12 +336,12 @@ export default function CoursesPage() {
                         </div>
                         <div style={{ flex: 1 }}>
                             <h4 style={{ margin: '0 0 0.3rem 0', color: 'var(--secondary-color)', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                Rastreabilidade do Emissor
+                                Rastreabilidade do Emissor (Auditoria MEC)
                             </h4>
-                            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{user?.username || 'Sessão Expirada'}</p>
-                            <p style={{ margin: '0.2rem 0 0 0', opacity: 0.7, fontSize: '0.9rem', color: 'var(--secondary-color)' }}>{user?.position || 'CARGO NÃO IDENTIFICADO'}</p>
-                            <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', opacity: 0.5, fontStyle: 'italic' }}>
-                                A foto e credenciais acima serão persistidas no registro deste curso para auditoria institucional permanente (V30.7-QUANTUM).
+                            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{user?.username || 'Sessão Administrativa Identificada'}</p>
+                            <p style={{ margin: '0.2rem 0 0 0', opacity: 0.8, fontSize: '0.9rem', color: 'var(--secondary-color)', fontWeight: 600 }}>{user?.position || 'COORDENAÇÃO / ACADÊMICO'}</p>
+                            <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', opacity: 0.6, fontStyle: 'italic', fontWeight: 500 }}>
+                                Registro Imutável: A foto e credenciais acima serão persistidas no histórico deste curso para auditoria institucional permanente.
                             </div>
                         </div>
                     </div>

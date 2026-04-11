@@ -19,6 +19,11 @@ export default function FinancePage() {
   const [showPaymentModal, setShowPaymentModal] = useState<any | null>(null);
   
   // Estado para formulário de nova cobrança
+  const [newCharge, setNewCharge] = useState({
+    studentId: '',
+    amount: '',
+    category: 'MENSALIDADE',
+    secretaryProcessType: 'REGULAR',
     description: ''
   });
   
@@ -300,9 +305,9 @@ export default function FinancePage() {
                           )}
                       </div>
                       <div style={{ flex: 1 }}>
-                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>Emissor Auditor</p>
-                          <h4 style={{ margin: '0', fontSize: '0.95rem', fontWeight: 800 }}>{user?.username || 'Funcionário'}</h4>
-                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7 }}>{user?.position || 'Financeiro'}</p>
+                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>Emissor Auditor (Imutável)</p>
+                          <h4 style={{ margin: '0', fontSize: '1rem', fontWeight: 800, color: 'var(--primary-color)' }}>{user?.username || 'Funcionário Identificado'}</h4>
+                          <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, fontWeight: 500 }}>{user?.position || 'Departamento Financeiro'}</p>
                       </div>
                   </div>
 
@@ -334,16 +339,19 @@ export default function FinancePage() {
                           )}
                       </div>
                       <div style={{ flex: 1 }}>
-                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: selectedStudent ? '#27ae60' : '#888', textTransform: 'uppercase' }}>Beneficiário Auditado</p>
+                          <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 700, color: selectedStudent ? '#27ae60' : '#d35400', textTransform: 'uppercase' }}>Beneficiário Auditado (Receptor)</p>
                           {isSearchingStudent ? (
-                              <span style={{ fontSize: '0.9rem', opacity: 0.5 }}>Buscando aluno...</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div className="spinner-mini" style={{ width: '12px', height: '12px', border: '2px solid rgba(0,0,0,0.1)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                  <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>Verificando integridade...</span>
+                              </div>
                           ) : selectedStudent ? (
                               <>
-                                <h4 style={{ margin: '0', fontSize: '0.95rem', fontWeight: 800 }}>{selectedStudent.fullName}</h4>
-                                <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7 }}>CPF: {selectedStudent.cpf}</p>
+                                <h4 style={{ margin: '0', fontSize: '1rem', fontWeight: 800 }}>{selectedStudent.fullName}</h4>
+                                <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8, color: '#27ae60' }}>CPF Validado: {selectedStudent.cpf}</p>
                               </>
                           ) : (
-                              <span style={{ fontSize: '0.9rem', opacity: 0.5 }}>Aguardando ID do Aluno</span>
+                              <span style={{ fontSize: '0.9rem', opacity: 0.5, fontStyle: 'italic' }}>Insira o ID para auditoria cruzada</span>
                           )}
                       </div>
                       {selectedStudent && <div style={{ color: '#2ecc71', fontSize: '1.2rem' }}>✓</div>}
