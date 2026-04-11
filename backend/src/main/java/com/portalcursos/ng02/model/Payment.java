@@ -22,7 +22,7 @@ import org.hibernate.annotations.Where;
 @Builder
 @SQLDelete(sql = "UPDATE payments SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class Payment {
+public class Payment extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -59,12 +59,6 @@ public class Payment {
     private ESecretaryProcessType secretaryProcessType;
 
     private String description;
-
-    private String creatorName;
-    private String creatorPosition;
-    
-    @Column(columnDefinition = "TEXT")
-    private String creatorPhotoUrl;
 
     @Column(columnDefinition = "TEXT")
     private String studentPhotoUrl;
@@ -118,8 +112,5 @@ public class Payment {
         if (amount == null) return BigDecimal.ZERO;
         return amount.add(getInterestAmount());
     }
-
-    @Builder.Default
-    private boolean active = true;
 }
 

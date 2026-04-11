@@ -9,14 +9,12 @@ import {
   X, 
   Upload, 
   Trash2, 
-  GraduationCap,
-  LayoutDashboard,
-  CheckCircle2,
-  Clock,
-  AlertCircle
+  GraduationCap
 } from 'lucide-react';
 import { toast } from "sonner";
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
+import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
+import { AuditStamp } from '@/app/components/AuditStamp';
 
 interface StudentDocument {
     id: number;
@@ -39,6 +37,10 @@ interface GradStudent {
     formaIngresso: string;
     tipoCota: string;
     documents: StudentDocument[];
+    creatorName?: string;
+    creatorPosition?: string;
+    creatorPhotoUrl?: string;
+    registrationDate?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -50,10 +52,18 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function GraduationPage() {
     const [students, setStudents] = useState<GradStudent[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editingStudent, setEditingStudent] = useState<GradStudent | null>(null);
+
+    // Contexto SUPREME
+    const gradService = useAuditCRUD('v1/grad-students');
+    const isLoading = gradService.loading;
+
+    const loadStudents = async () => {
+        const data = await gradService.list();
+        setStudents(data);
+    };
 
     // Form State
     const [formData, setFormData] = useState({
@@ -81,23 +91,7 @@ export default function GraduationPage() {
         certidaoNascimentoFile: null, autodeclaracaoRacialFile: null
     });
 
-    const loadStudents = async () => {
-        const { isAuthenticated } = (window as any).authContext || {}; // Fallback se o contexto não estiver exposto globalmente, mas idealmente deve vir de um hook customizado
-        
-        // No PortalCursos, o AuthContext provê o estado via hook, mas se estivermos num componente funcional sem o hook invocado, vamos garantir a segurança.
-        // Assumindo que o componente GraduationPage será envolvido pelo AppShell que já expõe o AuthContext.
-        
-        setIsLoading(true);
-        try {
-            const res = await api.get('v1/grad-students');
-            setStudents(res.data);
-        } catch (e: any) {
-            if (e.silent) return; // Silenciar erros de logout
-            toast.error('Erro ao carregar alunos. Verifique o backend.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // useEffect automático pelo useAuditCRUD
 
     useEffect(() => { loadStudents(); }, []);
 
@@ -174,19 +168,18 @@ export default function GraduationPage() {
 
     const handleStatusChange = async (id: number, status: string) => {
         try {
-            await api.put(`v1/grad-students/${id}/status?status=${status}`);
+            await api.patch(`v1/grad-students/${id}/status?status=${status}`);
             loadStudents();
             toast.success('Status atualizado!');
         } catch (e) { toast.error('Erro ao atualizar status.'); }
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Tem certeza que deseja remover este aluno?')) return;
+        if (!confirm('Tem certeza que deseja remover este aluno? Esta operação é um Soft Delete (exclusão lógica).')) return;
         try {
-            await api.delete(`v1/grad-students/${id}`);
+            await gradService.remove(id);
             loadStudents();
-            toast.success('Aluno removido.');
-        } catch (e) { toast.error('Erro ao remover aluno.'); }
+        } catch (e) { /* toast handled by hook */ }
     };
 
     return (
@@ -353,7 +346,7 @@ export default function GraduationPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    {['Aluno / Matrícula', 'Contato', 'CPF', 'Curso / Ingresso', 'Documentação', 'Status', 'Ações'].map(h => (
+                                    {['Aluno / Matrícula', 'Contato', 'Auditoria', 'Curso / Ingresso', 'Documentação', 'Status', 'Ações'].map(h => (
                                         <th key={h} style={{ padding: '1.5rem 2rem', fontWeight: 700 }}>{h}</th>
                                     ))}
                                 </tr>
@@ -384,7 +377,14 @@ export default function GraduationPage() {
                                             <div style={{ opacity: 0.8 }}>{s.email}</div>
                                             <div style={{ fontSize: '0.8rem', opacity: 0.4 }}>{s.phone}</div>
                                         </td>
-                                        <td style={{ padding: '1.5rem 2rem', opacity: 0.8 }}>{s.cpf}</td>
+                                        <td style={{ padding: '1.5rem 2rem' }}>
+                                            <AuditStamp 
+                                                name={s.creatorName}
+                                                position={s.creatorPosition}
+                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : undefined}
+                                                date={s.registrationDate}
+                                            />
+                                        </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>{s.currentCourse}</div>
                                             <div style={{ fontSize: '0.75rem', opacity: 0.4 }}>{s.formaIngresso}</div>
@@ -441,16 +441,7 @@ export default function GraduationPage() {
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>
-                                            
-                                            {/* Audit Visual V30.9-SUPREME */}
-                                            {(s as any).creatorName && (
-                                                <div className="audit-stamp" style={{ marginTop: '0.5rem', transform: 'scale(0.8)', transformOrigin: 'right' }}>
-                                                    <img src={(s as any).creatorPhotoUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d'} alt="Auditor" />
-                                                    <div className="audit-info">
-                                                        <span className="name">Auditado por: {(s as any).creatorName}</span>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            </div>
                                          </td>
                                     </tr>
                                 ))}

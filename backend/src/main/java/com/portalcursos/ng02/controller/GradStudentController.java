@@ -221,13 +221,34 @@ public class GradStudentController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
+        if (id == null) return ResponseEntity.badRequest().build();
+        return studentRepository.findById(id).map(student -> {
+            student.setEnrollmentStatus(status);
+            
+            // Injetar auditoria
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
+                    student.setCreatorName(creator.getFullName());
+                    student.setCreatorPosition(creator.getPosition());
+                    student.setCreatorPhotoUrl(creator.getFotoUrl());
+                });
+            }
+            
+            return ResponseEntity.ok(studentRepository.save(student));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
         if (id == null) return ResponseEntity.badRequest().build();
         return studentRepository.findById(id)
                 .map(student -> {
                     studentRepository.delete(student);
-                    return ResponseEntity.ok().build();
+                    return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

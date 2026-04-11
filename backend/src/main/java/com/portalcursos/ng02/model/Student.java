@@ -18,7 +18,7 @@ import org.hibernate.annotations.Where;
 @Builder
 @SQLDelete(sql = "UPDATE students SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class Student {
+public class Student extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -66,15 +66,6 @@ public class Student {
 
     @Column(name = "foto_url")
     private String fotoUrl;
-
-    private String creatorName;
-    private String creatorPosition;
-    
-    @Column(columnDefinition = "TEXT")
-    private String creatorPhotoUrl;
-
-    @Builder.Default
-    private boolean active = true;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")

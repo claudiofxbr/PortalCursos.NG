@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useAuditCRUD } from '../hooks/useAuditCRUD';
+import { AuditStamp } from '../components/AuditStamp';
+import { toast } from 'sonner';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
 
@@ -13,6 +16,10 @@ export default function FinancePage() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hooks SUPREME
+  const financeService = useAuditCRUD('/finance');
+  const invoicesService = useAuditCRUD('/finance/invoices');
   
   // Estados para Modais
   const [showChargeModal, setShowChargeModal] = useState(false);
@@ -47,9 +54,8 @@ export default function FinancePage() {
         
         setIsSearchingStudent(true);
         try {
-            const endpoint = activeTab === 'GRADUATION' ? `/v1/students/${newCharge.studentId}` : `/api/v1/postgrad-students/${newCharge.studentId}`;
-            // Ajuste de prefixo conforme a API
-            const res = await api.get(endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint);
+            const prefix = activeTab === 'GRADUATION' ? 'v1/grad-students' : 'v1/postgrad-students';
+            const res = await api.get(`${prefix}/${newCharge.studentId}`);
             setSelectedStudent(res.data);
         } catch (e) {
             setSelectedStudent(null);
@@ -65,17 +71,17 @@ export default function FinancePage() {
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
-      const [invoicesRes, historyRes] = await Promise.all([
-        api.get(`/finance/invoices/${activeTab}`).catch(() => ({ data: [] })),
-        api.get(`/finance/history/${activeTab}`).catch(() => ({ data: [] }))
+      const [invoicesData, historyData] = await Promise.all([
+        api.get(`/finance/invoices/${activeTab}`).then(r => r.data).catch(() => []),
+        api.get(`/finance/history/${activeTab}`).then(r => r.data).catch(() => [])
       ]);
       
-      setInvoices(invoicesRes.data);
-      setHistory(historyRes.data);
+      setInvoices(invoicesData);
+      setHistory(historyData);
       setError(null);
     } catch (err) {
       console.error("Erro financeiro:", err);
-      setError("Não foi possível carregar os dados financeiros.");
+      toast.error("Não foi possível carregar os dados financeiros.");
     } finally {
       setLoading(false);
     }
@@ -84,17 +90,16 @@ export default function FinancePage() {
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/finance/charge', {
+      await financeService.create({
         ...newCharge,
         amount: parseFloat(newCharge.amount),
         studentId: parseInt(newCharge.studentId),
         academicLevel: activeTab
-      });
-      alert("✅ Cobrança gerada com sucesso!");
-      setShowChargeModal(false);
+      }, '/charge'); // useAuditCRUD need adjustment if it doesn't support subpaths easily
       fetchFinanceData();
+      setShowChargeModal(false);
     } catch (err) {
-      alert("❌ Erro ao gerar cobrança. Verifique o ID do aluno.");
+      // toast already handled by hook
     }
   };
 
@@ -111,23 +116,21 @@ export default function FinancePage() {
   const handleDeleteInvoice = async (id: number) => {
     if (!confirm("⚠️ ATENÇÃO: Deseja realmente excluir esta fatura? Esta ação é irreversível e ficará registrada como inativa para auditoria.")) return;
     try {
-      await api.delete(`/finance/invoices/${id}`);
-      alert("✅ Fatura desativada com sucesso (Soft Delete).");
+      await invoicesService.remove(id);
       fetchFinanceData();
     } catch (err) {
-      alert("❌ Erro ao excluir fatura.");
+      // toast handled by hook
     }
   };
-
+ 
   const handleUpdateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/finance/invoices/${editingInvoice.id}`, editingInvoice);
-      alert("✅ Fatura atualizada com sucesso!");
+      await invoicesService.update(editingInvoice.id, editingInvoice);
       setEditingInvoice(null);
       fetchFinanceData();
     } catch (err) {
-      alert("❌ Erro ao atualizar fatura.");
+      // toast handled by hook
     }
   };
 
@@ -266,15 +269,14 @@ export default function FinancePage() {
             </div>
 
             {/* Selo de Auditoria V30.9-SUPREME */}
-            {invoice.creatorName && (
-                <div className="audit-stamp" style={{ marginTop: '1rem' }}>
-                    <img src={invoice.creatorPhotoUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d'} alt="Auditor" />
-                    <div className="audit-info">
-                        <span className="name">{invoice.creatorName}</span>
-                        <span className="position">{invoice.creatorPosition}</span>
-                    </div>
-                </div>
-            )}
+            <div style={{ marginTop: '1rem' }}>
+              <AuditStamp 
+                  name={invoice.creatorName} 
+                  position={invoice.creatorPosition} 
+                  photoUrl={invoice.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${invoice.creatorPhotoUrl}` : undefined}
+                  date={invoice.createdAt}
+              />
+            </div>
           </div>
         )) : (
           <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: '#999' }}>

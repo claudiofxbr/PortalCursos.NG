@@ -22,7 +22,7 @@ import org.hibernate.annotations.Where;
 @Builder
 @SQLDelete(sql = "UPDATE postgrad_students SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class PostgradStudent {
+public class PostgradStudent extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -82,23 +82,12 @@ public class PostgradStudent {
     @Column(name = "foto_url")
     private String fotoUrl;
 
-    private String creatorName;
-    private String creatorPosition;
-    
-    @Column(columnDefinition = "TEXT")
-    private String creatorPhotoUrl;
-
-    @Column(name = "registration_date", nullable = false, updatable = false)
-    private LocalDateTime registrationDate;
-
+    @Override
     @PrePersist
     protected void onCreate() {
-        registrationDate = LocalDateTime.now();
+        super.onCreate();
         if (enrollmentStatus == null) {
             enrollmentStatus = "PENDENTE";
         }
     }
-
-    @Builder.Default
-    private boolean active = true;
 }

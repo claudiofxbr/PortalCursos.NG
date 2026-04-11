@@ -177,7 +177,29 @@ public class PostgradStudentController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE /api/v1/postgrad-students/{id} - Remover aluno
+    // PATCH /api/v1/postgrad-students/{id}/status - Atualizar status do aluno (específico)
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
+        return studentRepository.findById(id).map(student -> {
+            student.setEnrollmentStatus(status);
+            
+            // Injetar auditoria
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
+                    student.setCreatorName(creator.getFullName());
+                    student.setCreatorPosition(creator.getPosition());
+                    student.setCreatorPhotoUrl(creator.getFotoUrl());
+                });
+            }
+            
+            return ResponseEntity.ok(studentRepository.save(student));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // DELETE /api/v1/postgrad-students/{id} - Remover aluno (Soft Delete)
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> delete(@PathVariable Long id) {

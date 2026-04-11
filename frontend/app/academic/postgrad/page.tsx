@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import api, { BASE_URL } from '@/app/services/api';
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
+import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
+import { AuditStamp } from '@/app/components/AuditStamp';
+import { toast } from 'sonner';
 
 interface PostgradStudent {
     id: number;
@@ -34,11 +37,17 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function PostgradStudentsPage() {
     const [students, setStudents] = useState<PostgradStudent[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+
+    // Contexto SUPREME
+    const postgradService = useAuditCRUD('v1/postgrad-students');
+    const isLoading = postgradService.loading;
+
+    const loadStudents = async () => {
+        const data = await postgradService.list();
+        setStudents(data);
+    };
 
     // Form State
     const [formData, setFormData] = useState({
@@ -108,17 +117,18 @@ export default function PostgradStudentsPage() {
 
     const handleStatusChange = async (id: number, status: string) => {
         try {
-            await api.put(`v1/postgrad-students/${id}/status?status=${status}`);
+            await api.patch(`v1/postgrad-students/${id}/status?status=${status}`);
+            toast.success('Status atualizado com sucesso!');
             loadStudents();
-        } catch (e) { setError('Erro ao atualizar status.'); }
+        } catch (e) { toast.error('Erro ao atualizar status.'); }
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Tem certeza que deseja remover este aluno?')) return;
+        if (!confirm('Tem certeza que deseja remover este aluno? Esta operação é um Soft Delete (exclusão lógica).')) return;
         try {
-            await api.delete(`v1/postgrad-students/${id}`);
+            await postgradService.remove(id);
             loadStudents();
-        } catch (e) { setError('Erro ao remover aluno.'); }
+        } catch (e) { /* toast handled by hook */ }
     };
 
     return (
@@ -305,40 +315,12 @@ export default function PostgradStudentsPage() {
                                             </div>
                                         </td>
                                         <td style={{ padding: '0.8rem 1rem' }}>
-                                            {s.creatorName ? (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '5px',
-                                                    padding: '8px',
-                                                    backgroundColor: 'rgba(255,255,255,0.05)',
-                                                    borderRadius: '8px',
-                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                    minWidth: '100px'
-                                                }}>
-                                                    <div style={{
-                                                        width: '30px',
-                                                        height: '40px',
-                                                        border: '2px solid var(--secondary-color)',
-                                                        borderRadius: '3px',
-                                                        overflow: 'hidden',
-                                                        boxShadow: '0 0 10px var(--secondary-color)'
-                                                    }}>
-                                                        <img
-                                                            src={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : '/placeholder-user.png'}
-                                                            alt={s.creatorName}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                        />
-                                                    </div>
-                                                    <div style={{ textAlign: 'center' }}>
-                                                        <p style={{ fontSize: '0.65rem', fontWeight: 800, margin: 0, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>{s.creatorPosition}</p>
-                                                        <p style={{ fontSize: '0.6rem', margin: 0, opacity: 0.8 }}>{s.creatorName.split(' ')[0]}</p>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: '0.7rem', opacity: 0.4 }}>Sistema</span>
-                                            )}
+                                            <AuditStamp 
+                                                name={s.creatorName}
+                                                position={s.creatorPosition}
+                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : undefined}
+                                                date={s.registrationDate}
+                                            />
                                         </td>
                                         <td style={{ padding: '0.8rem 1rem' }}>
                                             <select
