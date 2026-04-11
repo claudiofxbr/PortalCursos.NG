@@ -5,6 +5,7 @@ import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,12 @@ public class FinancialController {
 
     @Autowired
     PaymentRepository paymentRepository;
+
+    @Autowired
+    StaffMemberRepository staffMemberRepository;
+
+    @Autowired
+    com.portalcursos.ng02.repository.UserRepository userRepository;
 
     @Autowired
     StudentRepository studentRepository;
@@ -57,6 +64,18 @@ public class FinancialController {
                 .secretaryProcessType(request.getSecretaryProcessType())
                 .academicLevel(request.getAcademicLevel())
                 .description(request.getDescription());
+
+        // Injetar dados do emissor (Usuário logado)
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
+            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+            java.util.Optional<com.portalcursos.ng02.model.StaffMember> staff = staffMemberRepository.findByUserId(userDetails.getId());
+            if (staff.isPresent()) {
+                paymentBuilder.creatorName(staff.get().getFullName());
+                paymentBuilder.creatorPosition(staff.get().getPosition());
+                paymentBuilder.creatorPhotoUrl(staff.get().getFotoUrl());
+            }
+        }
 
         if (request.getAcademicLevel() == Payment.EAcademicLevel.GRADUATION) {
             Optional<Student> student = studentRepository.findById(request.getStudentId());

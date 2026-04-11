@@ -31,6 +31,9 @@ import java.time.temporal.ChronoUnit;
 
 import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserSessionRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.model.StaffMember;
+import java.util.Optional;
 
 
 @RestController
@@ -55,6 +58,9 @@ public class AuthController {
 
     @Autowired
     UserSessionRepository userSessionRepository;
+
+    @Autowired
+    StaffMemberRepository staffMemberRepository;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -139,13 +145,23 @@ public class AuthController {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
+        String position = "";
+        String fotoUrl = "";
+        Optional<StaffMember> staff = staffMemberRepository.findByUserId(userDetails.getId());
+        if (staff.isPresent()) {
+            position = staff.get().getPosition();
+            fotoUrl = staff.get().getFotoUrl();
+        }
+
         return ResponseEntity.ok(new com.portalcursos.ng02.dto.UserInfoResponse(
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 userDetails.getAuthorities().stream()
                         .map(item -> item.getAuthority())
-                        .collect(Collectors.toList())));
+                        .collect(Collectors.toList()),
+                position,
+                fotoUrl));
     }
 
     @PostMapping("/signout")

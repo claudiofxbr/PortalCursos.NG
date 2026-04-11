@@ -55,6 +55,12 @@ public class Payment {
 
     private String description;
 
+    private String creatorName;
+    private String creatorPosition;
+    
+    @Column(columnDefinition = "TEXT")
+    private String creatorPhotoUrl;
+
     public enum EPaymentStatus {
         PENDING, PAID, CANCELLED, OVERDUE
     }

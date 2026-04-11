@@ -140,6 +140,9 @@ CREATE TABLE IF NOT EXISTS payments (
     category VARCHAR(20),
     secretary_process_type VARCHAR(20),
     description VARCHAR(255),
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
 
 export default function FinancePage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AcademicLevel>('GRADUATION');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -248,6 +250,39 @@ export default function FinancePage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                       <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>⚡ Nova Cobrança de Curso</h3>
                       <button onClick={() => setShowChargeModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                  </div>
+
+                  {/* IDENTIFICAÇÃO DO EMISSOR (FOTO 3X4 E CARGO) */}
+                  <div className="glass-panel" style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1.5rem', 
+                      padding: '1.2rem', 
+                      marginBottom: '2rem',
+                      background: 'linear-gradient(135deg, rgba(26, 35, 126, 0.05), rgba(0, 150, 136, 0.05))',
+                      border: '1px solid rgba(26, 35, 126, 0.1)',
+                      borderRadius: '16px'
+                  }}>
+                      <div style={{ 
+                          width: '60px', 
+                          height: '80px', 
+                          borderRadius: '8px', 
+                          overflow: 'hidden',
+                          border: '3px solid white',
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                          flexShrink: 0
+                      }}>
+                          {user?.fotoUrl ? (
+                              <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                              <div style={{ width: '100%', height: '100%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>👤</div>
+                          )}
+                      </div>
+                      <div>
+                          <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px' }}>Emissor Autorizado</p>
+                          <h4 style={{ margin: '2px 0', fontSize: '1.1rem', fontWeight: 800 }}>{user?.username || 'Funcionário'}</h4>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>{user?.position || 'Departamento Financeiro'}</p>
+                      </div>
                   </div>
                   
                   <form onSubmit={handleCreateCharge}>
