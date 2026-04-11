@@ -26,6 +26,9 @@ interface Course {
     monthlyFee: number;
     durationInSemesters: number;
     totalVacancies: number;
+    creatorName?: string;
+    creatorPosition?: string;
+    creatorPhotoUrl?: string;
 }
 
 const SECTION_STYLE = {
@@ -170,9 +173,9 @@ export default function CoursesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
                 <div>
                     <h1 style={{ fontSize: '2.2rem', fontWeight: 800, background: 'linear-gradient(45deg, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        🎒 Gestão Acadêmica de Cursos
+                        🎒 Gestão do MEC - Cursos
                     </h1>
-                    <p style={{ opacity: 0.5, fontSize: '0.9rem', marginTop: '0.5rem' }}>Conformidade e-MEC 2026 & Diretrizes Institucionais</p>
+                    <p style={{ opacity: 0.5, fontSize: '0.9rem', marginTop: '0.5rem' }}>Conformidade Institucional & Diretrizes MEC</p>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
@@ -319,30 +322,27 @@ export default function CoursesPage() {
                         marginTop: '2rem'
                     }}>
                         <div style={{
-                            width: '90px',
-                            height: '120px',
-                            border: '3px solid var(--secondary-color)',
-                            borderRadius: '8px',
+                            width: '45px',
+                            height: '60px',
+                            border: '2px solid var(--secondary-color)',
+                            borderRadius: '4px',
                             overflow: 'hidden',
                             backgroundColor: '#000',
                             flexShrink: 0,
-                            boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                            boxShadow: '0 0 10px var(--secondary-color)'
                         }}>
                             {user?.fotoUrl ? (
                                 <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', textAlign: 'center', opacity: 0.5 }}>SEM FOTO</div>
+                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', textAlign: 'center', opacity: 0.5 }}>3x4</div>
                             )}
                         </div>
                         <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: '0 0 0.3rem 0', color: 'var(--secondary-color)', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                Rastreabilidade do Emissor (Auditoria MEC)
+                            <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--secondary-color)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>
+                                Auditoria MEC (Responsável pelo Registro)
                             </h4>
-                            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{user?.username || 'Sessão Administrativa Identificada'}</p>
-                            <p style={{ margin: '0.2rem 0 0 0', opacity: 0.8, fontSize: '0.9rem', color: 'var(--secondary-color)', fontWeight: 600 }}>{user?.position || 'COORDENAÇÃO / ACADÊMICO'}</p>
-                            <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', opacity: 0.6, fontStyle: 'italic', fontWeight: 500 }}>
-                                Registro Imutável: A foto e credenciais acima serão persistidas no histórico deste curso para auditoria institucional permanente.
-                            </div>
+                            <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{user?.fullName || user?.username || 'Sessão Administrativa'}</p>
+                            <p style={{ margin: '0.1rem 0 0 0', opacity: 0.8, fontSize: '0.8rem', color: 'var(--secondary-color)', fontWeight: 600 }}>{user?.position || 'COORDENAÇÃO ACADÊMICA'}</p>
                         </div>
                     </div>
 
@@ -370,7 +370,7 @@ export default function CoursesPage() {
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>DENOMINAÇÃO / CÓD. IES</th>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>NÍVEL / MODALIDADE</th>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>CARGA H.</th>
-                                    <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>STATUS</th>
+                                    <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>AUDITORIA MEC</th>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>AÇÕES</th>
                                 </tr>
                             </thead>
@@ -387,12 +387,37 @@ export default function CoursesPage() {
                                         </td>
                                         <td style={{ padding: '1rem' }}>{c.cargaHorariaTotal}h</td>
                                         <td style={{ padding: '1rem' }}>
-                                            {c.isLocked ? (
-                                                <span style={{ color: '#2ecc71', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                    🔒 Registrado
-                                                </span>
+                                            {c.creatorName ? (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '5px 10px',
+                                                    backgroundColor: 'rgba(212, 175, 55, 0.05)',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid rgba(212, 175, 55, 0.1)',
+                                                    width: 'fit-content'
+                                                }}>
+                                                    <div style={{
+                                                        width: '24px',
+                                                        height: '32px',
+                                                        border: '1.5px solid var(--secondary-color)',
+                                                        borderRadius: '2px',
+                                                        overflow: 'hidden'
+                                                    }}>
+                                                        <img
+                                                            src={c.creatorPhotoUrl ? c.creatorPhotoUrl : '/placeholder-user.png'}
+                                                            alt={c.creatorName}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.6rem', fontWeight: 800, margin: 0, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>{c.creatorPosition}</p>
+                                                        <p style={{ fontSize: '0.65rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>{c.creatorName.split(' ')[0]}</p>
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <span style={{ color: '#f1c40f', fontSize: '0.75rem' }}>📝 Rascunho</span>
+                                                <span style={{ fontSize: '0.7rem', opacity: 0.3 }}>Automático</span>
                                             )}
                                         </td>
                                         <td style={{ padding: '1rem' }}>

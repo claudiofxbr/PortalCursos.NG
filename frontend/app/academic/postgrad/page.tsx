@@ -21,6 +21,9 @@ interface PostgradStudent {
     proofOfAddressFilePath: string | null;
     academicTranscriptFilePath: string | null;
     registrationDate: string;
+    creatorName?: string;
+    creatorPosition?: string;
+    creatorPhotoUrl?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -244,7 +247,7 @@ export default function PostgradStudentsPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                             <thead>
                                 <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                                    {['Nome', 'E-mail', 'CPF', 'Curso', 'Documentos', 'Status', 'Ações'].map(h => (
+                                    {['Nome', 'E-mail', 'CPF', 'Curso', 'Documentos', 'Auditoria MEC', 'Status', 'Ações'].map(h => (
                                         <th key={h} style={{ padding: '0.8rem 1rem', textAlign: 'left', opacity: 0.7, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -300,6 +303,42 @@ export default function PostgradStudentsPage() {
                                                     );
                                                 })}
                                             </div>
+                                        </td>
+                                        <td style={{ padding: '0.8rem 1rem' }}>
+                                            {s.creatorName ? (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    padding: '8px',
+                                                    backgroundColor: 'rgba(255,255,255,0.05)',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    minWidth: '100px'
+                                                }}>
+                                                    <div style={{
+                                                        width: '30px',
+                                                        height: '40px',
+                                                        border: '2px solid var(--secondary-color)',
+                                                        borderRadius: '3px',
+                                                        overflow: 'hidden',
+                                                        boxShadow: '0 0 10px var(--secondary-color)'
+                                                    }}>
+                                                        <img
+                                                            src={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : '/placeholder-user.png'}
+                                                            alt={s.creatorName}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <p style={{ fontSize: '0.65rem', fontWeight: 800, margin: 0, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>{s.creatorPosition}</p>
+                                                        <p style={{ fontSize: '0.6rem', margin: 0, opacity: 0.8 }}>{s.creatorName.split(' ')[0]}</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '0.7rem', opacity: 0.4 }}>Sistema</span>
+                                            )}
                                         </td>
                                         <td style={{ padding: '0.8rem 1rem' }}>
                                             <select

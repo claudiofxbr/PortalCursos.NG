@@ -1,8 +1,11 @@
 package com.portalcursos.ng02.controller;
 
+import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
-import com.portalcursos.ng02.security.services.UserDetailsImpl;
+import com.portalcursos.ng02.service.StorageService;
+import com.portalcursos.ng02.service.UserDetailsImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.portalcursos.ng02.dto.MessageResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -128,9 +132,6 @@ public class PostgradStudentController {
         }
     }
 
-    // PUT /api/v1/postgrad-students/{id}/status - Atualizar status de matrícula
-                .orElse(ResponseEntity.notFound().build());
-    }
 
     // PUT /api/v1/postgrad-students/{id} - Atualização completa do aluno
     @PutMapping("/{id}")
@@ -181,14 +182,8 @@ public class PostgradStudentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         return studentRepository.findById(id).map(student -> {
-            // Limpar arquivos do disco
-            storageService.delete(student.getDiplomaFilePath());
-            storageService.delete(student.getRgCpfFilePath());
-            storageService.delete(student.getProofOfAddressFilePath());
-            storageService.delete(student.getAcademicTranscriptFilePath());
-            storageService.delete(student.getFotoUrl());
             studentRepository.delete(student);
-            return ResponseEntity.ok(new MessageResponse("Aluno removido com sucesso."));
+            return ResponseEntity.ok(new MessageResponse("Aluno de pós-graduação desativado com sucesso (Soft Delete)."));
         }).orElse(ResponseEntity.notFound().build());
     }
 }

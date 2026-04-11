@@ -8,11 +8,16 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 @Entity
 @Table(name = "courses")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
+@Where(clause = "active = true")
 public class Course {
 
     @Id
@@ -68,6 +73,7 @@ public class Course {
     private String creatorName;
     private String creatorPosition;
     private String creatorPhotoUrl;
+    private boolean active = true;
 
     public enum ENivelPosGraduacao {
         LATO_SENSU,

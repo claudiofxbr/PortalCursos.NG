@@ -121,10 +121,11 @@ public class FinancialController {
     @DeleteMapping("/invoices/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
-        return paymentRepository.findById(id).map(payment -> {
-            paymentRepository.delete(payment);
+        if (paymentRepository.existsById(id)) {
+            paymentRepository.deleteById(id);
             return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        }
+        return ResponseEntity.notFound().build();
     }
 
     // DTO estático para a requisição

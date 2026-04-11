@@ -3,7 +3,7 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.StorageService;
-import com.portalcursos.ng02.security.services.UserDetailsImpl;
+import com.portalcursos.ng02.service.UserDetailsImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +48,15 @@ public class StaffMemberController {
 
 
         // --- [AUDITORIA V30.9-SUPREME] ---
+        String fotoPath = null;
+        if (foto3x4File != null && !foto3x4File.isEmpty()) {
+            try {
+                fotoPath = storageService.store(foto3x4File, "staff-photos");
+            } catch (Exception e) {
+                logger.error("Erro ao salvar foto institucional", e);
+            }
+        }
+
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String creatorName = "Sistema";
         String creatorPosition = "Automático";

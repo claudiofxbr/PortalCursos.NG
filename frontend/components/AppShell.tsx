@@ -92,7 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                             { href: '/', label: '📊 Dashboard' },
                             { href: '/academic', label: '🎓 Graduação' },
                             { href: '/academic/postgrad', label: '📋 Pós-Graduação' },
-                            { href: '/courses', label: '📚 Gestão e-MEC 2026' },
+                            { href: '/courses', label: '📚 Gestão do MEC' },
                             { href: '/users', label: '🛡️ Controle Institucional', adminOnly: true },
                             { href: '/roadmap', label: '🚀 Implementação', adminOnly: true },
                             { href: '/finance', label: '💰 Financeiro' },

@@ -7,12 +7,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 @Entity
 @Table(name = "staff_members")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@SQLDelete(sql = "UPDATE staff_members SET active = false WHERE id = ?")
+@Where(clause = "active = true")
 public class StaffMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,6 +40,9 @@ public class StaffMember {
     
     @Column(columnDefinition = "TEXT")
     private String creatorPhotoUrl;
+
+    @Builder.Default
+    private boolean active = true;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")

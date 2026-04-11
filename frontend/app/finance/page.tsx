@@ -22,6 +22,7 @@ export default function FinancePage() {
   const [newCharge, setNewCharge] = useState({
     studentId: '',
     amount: '',
+    dueDate: '',
     category: 'MENSALIDADE',
     secretaryProcessType: 'REGULAR',
     description: ''
@@ -108,10 +109,10 @@ export default function FinancePage() {
   };
 
   const handleDeleteInvoice = async (id: number) => {
-    if (!confirm("⚠️ ATENÇÃO: Deseja realmente excluir esta fatura? Esta ação é irreversível e ficará registrada nos logs de auditoria.")) return;
+    if (!confirm("⚠️ ATENÇÃO: Deseja realmente excluir esta fatura? Esta ação é irreversível e ficará registrada como inativa para auditoria.")) return;
     try {
-      await api.delete(`/finance/invoice/${id}`);
-      alert("✅ Fatura excluída com sucesso.");
+      await api.delete(`/finance/invoices/${id}`);
+      alert("✅ Fatura desativada com sucesso (Soft Delete).");
       fetchFinanceData();
     } catch (err) {
       alert("❌ Erro ao excluir fatura.");
@@ -121,7 +122,7 @@ export default function FinancePage() {
   const handleUpdateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/finance/invoice/${editingInvoice.id}`, editingInvoice);
+      await api.put(`/finance/invoices/${editingInvoice.id}`, editingInvoice);
       alert("✅ Fatura atualizada com sucesso!");
       setEditingInvoice(null);
       fetchFinanceData();

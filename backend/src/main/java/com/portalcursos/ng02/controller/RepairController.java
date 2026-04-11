@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
-import com.portalcursos.ng02.security.services.UserDetailsImpl;
+import com.portalcursos.ng02.service.UserDetailsImpl;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
@@ -172,8 +172,7 @@ public class RepairController {
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         return repairRepository.findById(id).map(ticket -> {
-            storageService.delete(ticket.getMainPhotoUrl());
-            ticket.getPhotoUrls().forEach(storageService::delete);
+            // Soft Delete automatizado via Hibernate @SQLDelete
             repairRepository.delete(ticket);
             return ResponseEntity.ok().build();
         }).orElse(ResponseEntity.notFound().build());

@@ -11,12 +11,17 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 @Entity
 @Table(name = "postgrad_students")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@SQLDelete(sql = "UPDATE postgrad_students SET active = false WHERE id = ?")
+@Where(clause = "active = true")
 public class PostgradStudent {
 
     @Id
@@ -93,4 +98,7 @@ public class PostgradStudent {
             enrollmentStatus = "PENDENTE";
         }
     }
+
+    @Builder.Default
+    private boolean active = true;
 }

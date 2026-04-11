@@ -108,7 +108,7 @@ export default function Home() {
               <Link href="/courses" style={ADMIN_LINK_STYLE}>
                 <div style={{ fontSize: '1.2rem' }}>📚</div>
                 <div>
-                  <div style={{ fontWeight: 700 }}>Gestão e-MEC 2026</div>
+                  <div style={{ fontWeight: 700 }}>Gestão do MEC</div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>Regularização de cursos e IES</div>
                 </div>
               </Link>

@@ -83,6 +83,18 @@ export default function RepairsPage() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm("⚠️ Tem certeza que deseja remover este chamado? Ele será arquivado para auditoria.")) return;
+    
+    try {
+      await api.delete(`/repairs/${id}`);
+      alert("✅ Chamado removido com sucesso!");
+      fetchTickets();
+    } catch (err: any) {
+      alert("❌ Erro ao remover chamado.");
+    }
+  };
+
   const handleUploadPhoto = async (id: number, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -277,8 +289,48 @@ export default function RepairsPage() {
                        )}
                     </div>
                   </div>
-                  <div style={{ marginLeft: '20px', display: 'flex', alignItems: 'flex-start' }}>
-                    <button style={{ background: '#f8f9fa', border: '1px solid #eee', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}>👁️</button>
+                  <div style={{ marginLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+                    {/* Carimbo de Auditoria Premium */}
+                    {ticket.creatorName && (
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        padding: '10px',
+                        backgroundColor: 'rgba(26, 35, 126, 0.03)',
+                        borderRadius: '12px',
+                        border: '1px dashed rgba(26, 35, 126, 0.2)',
+                        minWidth: '100px'
+                      }}>
+                        <div style={{ 
+                          width: '45px', 
+                          height: '60px', 
+                          borderRadius: '4px', 
+                          overflow: 'hidden',
+                          border: '1px solid #fff',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                          marginBottom: '6px'
+                        }}>
+                          {ticket.creatorPhotoUrl ? (
+                            <img src={ticket.creatorPhotoUrl} alt="Auditor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>👤</div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1a237e', textAlign: 'center', lineHeight: 1 }}>{ticket.creatorName.split(' ')[0]}</span>
+                        <span style={{ fontSize: '0.55rem', color: '#666', marginTop: '2px' }}>{ticket.creatorPosition}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                      <button 
+                        onClick={() => handleDelete(ticket.id)}
+                        style={{ background: 'rgba(211, 47, 47, 0.05)', color: '#d32f2f', border: '1px solid rgba(211, 47, 47, 0.2)', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}
+                        title="Remover Chamado"
+                      >
+                        🗑️
+                      </button>
+                      <button style={{ background: '#f8f9fa', border: '1px solid #eee', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}>👁️</button>
+                    </div>
                   </div>
                 </div>
               );

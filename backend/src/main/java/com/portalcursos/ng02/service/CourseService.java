@@ -99,8 +99,10 @@ public class CourseService {
         }
     }
 
+    @Transactional
     public void deleteCourse(UUID id) {
         Course course = getCourseById(id);
+        // Soft Delete automatizado via Hibernate @SQLDelete
         courseRepository.delete(course);
     }
 }

@@ -11,12 +11,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
+
 @Entity
 @Table(name = "payments")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@SQLDelete(sql = "UPDATE payments SET active = false WHERE id = ?")
+@Where(clause = "active = true")
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -113,5 +118,8 @@ public class Payment {
         if (amount == null) return BigDecimal.ZERO;
         return amount.add(getInterestAmount());
     }
+
+    @Builder.Default
+    private boolean active = true;
 }
 
