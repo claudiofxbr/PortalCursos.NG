@@ -6,6 +6,7 @@ import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
 import { AuditStamp } from '@/app/components/AuditStamp';
 import { toast } from 'sonner';
+import { User, FileText, Trash2, X, Eye, GraduationCap, Phone, Mail, MapPin, Calendar, ClipboardCheck } from 'lucide-react';
 
 interface PostgradStudent {
     id: number;
@@ -37,19 +38,29 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function PostgradStudentsPage() {
     const [students, setStudents] = useState<PostgradStudent[]>([]);
-    const [success, setSuccess] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [editingStudent, setEditingStudent] = useState<PostgradStudent | null>(null);
+    const [viewingStudent, setViewingStudent] = useState<PostgradStudent | null>(null);
 
     // Contexto SUPREME
     const postgradService = useAuditCRUD('v1/postgrad-students');
     const isLoading = postgradService.loading;
 
     const loadStudents = async () => {
-        const data = await postgradService.list();
-        setStudents(data);
+        try {
+            const data = await postgradService.list();
+            setStudents(data);
+        } catch (e: any) {
+            toast.error('Erro ao carregar lista de pós-graduandos.');
+        }
     };
 
-    // Form State
+    useEffect(() => { loadStudents(); }, []);
+
+    // Form State (Cadastro)
     const [formData, setFormData] = useState({
         fullName: '', email: '', cpf: '', phone: '',
         dateOfBirth: '', address: '', graduationInstitution: '',
@@ -58,20 +69,6 @@ export default function PostgradStudentsPage() {
     const [files, setFiles] = useState<Record<string, File | null>>({
         diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null, foto3x4File: null
     });
-
-    const loadStudents = async () => {
-        setIsLoading(true);
-        try {
-            const res = await api.get('v1/postgrad-students');
-            setStudents(res.data);
-        } catch (e: any) {
-            setError('Erro ao carregar alunos. Verifique o backend.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => { loadStudents(); }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -129,6 +126,36 @@ export default function PostgradStudentsPage() {
             await postgradService.remove(id);
             loadStudents();
         } catch (e) { /* toast handled by hook */ }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingStudent) return;
+        setSubmitting(true);
+
+        try {
+            const form = new FormData();
+            form.append('fullName', editingStudent.fullName);
+            form.append('email', editingStudent.email);
+            form.append('phone', editingStudent.phone);
+            form.append('desiredCourse', editingStudent.desiredCourse);
+            
+            if (files.foto3x4_update) {
+                form.append('foto3x4File', files.foto3x4_update);
+            }
+
+            await api.put(`v1/postgrad-students/${editingStudent.id}`, form, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            toast.success('Registro atualizado com sucesso!');
+            setEditingStudent(null);
+            loadStudents();
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Erro ao atualizar registro.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -257,40 +284,45 @@ export default function PostgradStudentsPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                             <thead>
                                 <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                                    {['Nome', 'E-mail', 'CPF', 'Curso', 'Documentos', 'Auditoria MEC', 'Status', 'Ações'].map(h => (
-                                        <th key={h} style={{ padding: '0.8rem 1rem', textAlign: 'left', opacity: 0.7, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-                                    ))}
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Candidato</th>
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Curso / Instituição</th>
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Documentos</th>
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Auditoria MEC</th>
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Status</th>
+                                    <th style={{ padding: '1.2rem 1.5rem', textAlign: 'center', opacity: 0.7, fontWeight: 600 }}>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {students.map((s, i) => (
-                                    <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                                        <td style={{ padding: '0.8rem 1rem', fontWeight: 500 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                {(s as any).fotoUrl ? (
-                                                    <img
-                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`}
-                                                        alt={s.fullName}
-                                                        style={{ width: '30px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
-                                                    />
-                                                ) : (
-                                                    <div style={{ width: '30px', height: '40px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                                                        👤
+                                    <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', transition: 'background 0.2s' }}>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                                                <div style={{ width: '45px', height: '60px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
+                                                    {(s as any).fotoUrl ? (
+                                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={20} /></div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.2rem' }}>{s.fullName}</div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                        <Mail size={12} /> {s.email}
                                                     </div>
-                                                )}
-                                                {s.fullName}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.email}</td>
-                                        <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.cpf}</td>
-                                        <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.desiredCourse}</td>
-                                        <td style={{ padding: '0.8rem 1rem' }}>
-                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
+                                            <div style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>{s.desiredCourse}</div>
+                                            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{s.graduationInstitution} ({s.graduationYear})</div>
+                                        </td>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
+                                            <div style={{ display: 'flex', gap: '12px' }}>
                                                 {[
-                                                    { label: '🎓', key: 'diplomaFilePath' },
-                                                    { label: '🪪', key: 'rgCpfFilePath' },
-                                                    { label: '🏠', key: 'proofOfAddressFilePath' },
-                                                    { label: '📄', key: 'academicTranscriptFilePath' },
+                                                    { label: '🎓', key: 'diplomaFilePath', title: 'Diploma' },
+                                                    { label: '🪪', key: 'rgCpfFilePath', title: 'RG/CPF' },
+                                                    { label: '🏠', key: 'proofOfAddressFilePath', title: 'Residência' },
+                                                    { label: '📄', key: 'academicTranscriptFilePath', title: 'Histórico' },
                                                 ].map(d => {
                                                     const path = (s as any)[d.key];
                                                     return (
@@ -299,14 +331,17 @@ export default function PostgradStudentsPage() {
                                                             href={path ? `${BASE_URL}/uploads/${path}` : '#'}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            title={path || 'Não enviado'}
+                                                            title={path ? d.title : 'Não enviado'}
                                                             style={{
-                                                                opacity: path ? 1 : 0.2,
-                                                                fontSize: '1.2rem',
+                                                                opacity: path ? 1 : 0.15,
+                                                                fontSize: '1.3rem',
                                                                 textDecoration: 'none',
                                                                 cursor: path ? 'pointer' : 'default',
-                                                                filter: path ? 'none' : 'grayscale(100%)'
+                                                                filter: path ? 'none' : 'grayscale(100%)',
+                                                                transition: 'transform 0.2s',
                                                             }}
+                                                            onMouseEnter={(e) => path && (e.currentTarget.style.transform = 'scale(1.2)')}
+                                                            onMouseLeave={(e) => path && (e.currentTarget.style.transform = 'scale(1)')}
                                                         >
                                                             {d.label}
                                                         </a>
@@ -314,7 +349,7 @@ export default function PostgradStudentsPage() {
                                                 })}
                                             </div>
                                         </td>
-                                        <td style={{ padding: '0.8rem 1rem' }}>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
@@ -322,24 +357,29 @@ export default function PostgradStudentsPage() {
                                                 date={s.registrationDate}
                                             />
                                         </td>
-                                        <td style={{ padding: '0.8rem 1rem' }}>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <select
                                                 value={s.enrollmentStatus}
                                                 onChange={(e) => handleStatusChange(s.id, e.target.value)}
-                                                style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', backgroundColor: STATUS_COLORS[s.enrollmentStatus] + '33', color: STATUS_COLORS[s.enrollmentStatus], fontWeight: 600, cursor: 'pointer' }}
+                                                style={{ padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: STATUS_COLORS[s.enrollmentStatus] + '15', color: STATUS_COLORS[s.enrollmentStatus], fontWeight: 700, cursor: 'pointer', outline: 'none' }}
                                             >
                                                 <option value="PENDENTE">PENDENTE</option>
                                                 <option value="APROVADO">APROVADO</option>
                                                 <option value="REJEITADO">REJEITADO</option>
                                             </select>
                                         </td>
-                                        <td style={{ padding: '0.8rem 1rem' }}>
-                                            <button
-                                                onClick={() => handleDelete(s.id)}
-                                                style={{ padding: '4px 10px', backgroundColor: 'rgba(231,76,60,0.15)', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
-                                            >
-                                                🗑️ Remover
-                                            </button>
+                                        <td style={{ padding: '1.2rem 1.5rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center' }}>
+                                                <button onClick={() => setViewingStudent(s)} style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} title="Visualizar Ficha">
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button onClick={() => setEditingStudent(s)} style={{ padding: '0.6rem', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.2)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'} title="Editar Cadastro">
+                                                    <FileText size={18} />
+                                                </button>
+                                                <button onClick={() => handleDelete(s.id)} style={{ padding: '0.6rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'} title="Excluir (Soft Delete)">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -348,6 +388,111 @@ export default function PostgradStudentsPage() {
                     </div>
                 )}
             </div>
+            </div>
+
+            {/* MODAL: Edição de Aluno (Procedimento U) */}
+            {editingStudent && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel fade-in" style={{ padding: '2.5rem', width: '100%', maxWidth: '650px', backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>📝 Editar Registro Acadêmico</h3>
+                            <button onClick={() => setEditingStudent(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleUpdate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nome Completo</label>
+                                <input value={editingStudent.fullName} onChange={e => setEditingStudent({...editingStudent, fullName: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>E-mail</label>
+                                <input value={editingStudent.email} onChange={e => setEditingStudent({...editingStudent, email: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Telefone</label>
+                                <input value={editingStudent.phone} onChange={e => setEditingStudent({...editingStudent, phone: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Curso Atual</label>
+                                <input value={editingStudent.desiredCourse} onChange={e => setEditingStudent({...editingStudent, desiredCourse: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nova Foto (Opcional)</label>
+                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0]})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
+                            </div>
+                            <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                <button type="button" onClick={() => setEditingStudent(null)} style={{ padding: '12px 25px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', cursor: 'pointer' }}>Cancelar</button>
+                                <button type="submit" disabled={submitting} style={{ padding: '12px 30px', borderRadius: '10px', background: 'var(--secondary-color)', color: '#000', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+                                    {submitting ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: Ficha Detalhada (Procedimento R) */}
+            {viewingStudent && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '850px', backgroundColor: '#0a0f1e', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                        <div style={{ padding: '2.5rem', display: 'flex', gap: '2.5rem' }}>
+                            <div style={{ width: '220px', flexShrink: 0 }}>
+                                <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
+                                    {viewingStudent.fotoUrl ? (
+                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
+                                    )}
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>Matrícula Pós</div>
+                                    <div style={{ fontWeight: 800, color: 'var(--secondary-color)' }}>{viewingStudent.id.toString().padStart(6, '0')}</div>
+                                </div>
+                            </div>
+
+                            <div style={{ flexGrow: 1 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                                    <div>
+                                        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>{viewingStudent.fullName}</h2>
+                                        <span style={{ padding: '6px 14px', borderRadius: '12px', backgroundColor: (STATUS_COLORS[viewingStudent.enrollmentStatus] || '#7f8c8d') + '20', color: STATUS_COLORS[viewingStudent.enrollmentStatus], fontWeight: 700, fontSize: '0.8rem' }}>
+                                            {viewingStudent.enrollmentStatus}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => setViewingStudent(null)} style={{ padding: '0.8rem', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Acadêmico</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Curso</div><div style={{ fontWeight: 600 }}>{viewingStudent.desiredCourse}</div></div>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Instituição</div><div style={{ fontWeight: 600 }}>{viewingStudent.graduationInstitution}</div></div>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Ano Formação</div><div style={{ fontWeight: 600 }}>{viewingStudent.graduationYear}</div></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Contato</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>E-mail</div><div style={{ fontWeight: 600 }}>{viewingStudent.email}</div></div>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>CPF</div><div style={{ fontWeight: 600 }}>{viewingStudent.cpf}</div></div>
+                                            <div><div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Telefone</div><div style={{ fontWeight: 600 }}>{viewingStudent.phone}</div></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '2.5rem', padding: '1.5rem', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <AuditStamp 
+                                        name={viewingStudent.creatorName || 'Sistema'}
+                                        position={viewingStudent.creatorPosition || 'Administrador'}
+                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${viewingStudent.creatorPhotoUrl}` : undefined}
+                                        date={viewingStudent.registrationDate}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

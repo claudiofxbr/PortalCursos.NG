@@ -1,22 +1,19 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
-import com.portalcursos.ng02.repository.StudentDocumentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.StorageService;
+import com.portalcursos.ng02.service.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.portalcursos.ng02.dto.MessageResponse;
-import com.portalcursos.ng02.service.UserDetailsImpl;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.access.prepost.PreAuthorize;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +26,8 @@ import java.util.UUID;
 public class GradStudentController {
 
     private final StudentRepository studentRepository;
-    private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
-    private final String UPLOAD_DIR = "uploads/grad-students/";
+    private final StaffMemberRepository staffMemberRepository;
+    private final StorageService storageService;
 
     @GetMapping
     public List<Student> getAllGradStudents() {
@@ -78,25 +75,7 @@ public class GradStudentController {
         }
 
         try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
-
-            // --- [AUDITORIA V30.9-SUPREME] ---
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            String creatorName = "Sistema";
-            String creatorPosition = "Automático";
-            String creatorPhotoUrl = null;
-
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> creatorStaff = staffMemberRepository.findByUserId(userDetails.getId());
-                if (creatorStaff.isPresent()) {
-                    creatorName = creatorStaff.get().getFullName();
-                    creatorPosition = creatorStaff.get().getPosition();
-                    creatorPhotoUrl = creatorStaff.get().getFotoUrl();
-                }
-            }
-
-            Student student = Student.builder()
+            Student.StudentBuilder<?, ?> studentBuilder = Student.builder()
                     .registrationNumber("GRAD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                     .fullName(fullName)
                     .email(email)
@@ -114,22 +93,20 @@ public class GradStudentController {
                     .isEstrangeiro(isEstrangeiro)
                     .formaIngresso(formaIngresso)
                     .tipoCota(tipoCota)
-                    .documents(new ArrayList<>())
-                    .creatorName(creatorName)
-                    .creatorPosition(creatorPosition)
-                    .creatorPhotoUrl(creatorPhotoUrl)
-                    .build();
+                    .documents(new ArrayList<>());
+
+            Student student = studentBuilder.build();
+
+            // --- [AUDITORIA V30.9-SUPREME] ---
+            injectAuditStamps(student);
 
             // Persistir primeiro o estudante para gerar ID
             Student savedStudent = studentRepository.save(student);
-            if (savedStudent == null) {
-                return ResponseEntity.internalServerError().body("Erro ao salvar estudante inicial.");
-            }
 
-            // Processar Documentos
+            // Processar Documentos usando o StorageService unificado
             String fotoPath = addDocumentAndReturnPath(savedStudent, foto3x4, EDocumentType.FOTO_3X4);
             if (fotoPath != null) {
-                savedStudent.setFotoUrl("/" + UPLOAD_DIR + fotoPath);
+                savedStudent.setFotoUrl(fotoPath);
             }
             addDocument(savedStudent, rgCpf, EDocumentType.RG);
             addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
@@ -154,7 +131,7 @@ public class GradStudentController {
 
     private String addDocumentAndReturnPath(Student student, MultipartFile file, EDocumentType type) throws IOException {
         if (file != null && !file.isEmpty()) {
-            String fileName = saveFile(file, type.name().toLowerCase());
+            String fileName = storageService.store(file, "grad-students/" + type.name().toLowerCase());
             StudentDocument doc = StudentDocument.builder()
                     .documentType(type)
                     .filePath(fileName)
@@ -200,23 +177,16 @@ public class GradStudentController {
 
             if (foto3x4 != null && !foto3x4.isEmpty()) {
                 try {
-                    String fileName = saveFile(foto3x4, "foto3x4_update");
-                    student.setFotoUrl("/" + UPLOAD_DIR + fileName);
+                    storageService.delete(student.getFotoUrl());
+                    String fileName = storageService.store(foto3x4, "grad-students/perfil");
+                    student.setFotoUrl(fileName);
                 } catch (IOException e) {
                     // Log error
                 }
             }
 
-            // Atualizar auditoria
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
-                    student.setCreatorName(creator.getFullName());
-                    student.setCreatorPosition(creator.getPosition());
-                    student.setCreatorPhotoUrl(creator.getFotoUrl());
-                });
-            }
+            // Atualizar auditoria SUPREME
+            injectAuditStamps(student);
 
             return ResponseEntity.ok(studentRepository.save(student));
         }).orElse(ResponseEntity.notFound().build());
@@ -228,16 +198,8 @@ public class GradStudentController {
         return studentRepository.findById(id).map(student -> {
             student.setEnrollmentStatus(status);
             
-            // Injetar auditoria
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
-                    student.setCreatorName(creator.getFullName());
-                    student.setCreatorPosition(creator.getPosition());
-                    student.setCreatorPhotoUrl(creator.getFotoUrl());
-                });
-            }
+            // Injetar auditoria SUPREME
+            injectAuditStamps(student);
             
             return ResponseEntity.ok(studentRepository.save(student));
         }).orElse(ResponseEntity.notFound().build());
@@ -254,12 +216,18 @@ public class GradStudentController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private String saveFile(MultipartFile file, String prefix) throws IOException {
-        String originalName = file.getOriginalFilename();
-        String cleanName = (originalName != null ? originalName : "unknown").replaceAll("[^a-zA-Z0-9.\\-]", "_");
-        String fileName = prefix + "_" + UUID.randomUUID().toString().substring(0, 8) + "_" + cleanName;
-        Path path = Paths.get(UPLOAD_DIR + fileName);
-        Files.write(path, file.getBytes());
-        return fileName;
+    /**
+     * Auxiliar para injetar os carimbos de auditoria Protocolo V30.9-SUPREME.
+     */
+    private void injectAuditStamps(Student s) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                s.setCreatorName(staff.getFullName());
+                s.setCreatorPosition(staff.getPosition());
+                s.setCreatorPhotoUrl(staff.getFotoUrl());
+            });
+        }
     }
 }

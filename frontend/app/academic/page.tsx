@@ -53,8 +53,9 @@ const STATUS_COLORS: Record<string, string> = {
 export default function GraduationPage() {
     const [students, setStudents] = useState<GradStudent[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    const [showForm, setShowForm] = useState(false);
     const [editingStudent, setEditingStudent] = useState<GradStudent | null>(null);
+    const [viewingStudent, setViewingStudent] = useState<GradStudent | null>(null);
+    const [showForm, setShowForm] = useState(false);
 
     // Contexto SUPREME
     const gradService = useAuditCRUD('v1/grad-students');
@@ -139,13 +140,26 @@ export default function GraduationPage() {
         e.preventDefault();
         if (!editingStudent) return;
         setSubmitting(true);
+        
+        const form = new FormData();
+        form.append('fullName', editingStudent.fullName);
+        form.append('phone', editingStudent.phone);
+        form.append('address', editingStudent.address);
+        form.append('currentCourse', editingStudent.currentCourse);
+        form.append('enrollmentStatus', editingStudent.enrollmentStatus);
+        
+        const photoFile = (files as any).foto3x4_update;
+        if (photoFile) form.append('foto3x4', photoFile);
+
         try {
-            await api.put(`v1/grad-students/${editingStudent.id}`, editingStudent);
-            toast.success('✅ Dados do aluno atualizados!');
+            await api.put(`v1/grad-students/${editingStudent.id}`, form, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success('✅ Registro acadêmico atualizado com sucesso!');
             setEditingStudent(null);
             loadStudents();
         } catch (e: any) {
-            toast.error('Erro ao atualizar dados.');
+            toast.error(e?.response?.data?.message || 'Erro ao atualizar dados.');
         } finally {
             setSubmitting(false);
         }
@@ -426,17 +440,23 @@ export default function GraduationPage() {
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button
+                                                    onClick={() => setViewingStudent(s)}
+                                                    style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                                                    title="Ver Ficha Detalhada"
+                                                >
+                                                    <User size={18} />
+                                                </button>
+                                                <button
                                                     onClick={() => setEditingStudent(s)}
-                                                    style={{ padding: '0.6rem', background: 'transparent', color: 'var(--secondary-color)', border: 'none', cursor: 'pointer', opacity: 0.7 }}
-                                                    className="hover:opacity-100"
+                                                    style={{ padding: '0.6rem', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                                                    title="Editar Prontuário"
                                                 >
                                                     <FileText size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(s.id)}
-                                                    style={{ padding: '0.6rem', background: 'transparent', color: '#e74c3c', border: 'none', cursor: 'pointer', opacity: 0.5 }}
-                                                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                                                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.5'}
+                                                    style={{ padding: '0.6rem', background: 'rgba(231,76,60,0.1)', color: '#e74c3c', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                                                    title="Inativar Matrícula"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -475,6 +495,11 @@ export default function GraduationPage() {
                                 <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Curso Atual</label>
                                 <input value={editingStudent.currentCourse} onChange={e => setEditingStudent({...editingStudent, currentCourse: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
                             </div>
+                             
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nova Foto 3x4 (Opcional)</label>
+                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0]})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
+                            </div>
 
                             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <button type="button" onClick={() => setEditingStudent(null)} style={{ padding: '12px 25px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>Cancelar</button>
@@ -483,6 +508,78 @@ export default function GraduationPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: Visualização Detalhada (Procedimento R) */}
+            {viewingStudent && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '850px', backgroundColor: '#0a0f1e', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                        <div style={{ padding: '2.5rem', display: 'flex', gap: '2.5rem' }}>
+                            {/* Lateral: Foto e Matrícula */}
+                            <div style={{ width: '220px', flexShrink: 0 }}>
+                                <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
+                                    {(viewingStudent as any).fotoUrl ? (
+                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${(viewingStudent as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
+                                    )}
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>Registro Acadêmico</div>
+                                    <div style={{ fontWeight: 800, color: 'var(--secondary-color)', fontSize: '1.2rem' }}>{viewingStudent.registrationNumber}</div>
+                                </div>
+                            </div>
+
+                            {/* Conteúdo Principal */}
+                            <div style={{ flexGrow: 1 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                                    <div>
+                                        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>{viewingStudent.fullName}</h2>
+                                        <span style={{ padding: '6px 14px', borderRadius: '12px', backgroundColor: (STATUS_COLORS[viewingStudent.enrollmentStatus] || '#7f8c8d') + '20', color: STATUS_COLORS[viewingStudent.enrollmentStatus], fontWeight: 700, fontSize: '0.8rem' }}>
+                                            {viewingStudent.enrollmentStatus}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => setViewingStudent(null)} style={{ padding: '0.8rem', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <GraduationCap size={14} /> Acadêmico
+                                        </h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Curso</div><div style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>{viewingStudent.currentCourse}</div></div>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Forma de Ingresso</div><div style={{ fontWeight: 500 }}>{viewingStudent.formaIngresso}</div></div>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Data de Cadastro</div><div style={{ fontWeight: 500 }}>{viewingStudent.registrationDate ? new Date(viewingStudent.registrationDate).toLocaleDateString('pt-BR') : '---'}</div></div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <FileText size={14} /> Pessoal & Contato
+                                        </h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>E-mail</div><div style={{ fontWeight: 500 }}>{viewingStudent.email}</div></div>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>CPF</div><div style={{ fontWeight: 500 }}>{viewingStudent.cpf}</div></div>
+                                            <div><div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Telefone</div><div style={{ fontWeight: 500 }}>{viewingStudent.phone}</div></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Auditoria SUPREME */}
+                                <div style={{ marginTop: '3rem', padding: '1.5rem', borderRadius: '24px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>Auditado por Protocolo V30.9-SUPREME</div>
+                                    <AuditStamp 
+                                        name={viewingStudent.creatorName}
+                                        position={viewingStudent.creatorPosition}
+                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${viewingStudent.creatorPhotoUrl}` : undefined}
+                                        date={viewingStudent.registrationDate}
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -32,25 +32,20 @@ public class PostgradStudentController {
     @Autowired
     private StorageService storageService;
 
-    // GET /api/v1/postgrad-students - Listar todos os alunos
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<PostgradStudent>> listAll() {
         return ResponseEntity.ok(studentRepository.findAll());
     }
 
-    // GET /api/v1/postgrad-students/{id} - Buscar aluno por ID
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> findById(@PathVariable Long id) {
-        Optional<PostgradStudent> student = studentRepository.findById(id);
-        if (student.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(student.get());
+        return studentRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // POST /api/v1/postgrad-students - Cadastrar novo aluno com documentos
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> create(
@@ -69,7 +64,6 @@ public class PostgradStudentController {
             @RequestParam(value = "academicTranscriptFile", required = false) MultipartFile academicTranscriptFile,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        // Verificar duplicidades
         if (studentRepository.existsByEmail(email)) {
             return ResponseEntity.badRequest().body(new MessageResponse("Erro: E-mail já cadastrado no sistema."));
         }
@@ -78,31 +72,7 @@ public class PostgradStudentController {
         }
 
         try {
-            // --- [AUDITORIA V30.9-SUPREME] ---
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            String creatorName = "Sistema";
-            String creatorPosition = "Automático";
-            String creatorPhotoUrl = null;
-
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> creatorStaff = staffMemberRepository.findByUserId(userDetails.getId());
-                if (creatorStaff.isPresent()) {
-                    creatorName = creatorStaff.get().getFullName();
-                    creatorPosition = creatorStaff.get().getPosition();
-                    creatorPhotoUrl = creatorStaff.get().getFotoUrl();
-                }
-            }
-
-            // Fazer upload dos documentos
-            String diplomaPath = storageService.store(diplomaFile, "diplomas");
-            String rgPath = storageService.store(rgCpfFile, "documentos");
-            String addressPath = storageService.store(proofOfAddressFile, "residencia");
-            String transcriptPath = storageService.store(academicTranscriptFile, "historicos");
-            String fotoPath = storageService.store(foto3x4File, "fotos-perfil");
-
-            // Criar e salvar o aluno
-            PostgradStudent student = PostgradStudent.builder()
+            PostgradStudent.PostgradStudentBuilder<?, ?> builder = PostgradStudent.builder()
                     .registrationNumber("POS-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                     .fullName(fullName)
                     .email(email)
@@ -113,18 +83,21 @@ public class PostgradStudentController {
                     .graduationInstitution(graduationInstitution)
                     .graduationYear(graduationYear)
                     .desiredCourse(desiredCourse)
-                    .diplomaFilePath(diplomaPath)
-                    .rgCpfFilePath(rgPath)
-                    .proofOfAddressFilePath(addressPath)
-                    .academicTranscriptFilePath(transcriptPath)
-                    .fotoUrl(fotoPath)
-                    .creatorName(creatorName)
-                    .creatorPosition(creatorPosition)
-                    .creatorPhotoUrl(creatorPhotoUrl)
-                    .build();
+                    .enrollmentStatus("PENDENTE");
 
-            PostgradStudent saved = studentRepository.save(student);
-            return ResponseEntity.ok(saved);
+            PostgradStudent student = builder.build();
+
+            // --- [AUDITORIA V30.9-SUPREME] ---
+            injectAuditStamps(student);
+
+            // Uploads
+            student.setDiplomaFilePath(storageService.store(diplomaFile, "postgrad/diplomas"));
+            student.setRgCpfFilePath(storageService.store(rgCpfFile, "postgrad/documentos"));
+            student.setProofOfAddressFilePath(storageService.store(proofOfAddressFile, "postgrad/residencia"));
+            student.setAcademicTranscriptFilePath(storageService.store(academicTranscriptFile, "postgrad/historicos"));
+            student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
+
+            return ResponseEntity.ok(studentRepository.save(student));
 
         } catch (IOException e) {
             return ResponseEntity.internalServerError()
@@ -132,8 +105,6 @@ public class PostgradStudentController {
         }
     }
 
-
-    // PUT /api/v1/postgrad-students/{id} - Atualização completa do aluno
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> update(
@@ -155,51 +126,29 @@ public class PostgradStudentController {
             if (foto3x4File != null && !foto3x4File.isEmpty()) {
                 try {
                     storageService.delete(student.getFotoUrl());
-                    String fotoPath = storageService.store(foto3x4File, "fotos-perfil");
-                    student.setFotoUrl(fotoPath);
+                    student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
                 } catch (IOException e) {
                     // Log error
                 }
             }
 
-            // Atualizar auditoria
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
-                    student.setCreatorName(creator.getFullName());
-                    student.setCreatorPosition(creator.getPosition());
-                    student.setCreatorPhotoUrl(creator.getFotoUrl());
-                });
-            }
+            // Atualizar auditoria SUPREME
+            injectAuditStamps(student);
 
             return ResponseEntity.ok(studentRepository.save(student));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // PATCH /api/v1/postgrad-students/{id}/status - Atualizar status do aluno (específico)
     @PatchMapping("/{id}/status")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
         return studentRepository.findById(id).map(student -> {
             student.setEnrollmentStatus(status);
-            
-            // Injetar auditoria
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
-                    student.setCreatorName(creator.getFullName());
-                    student.setCreatorPosition(creator.getPosition());
-                    student.setCreatorPhotoUrl(creator.getFotoUrl());
-                });
-            }
-            
+            injectAuditStamps(student);
             return ResponseEntity.ok(studentRepository.save(student));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE /api/v1/postgrad-students/{id} - Remover aluno (Soft Delete)
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> delete(@PathVariable Long id) {
@@ -207,5 +156,17 @@ public class PostgradStudentController {
             studentRepository.delete(student);
             return ResponseEntity.ok(new MessageResponse("Aluno de pós-graduação desativado com sucesso (Soft Delete)."));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private void injectAuditStamps(PostgradStudent s) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                s.setCreatorName(staff.getFullName());
+                s.setCreatorPosition(staff.getPosition());
+                s.setCreatorPhotoUrl(staff.getFotoUrl());
+            });
+        }
     }
 }
