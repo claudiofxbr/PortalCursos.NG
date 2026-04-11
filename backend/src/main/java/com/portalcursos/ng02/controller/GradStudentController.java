@@ -30,8 +30,9 @@ public class GradStudentController {
     private final StorageService storageService;
 
     @GetMapping
-    public List<Student> getAllGradStudents() {
-        return studentRepository.findAll();
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Student>> getAllGradStudents() {
+        return ResponseEntity.ok(studentRepository.findAll());
     }
 
     @PostMapping("/enroll")

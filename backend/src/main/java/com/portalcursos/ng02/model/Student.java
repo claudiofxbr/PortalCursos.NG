@@ -61,7 +61,7 @@ public class Student extends BaseAuditEntity {
     @Enumerated(EnumType.STRING)
     private EQuotaType tipoCota;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private java.util.List<StudentDocument> documents = new java.util.ArrayList<>();
 
