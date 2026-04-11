@@ -14,8 +14,8 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle
-} from "lucide-react";
 import { toast } from "sonner";
+import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 
 interface StudentDocument {
     id: number;
@@ -106,6 +106,10 @@ export default function GraduationPage() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFiles({ ...files, [e.target.name]: e.target.files?.[0] || null });
+    };
+
+    const handlePhotoChange = (file: File | null) => {
+        setFiles(prev => ({ ...prev, foto3x4: file }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -261,9 +265,12 @@ export default function GraduationPage() {
                             <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Checklist de Documentos</h2>
                         </div>
 
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+                            <PhotoUpload3x4 onPhotoSelected={handlePhotoChange} label="Foto Acadêmica 3x4" />
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                             {[
-                                { label: '📸 Foto 3x4 / Selfie', name: 'foto3x4' },
                                 { label: '🪪 RG e CPF (Unificado)', name: 'rgCpf' },
                                 { label: '🏠 Comprovante Residência', name: 'comprovanteResidencia' },
                                 { label: '📜 Certificado Ensino Médio', name: 'certificadoEM' },
@@ -337,8 +344,23 @@ export default function GraduationPage() {
                                 {students.map((s, i) => (
                                     <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                                         <td style={{ padding: '1.5rem 2rem' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '1rem' }}>{s.fullName}</div>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: '0.2rem' }}>{s.registrationNumber}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                {(s as any).fotoUrl ? (
+                                                    <img 
+                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} 
+                                                        alt={s.fullName} 
+                                                        style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ width: '40px', height: '53px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <User size={20} opacity={0.3} />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{s.fullName}</div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: '0.2rem' }}>{s.registrationNumber}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ opacity: 0.8 }}>{s.email}</div>

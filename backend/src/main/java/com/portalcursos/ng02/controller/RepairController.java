@@ -5,6 +5,7 @@ import com.portalcursos.ng02.model.RepairTicket;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RepairRepository;
 import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.service.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +35,9 @@ public class RepairController {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    StorageService storageService;
+
     private RepairTicketDTO convertToDTO(RepairTicket ticket) {
         return RepairTicketDTO.builder()
                 .id(ticket.getId())
@@ -42,6 +46,7 @@ public class RepairController {
                 .location(ticket.getLocation())
                 .status(ticket.getStatus())
                 .photoUrls(ticket.getPhotoUrls())
+                .mainPhotoUrl(ticket.getMainPhotoUrl())
                 .createdAt(ticket.getCreatedAt())
                 .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
                 .build();
@@ -56,19 +61,38 @@ public class RepairController {
                 .collect(Collectors.toList());
     }
 
-    @PostMapping({"", "/tickets"})
+    @PostMapping(value = {"", "/tickets"}, consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
-    public ResponseEntity<?> createTicket(@RequestBody @NonNull RepairTicket ticket) {
-        logger.info("[REPAIR API] Iniciando criação de ticket: {}", ticket.getTitle());
+    public ResponseEntity<?> createTicket(
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("location") String location,
+            @RequestParam(value = "mainPhotoFile", required = false) MultipartFile mainPhotoFile
+    ) {
+        logger.info("[REPAIR API] Iniciando criação de ticket: {}", title);
+        
+        RepairTicket ticket = new RepairTicket();
+        ticket.setTitle(title);
+        ticket.setDescription(description);
+        ticket.setLocation(location);
+        ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         
         Optional<User> user = userRepository.findByUsername(username);
         if (user.isPresent()) {
             ticket.setReportedBy(user.get());
-            logger.info("[REPAIR API] Ticket associado ao usuário: {}", username);
-        } else {
-            logger.warn("[REPAIR API] Usuário autenticado '{}' não encontrado no banco de dados!", username);
+        }
+
+        if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
+            try {
+                String photoPath = storageService.store(mainPhotoFile, "repairs-main");
+                ticket.setMainPhotoUrl(photoPath);
+            } catch (Exception e) {
+                logger.error("[REPAIR API] Erro ao salvar foto principal", e);
+                return ResponseEntity.status(500).body("Erro ao processar imagem.");
+            }
         }
 
         RepairTicket savedTicket = repairRepository.save(ticket);

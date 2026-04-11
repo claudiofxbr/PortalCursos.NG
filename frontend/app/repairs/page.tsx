@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import PhotoUpload3x4 from '../components/PhotoUpload3x4';
 
 // Auxiliar para tradução de status vindo do Backend (EN) para o Usuário (PT-BR)
 const statusMap: Record<string, { label: string, color: string }> = {
@@ -22,6 +23,7 @@ export default function RepairsPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newLoc, setNewLoc] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [mainPhotoFile, setMainPhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -56,17 +58,24 @@ export default function RepairsPage() {
     }
 
     try {
-      await api.post('repairs', { 
-        title: newTitle, 
-        location: newLoc,
-        description: newDesc,
-        status: 'OPEN' // Definido como OPEN por padrão no backend, mas enviado para clareza
+      const formData = new FormData();
+      formData.append('title', newTitle);
+      formData.append('location', newLoc);
+      formData.append('description', newDesc);
+      formData.append('status', 'OPEN');
+      if (mainPhotoFile) {
+        formData.append('mainPhotoFile', mainPhotoFile);
+      }
+
+      await api.post('repairs', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       alert("✅ Chamado registrado com sucesso!");
       setNewTitle('');
       setNewLoc('');
       setNewDesc('');
+      setMainPhotoFile(null);
       fetchTickets();
     } catch (err: any) {
       const msg = err.response?.data?.message || "Falha técnica ao enviar chamado. Verifique sua conexão.";
@@ -164,13 +173,34 @@ export default function RepairsPage() {
                 <div key={ticket.id} className="glass-panel" style={{ 
                   padding: '1.8rem', 
                   display: 'flex', 
-                  justifyContent: 'space-between',
+                  gap: '1.5rem',
                   borderLeft: `8px solid ${statusInfo.color}`,
                   background: 'white',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
                   borderRadius: '16px',
                   transition: 'transform 0.2s ease'
                 }}>
+                  {/* Foto Principal 3x4 */}
+                  <div style={{ 
+                    width: '90px', 
+                    height: '120px', 
+                    borderRadius: '8px', 
+                    backgroundColor: '#f8f9fa',
+                    overflow: 'hidden',
+                    border: '1px solid #eee',
+                    flexShrink: 0
+                  }}>
+                    {ticket.mainPhotoUrl ? (
+                      <img 
+                        src={`${BASE_URL}/v1/storage/${ticket.mainPhotoUrl}`} 
+                        alt="Foto principal" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: 0.1 }}>🛠️</div>
+                    )}
+                  </div>
+
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.8rem' }}>
                       <h4 style={{ margin: 0, color: '#1a237e', fontSize: '1.2rem' }}>{ticket.title}</h4>
@@ -295,6 +325,16 @@ export default function RepairsPage() {
                   placeholder="Ex: Sala 402 - Bloco D" 
                   style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #eee', fontSize: '1rem' }} 
                 />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#333', marginBottom: '10px' }}>EVIDÊNCIA VISUAL (3X4)</label>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <PhotoUpload3x4 
+                    onPhotoSelect={(file) => setMainPhotoFile(file)}
+                    label="Clique para anexar foto principal"
+                  />
+                </div>
               </div>
 
               <div>

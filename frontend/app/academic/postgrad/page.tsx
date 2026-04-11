@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api, { BASE_URL } from '@/app/services/api';
+import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 
 interface PostgradStudent {
     id: number;
@@ -43,7 +44,7 @@ export default function PostgradStudentsPage() {
         graduationYear: '', desiredCourse: '',
     });
     const [files, setFiles] = useState<Record<string, File | null>>({
-        diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null,
+        diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null, foto3x4File: null
     });
 
     const loadStudents = async () => {
@@ -66,6 +67,10 @@ export default function PostgradStudentsPage() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFiles({ ...files, [e.target.name]: e.target.files?.[0] || null });
+    };
+
+    const handlePhotoChange = (file: File | null) => {
+        setFiles(prev => ({ ...prev, foto3x4File: file }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -152,6 +157,10 @@ export default function PostgradStudentsPage() {
             {showForm && (
                 <form onSubmit={handleSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '2rem', marginBottom: '2rem' }}>
                     <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>📝 Dados do Candidato</h2>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+                        <PhotoUpload3x4 onPhotoSelected={handlePhotoChange} label="Foto Acadêmica 3x4" />
+                    </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                         {[
@@ -243,7 +252,22 @@ export default function PostgradStudentsPage() {
                             <tbody>
                                 {students.map((s, i) => (
                                     <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                                        <td style={{ padding: '0.8rem 1rem', fontWeight: 500 }}>{s.fullName}</td>
+                                        <td style={{ padding: '0.8rem 1rem', fontWeight: 500 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                {(s as any).fotoUrl ? (
+                                                    <img 
+                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} 
+                                                        alt={s.fullName} 
+                                                        style={{ width: '30px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
+                                                    />
+                                                ) : (
+                                                    <div style={{ width: '30px', height: '40px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                                                        👤
+                                                    </div>
+                                                )}
+                                                {s.fullName}
+                                            </div>
+                                        </td>
                                         <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.email}</td>
                                         <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.cpf}</td>
                                         <td style={{ padding: '0.8rem 1rem', opacity: 0.8 }}>{s.desiredCourse}</td>

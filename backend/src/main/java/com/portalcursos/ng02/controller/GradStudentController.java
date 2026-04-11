@@ -102,7 +102,10 @@ public class GradStudentController {
             }
 
             // Processar Documentos
-            addDocument(savedStudent, foto3x4, EDocumentType.FOTO_3X4);
+            String fotoPath = addDocumentAndReturnPath(savedStudent, foto3x4, EDocumentType.FOTO_3X4);
+            if (fotoPath != null) {
+                savedStudent.setFotoUrl("/" + UPLOAD_DIR + fotoPath);
+            }
             addDocument(savedStudent, rgCpf, EDocumentType.RG);
             addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
             addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
@@ -124,7 +127,7 @@ public class GradStudentController {
         }
     }
 
-    private void addDocument(Student student, MultipartFile file, EDocumentType type) throws IOException {
+    private String addDocumentAndReturnPath(Student student, MultipartFile file, EDocumentType type) throws IOException {
         if (file != null && !file.isEmpty()) {
             String fileName = saveFile(file, type.name().toLowerCase());
             StudentDocument doc = StudentDocument.builder()
@@ -135,7 +138,13 @@ public class GradStudentController {
                     .student(student)
                     .build();
             student.getDocuments().add(doc);
+            return fileName;
         }
+        return null;
+    }
+
+    private void addDocument(Student student, MultipartFile file, EDocumentType type) throws IOException {
+        addDocumentAndReturnPath(student, file, type);
     }
 
     @GetMapping("/{id}")

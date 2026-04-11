@@ -38,6 +38,9 @@ public class RepairTicket {
     @Column(name = "photo_url")
     private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Lista de URLs das evidências fotográficas
 
+    @Column(name = "main_photo_url")
+    private String mainPhotoUrl;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime resolvedAt;

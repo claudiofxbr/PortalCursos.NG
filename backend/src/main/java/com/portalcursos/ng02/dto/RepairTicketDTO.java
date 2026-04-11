@@ -19,6 +19,7 @@ public class RepairTicketDTO {
     private String location;
     private ERepairStatus status;
     private java.util.List<String> photoUrls;
+    private String mainPhotoUrl;
     private LocalDateTime createdAt;
     private String reportedByFullName;
 }

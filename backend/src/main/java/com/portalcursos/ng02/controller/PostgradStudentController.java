@@ -59,7 +59,8 @@ public class PostgradStudentController {
             @RequestParam(value = "diplomaFile", required = false) MultipartFile diplomaFile,
             @RequestParam(value = "rgCpfFile", required = false) MultipartFile rgCpfFile,
             @RequestParam(value = "proofOfAddressFile", required = false) MultipartFile proofOfAddressFile,
-            @RequestParam(value = "academicTranscriptFile", required = false) MultipartFile academicTranscriptFile
+            @RequestParam(value = "academicTranscriptFile", required = false) MultipartFile academicTranscriptFile,
+            @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
         // Verificar duplicidades
         if (studentRepository.existsByEmail(email)) {
@@ -75,6 +76,7 @@ public class PostgradStudentController {
             String rgPath = storageService.store(rgCpfFile, "documentos");
             String addressPath = storageService.store(proofOfAddressFile, "residencia");
             String transcriptPath = storageService.store(academicTranscriptFile, "historicos");
+            String fotoPath = storageService.store(foto3x4File, "fotos-perfil");
 
             // Criar e salvar o aluno
             PostgradStudent student = PostgradStudent.builder()
@@ -92,6 +94,7 @@ public class PostgradStudentController {
                     .rgCpfFilePath(rgPath)
                     .proofOfAddressFilePath(addressPath)
                     .academicTranscriptFilePath(transcriptPath)
+                    .fotoUrl(fotoPath)
                     .build();
 
             PostgradStudent saved = studentRepository.save(student);
@@ -124,6 +127,7 @@ public class PostgradStudentController {
             storageService.delete(student.getRgCpfFilePath());
             storageService.delete(student.getProofOfAddressFilePath());
             storageService.delete(student.getAcademicTranscriptFilePath());
+            storageService.delete(student.getFotoUrl());
             studentRepository.delete(student);
             return ResponseEntity.ok(new MessageResponse("Aluno removido com sucesso."));
         }).orElse(ResponseEntity.notFound().build());

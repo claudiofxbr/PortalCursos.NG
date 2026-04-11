@@ -59,6 +59,9 @@ public class Student {
     @Builder.Default
     private java.util.List<StudentDocument> documents = new java.util.ArrayList<>();
 
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;

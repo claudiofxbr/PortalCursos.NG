@@ -1,7 +1,7 @@
 -- ==========================================================
 -- SCRIPT DE INICIALIZAÇÃO COMPLETO: PORTALCURSOS.NG
--- PROTOCOLO OMEGA-SUPREME V30.2 (ESTABILIZAÇÃO FINAL)
--- FOCO: PADRONIZAÇÃO DE DADOS E RESILIÊNCIA CLOUD
+-- PROTOCOLO OMEGA-SUPREME V30.4 (PHOTO INTEGRATION)
+-- FOCO: INTEGRAÇÃO DE FOTO 3X4 E PADRONIZAÇÃO DE CADASTROS
 -- ==========================================================
 
 -- 1. EXTENSÕES NECESSÁRIAS
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS students (
     is_estrangeiro BOOLEAN DEFAULT FALSE,
     forma_ingresso VARCHAR(50),
     tipo_cota VARCHAR(50),
+    foto_url VARCHAR(255),
     user_id BIGINT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_cpf_format CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
@@ -81,6 +82,7 @@ CREATE TABLE IF NOT EXISTS postgrad_students (
     rg_cpf_file_path VARCHAR(255),
     proof_of_address_file_path VARCHAR(255),
     academic_transcript_file_path VARCHAR(255),
+    foto_url VARCHAR(255),
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_postgrad_cpf CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
 );
@@ -141,12 +143,24 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6.1 CONTROLE INSTITUCIONAL (PADRONIZADA)
+CREATE TABLE IF NOT EXISTS staff_members (
+    id BIGSERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    position VARCHAR(255) NOT NULL,
+    department VARCHAR(255) NOT NULL,
+    foto_url VARCHAR(255),
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS repair_tickets (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     location VARCHAR(255) NOT NULL,
     status VARCHAR(20) DEFAULT 'OPEN',
+    main_photo_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP,
     reported_by_id BIGINT REFERENCES users(id)
@@ -226,6 +240,6 @@ ANALYZE payments;
 
 -- REGISTRO DE INICIALIZAÇÃO OMEGA
 INSERT INTO deployment_logs (version, status, environment, summary) 
-VALUES ('V30.3-SUPREME', 'SUCCESS', 'SYNC-SCHEMA', 'Admin padrão e sequências sincronizadas para Hostinger.');
+VALUES ('V30.4-PHOTO', 'SUCCESS', 'PHOTO-INTEGRATION', 'Colunas de foto 3x4 adicionadas em todos os módulos.');
 
--- SCRIPT CONCLUÍDO - V30.3-SUPREME
+-- SCRIPT CONCLUÍDO - V30.4-PHOTO-SUPREME

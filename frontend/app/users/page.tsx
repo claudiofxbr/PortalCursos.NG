@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
+import PhotoUpload3x4 from '@/app/components/PhotoUpload3x4';
 
 interface Role {
     id: number;
@@ -14,6 +15,7 @@ interface User {
     username: string;
     email: string;
     roles: Role[];
+    fotoUrl?: string;
 }
 
 const SECTION_STYLE = {
@@ -82,7 +84,8 @@ export default function UsersManagementPage() {
         username: '',
         email: '',
         password: '',
-        roles: ['ALUNO']
+        roles: ['ALUNO'],
+        foto3x4File: null as File | null
     });
 
     const loadUsers = async () => {
@@ -114,9 +117,21 @@ export default function UsersManagementPage() {
         setSuccess(null);
 
         try {
-            await api.post('v1/users', formData);
+            const data = new FormData();
+            data.append('username', formData.username);
+            data.append('email', formData.email);
+            data.append('password', formData.password);
+            data.append('roles', formData.roles.join(','));
+            if (formData.foto3x4File) {
+                data.append('foto3x4File', formData.foto3x4File);
+            }
+
+            await api.post('v1/users', data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
             setSuccess('🚀 Perfil institucional registrado e ativado com sucesso!');
-            setFormData({ username: '', email: '', password: '', roles: ['ALUNO'] });
+            setFormData({ username: '', email: '', password: '', roles: ['ALUNO'], foto3x4File: null });
             setShowForm(false);
             loadUsers();
         } catch (e: any) {
@@ -208,6 +223,13 @@ export default function UsersManagementPage() {
                                 onClick={() => setShowForm(false)}
                                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.5rem', opacity: 0.5 }}
                             >✕</button>
+                        </div>
+
+                        <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+                            <PhotoUpload3x4 
+                                onPhotoSelect={(file) => setFormData({...formData, foto3x4File: file})}
+                                label="Foto do Colaborador (3x4)"
+                            />
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.2rem' }}>
@@ -304,8 +326,31 @@ export default function UsersManagementPage() {
                         ) : users.map(u => (
                             <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
                                 <td style={{ padding: '1.2rem' }}>
-                                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{u.username}</div>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.4 }}>{u.email}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ 
+                                            width: '45px', 
+                                            height: '60px', 
+                                            borderRadius: '4px', 
+                                            backgroundColor: 'rgba(255,255,255,0.05)',
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            flexShrink: 0
+                                        }}>
+                                            {u.fotoUrl ? (
+                                                <img 
+                                                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/v1/storage/${u.fotoUrl}`} 
+                                                    alt={u.username}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', opacity: 0.2 }}>👤</div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 700, fontSize: '1rem' }}>{u.username}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.4 }}>{u.email}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td style={{ padding: '1.2rem' }}>
                                     <div style={{ display: 'flex', gap: '6px' }}>

@@ -27,6 +27,9 @@ public class StaffMember {
     @NotBlank
     private String department;
 
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;

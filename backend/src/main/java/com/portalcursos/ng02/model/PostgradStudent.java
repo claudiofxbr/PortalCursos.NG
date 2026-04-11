@@ -74,6 +74,9 @@ public class PostgradStudent {
     @Column(name = "academic_transcript_file_path")
     private String academicTranscriptFilePath;
 
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
     @Column(name = "registration_date", nullable = false, updatable = false)
     private LocalDateTime registrationDate;
 
