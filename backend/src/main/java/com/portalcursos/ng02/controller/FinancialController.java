@@ -56,7 +56,7 @@ public class FinancialController {
     @PostMapping("/charge")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> createManualCharge(@RequestBody ManualChargeRequest request) {
-        Payment.PaymentBuilder paymentBuilder = Payment.builder()
+        Payment.PaymentBuilder<?, ?> paymentBuilder = Payment.builder()
                 .amount(request.getAmount())
                 .dueDate(request.getDueDate())
                 .status(Payment.EPaymentStatus.PENDING)
