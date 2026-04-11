@@ -51,8 +51,8 @@ const STATUS_COLORS: Record<string, string> = {
 export default function GraduationPage() {
     const [students, setStudents] = useState<GradStudent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [editingStudent, setEditingStudent] = useState<GradStudent | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -135,6 +135,22 @@ export default function GraduationPage() {
             loadStudents();
         } catch (e: any) {
             toast.error(e?.response?.data?.message || 'Erro ao realizar matrícula.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingStudent) return;
+        setSubmitting(true);
+        try {
+            await api.put(`v1/grad-students/${editingStudent.id}`, editingStudent);
+            toast.success('✅ Dados do aluno atualizados!');
+            setEditingStudent(null);
+            loadStudents();
+        } catch (e: any) {
+            toast.error('Erro ao atualizar dados.');
         } finally {
             setSubmitting(false);
         }
@@ -407,15 +423,34 @@ export default function GraduationPage() {
                                             </select>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
-                                            <button
-                                                onClick={() => handleDelete(s.id)}
-                                                style={{ padding: '0.6rem', background: 'transparent', color: '#e74c3c', border: 'none', cursor: 'pointer', opacity: 0.5 }}
-                                                onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                                                onMouseOut={(e) => e.currentTarget.style.opacity = '0.5'}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => setEditingStudent(s)}
+                                                    style={{ padding: '0.6rem', background: 'transparent', color: 'var(--secondary-color)', border: 'none', cursor: 'pointer', opacity: 0.7 }}
+                                                    className="hover:opacity-100"
+                                                >
+                                                    <FileText size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(s.id)}
+                                                    style={{ padding: '0.6rem', background: 'transparent', color: '#e74c3c', border: 'none', cursor: 'pointer', opacity: 0.5 }}
+                                                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.5'}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Audit Visual V30.9-SUPREME */}
+                                            {(s as any).creatorName && (
+                                                <div className="audit-stamp" style={{ marginTop: '0.5rem', transform: 'scale(0.8)', transformOrigin: 'right' }}>
+                                                    <img src={(s as any).creatorPhotoUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d'} alt="Auditor" />
+                                                    <div className="audit-info">
+                                                        <span className="name">Auditado por: {(s as any).creatorName}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -423,6 +458,43 @@ export default function GraduationPage() {
                     </div>
                 )}
             </div>
+            {/* MODAL: Edição de Aluno (CRUD Universal) */}
+            {editingStudent && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel fade-in" style={{ padding: '2.5rem', width: '100%', maxWidth: '650px', backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>📝 Editar Registro Acadêmico</h3>
+                            <button onClick={() => setEditingStudent(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleUpdate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nome Completo</label>
+                                <input value={editingStudent.fullName} onChange={e => setEditingStudent({...editingStudent, fullName: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>E-mail</label>
+                                <input value={editingStudent.email} onChange={e => setEditingStudent({...editingStudent, email: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Telefone</label>
+                                <input value={editingStudent.phone} onChange={e => setEditingStudent({...editingStudent, phone: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Curso Atual</label>
+                                <input value={editingStudent.currentCourse} onChange={e => setEditingStudent({...editingStudent, currentCourse: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#1e293b', border: '1px solid #334155', color: '#fff' }} />
+                            </div>
+
+                            <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                <button type="button" onClick={() => setEditingStudent(null)} style={{ padding: '12px 25px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}>Cancelar</button>
+                                <button type="submit" disabled={submitting} style={{ padding: '12px 30px', borderRadius: '10px', background: 'var(--secondary-color)', color: '#000', fontWeight: 800 }}>
+                                    {submitting ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -77,6 +77,12 @@ public class PostgradStudent {
     @Column(name = "foto_url")
     private String fotoUrl;
 
+    private String creatorName;
+    private String creatorPosition;
+    
+    @Column(columnDefinition = "TEXT")
+    private String creatorPhotoUrl;
+
     @Column(name = "registration_date", nullable = false, updatable = false)
     private LocalDateTime registrationDate;
 

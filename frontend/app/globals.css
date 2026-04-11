@@ -156,3 +156,63 @@ button {
 main > div {
   animation: fadeIn 0.4s ease-out forwards;
 }
+/* Estilos de Auditoria e Identificação V30.9-SUPREME */
+.photo-frame-3x4 {
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  border: 4px solid var(--white);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.photo-3x4 {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.photo-frame-3x4:hover .photo-3x4 {
+  transform: scale(1.05);
+}
+
+.audit-stamp {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.audit-stamp img {
+  width: 32px;
+  height: 42px; /* Proporção 3x4 aproximada */
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--glass-border);
+}
+
+.audit-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.audit-info .name {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.audit-info .position {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}

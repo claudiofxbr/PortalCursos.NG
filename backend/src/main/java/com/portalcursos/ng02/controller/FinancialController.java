@@ -93,6 +93,40 @@ public class FinancialController {
         return ResponseEntity.ok(saved);
     }
 
+    @PutMapping("/invoices/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
+        return paymentRepository.findById(id).map(payment -> {
+            payment.setAmount(request.getAmount());
+            payment.setDueDate(request.getDueDate());
+            payment.setCategory(request.getCategory());
+            payment.setSecretaryProcessType(request.getSecretaryProcessType());
+            payment.setDescription(request.getDescription());
+
+            // Auditoria de quem editou
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
+                com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    payment.setCreatorName(staff.getFullName());
+                    payment.setCreatorPosition(staff.getPosition());
+                    payment.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
+
+            return ResponseEntity.ok(paymentRepository.save(payment));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/invoices/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
+        return paymentRepository.findById(id).map(payment -> {
+            paymentRepository.delete(payment);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // DTO estático para a requisição
     public static class ManualChargeRequest {
         private java.math.BigDecimal amount;

@@ -194,10 +194,10 @@ export default function CoursesPage() {
             {/* Form */}
             {showForm && (
                 <form onSubmit={handleSubmit} style={{ animation: 'fadeIn 0.5s ease' }}>
-                    
+
                     {/* Seção 1: Dados Institucionais */}
                     <div style={SECTION_STYLE}>
-                        <div 
+                        <div
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('institucional')}
                         >
@@ -206,7 +206,7 @@ export default function CoursesPage() {
                             </h3>
                             <span style={{ transform: openSections.institucional ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
                         </div>
-                        
+
                         {openSections.institucional && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
                                 <div>
@@ -246,7 +246,7 @@ export default function CoursesPage() {
 
                     {/* Seção 2: Atos Autorizativos */}
                     <div style={SECTION_STYLE}>
-                        <div 
+                        <div
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('autorizativo')}
                         >
@@ -276,7 +276,7 @@ export default function CoursesPage() {
 
                     {/* Seção 3: Coordenação e Corpo Docente */}
                     <div style={SECTION_STYLE}>
-                        <div 
+                        <div
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('docente')}
                         >
@@ -357,7 +357,7 @@ export default function CoursesPage() {
             {/* List */}
             <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', opacity: 0.8 }}>Cursos Registrados ({courses.length})</h2>
-                
+
                 {isLoading ? (
                     <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>Carregando dados...</div>
                 ) : courses.length === 0 ? (

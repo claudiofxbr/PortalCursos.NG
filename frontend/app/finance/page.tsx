@@ -29,6 +29,9 @@ export default function FinancePage() {
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
+  
+  // Estado para Edição
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
 
   useEffect(() => {
     fetchFinanceData();
@@ -102,6 +105,29 @@ export default function FinancePage() {
       } catch (err) {
           alert("Erro ao processar pagamento.");
       }
+  };
+
+  const handleDeleteInvoice = async (id: number) => {
+    if (!confirm("⚠️ ATENÇÃO: Deseja realmente excluir esta fatura? Esta ação é irreversível e ficará registrada nos logs de auditoria.")) return;
+    try {
+      await api.delete(`/finance/invoice/${id}`);
+      alert("✅ Fatura excluída com sucesso.");
+      fetchFinanceData();
+    } catch (err) {
+      alert("❌ Erro ao excluir fatura.");
+    }
+  };
+
+  const handleUpdateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put(`/finance/invoice/${editingInvoice.id}`, editingInvoice);
+      alert("✅ Fatura atualizada com sucesso!");
+      setEditingInvoice(null);
+      fetchFinanceData();
+    } catch (err) {
+      alert("❌ Erro ao atualizar fatura.");
+    }
   };
 
   return (
@@ -226,11 +252,28 @@ export default function FinancePage() {
                    <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '4px' }}>Vencimento: {new Date(invoice.dueDate).toLocaleDateString('pt-BR')}</p>
                    <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>R$ {invoice.totalAmount?.toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => handleGeneratePayment(invoice.id, 'PIX')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f0faff', color: '#0288d1', fontSize: '0.8rem' }}>Pix</button>
-                    <button onClick={() => handleGeneratePayment(invoice.id, 'BOLETO')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f5f5f5', color: '#333', fontSize: '0.8rem' }}>Boleto</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={() => setEditingInvoice(invoice)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '4px' }}>Editar</button>
+                        <button onClick={() => handleDeleteInvoice(invoice.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#ffebee', color: '#c62828', border: 'none', borderRadius: '4px' }}>Excluir</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleGeneratePayment(invoice.id, 'PIX')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f0faff', color: '#0288d1', fontSize: '0.8rem' }}>Pix</button>
+                        <button onClick={() => handleGeneratePayment(invoice.id, 'BOLETO')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f5f5f5', color: '#333', fontSize: '0.8rem' }}>Boleto</button>
+                    </div>
                 </div>
             </div>
+
+            {/* Selo de Auditoria V30.9-SUPREME */}
+            {invoice.creatorName && (
+                <div className="audit-stamp" style={{ marginTop: '1rem' }}>
+                    <img src={invoice.creatorPhotoUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d'} alt="Auditor" />
+                    <div className="audit-info">
+                        <span className="name">{invoice.creatorName}</span>
+                        <span className="position">{invoice.creatorPosition}</span>
+                    </div>
+                </div>
+            )}
           </div>
         )) : (
           <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: '#999' }}>
@@ -440,6 +483,50 @@ export default function FinancePage() {
                    )}
                    <button onClick={() => setShowPaymentModal(null)} style={{ border: 'none', background: 'none', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>Fechar</button>
                </div>
+          </div>
+      )}
+
+      {/* MODAL: Edição de Fatura (CRUD Universal) */}
+      {editingInvoice && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div className="glass-panel fade-in" style={{ padding: '2.5rem', width: '100%', maxWidth: '500px', backgroundColor: 'white' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>📂 Editar Fatura #{editingInvoice.id}</h3>
+                      <button onClick={() => setEditingInvoice(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999' }}>&times;</button>
+                  </div>
+
+                  <form onSubmit={handleUpdateInvoice}>
+                      <div style={{ marginBottom: '1rem' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Valor (R$)</label>
+                          <input type="number" step="0.01" value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                      </div>
+
+                      <div style={{ marginBottom: '1rem' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Data de Vencimento</label>
+                          <input type="date" value={editingInvoice.dueDate.split('T')[0]} onChange={e => setEditingInvoice({...editingInvoice, dueDate: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                      </div>
+
+                      <div style={{ marginBottom: '1rem' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Status</label>
+                          <select value={editingInvoice.status} onChange={e => setEditingInvoice({...editingInvoice, status: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff' }}>
+                              <option value="PENDING">Pendente</option>
+                              <option value="PAID">Pago</option>
+                              <option value="OVERDUE">Atrasado</option>
+                              <option value="CANCELLED">Cancelado</option>
+                          </select>
+                      </div>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Descrição</label>
+                          <textarea rows={3} value={editingInvoice.description} onChange={e => setEditingInvoice({...editingInvoice, description: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                          <button type="button" onClick={() => setEditingInvoice(null)} style={{ padding: '12px 20px', borderRadius: '8px', background: '#eee', border: 'none' }}>Cancelar</button>
+                          <button type="submit" className="btn-primary" style={{ padding: '12px 25px', borderRadius: '8px' }}>Salvar Alterações</button>
+                      </div>
+                  </form>
+              </div>
           </div>
       )}
     </div>

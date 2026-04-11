@@ -13,6 +13,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.security.services.UserDetailsImpl;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
@@ -36,6 +39,9 @@ public class RepairController {
     UserRepository userRepository;
 
     @Autowired
+    StaffMemberRepository staffMemberRepository;
+
+    @Autowired
     StorageService storageService;
 
     private RepairTicketDTO convertToDTO(RepairTicket ticket) {
@@ -49,6 +55,9 @@ public class RepairController {
                 .mainPhotoUrl(ticket.getMainPhotoUrl())
                 .createdAt(ticket.getCreatedAt())
                 .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
+                .creatorName(ticket.getCreatorName())
+                .creatorPosition(ticket.getCreatorPosition())
+                .creatorPhotoUrl(ticket.getCreatorPhotoUrl())
                 .build();
     }
 
@@ -95,6 +104,18 @@ public class RepairController {
             }
         }
 
+        // --- [AUDITORIA V30.9-SUPREME] ---
+        // Quem está gerando a cobrança (ou ticket) é o funcionário logado
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                ticket.setCreatorName(staff.getFullName());
+                ticket.setCreatorPosition(staff.getPosition());
+                ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+            });
+        }
+
         RepairTicket savedTicket = repairRepository.save(ticket);
         logger.info("[REPAIR API] Ticket ID {} salvo com sucesso.", savedTicket.getId());
         return ResponseEntity.ok(convertToDTO(savedTicket));
@@ -124,5 +145,37 @@ public class RepairController {
         
         logger.error("[REPAIR API] Tentativa de upload para ticket inexistente: {}", id);
         return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
+        return repairRepository.findById(id).map(ticket -> {
+            ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
+            
+            // Auditoria de quem alterou o status
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    ticket.setCreatorName(staff.getFullName());
+                    ticket.setCreatorPosition(staff.getPosition());
+                    ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
+
+            return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
+        return repairRepository.findById(id).map(ticket -> {
+            storageService.delete(ticket.getMainPhotoUrl());
+            ticket.getPhotoUrls().forEach(storageService::delete);
+            repairRepository.delete(ticket);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

@@ -49,6 +49,12 @@ public class RepairTicket {
     @JoinColumn(name = "reported_by_id", referencedColumnName = "id")
     private User reportedBy;
 
+    private String creatorName;
+    private String creatorPosition;
+    
+    @Column(columnDefinition = "TEXT")
+    private String creatorPhotoUrl;
+
     public enum ERepairStatus {
         OPEN, IN_PROGRESS, RESOLVED, CANCELLED
     }

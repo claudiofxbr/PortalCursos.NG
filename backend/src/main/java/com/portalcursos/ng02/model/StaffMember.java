@@ -30,6 +30,12 @@ public class StaffMember {
     @Column(name = "foto_url")
     private String fotoUrl;
 
+    private String creatorName;
+    private String creatorPosition;
+    
+    @Column(columnDefinition = "TEXT")
+    private String creatorPhotoUrl;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;

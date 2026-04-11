@@ -22,4 +22,9 @@ public class RepairTicketDTO {
     private String mainPhotoUrl;
     private LocalDateTime createdAt;
     private String reportedByFullName;
+    
+    // --- Metadados de Auditoria V30.9-SUPREME ---
+    private String creatorName;
+    private String creatorPosition;
+    private String creatorPhotoUrl;
 }

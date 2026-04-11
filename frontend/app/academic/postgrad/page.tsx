@@ -255,9 +255,9 @@ export default function PostgradStudentsPage() {
                                         <td style={{ padding: '0.8rem 1rem', fontWeight: 500 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 {(s as any).fotoUrl ? (
-                                                    <img 
-                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} 
-                                                        alt={s.fullName} 
+                                                    <img
+                                                        src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`}
+                                                        alt={s.fullName}
                                                         style={{ width: '30px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
                                                     />
                                                 ) : (

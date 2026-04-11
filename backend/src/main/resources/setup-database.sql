@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS students (
     forma_ingresso VARCHAR(50),
     tipo_cota VARCHAR(50),
     foto_url VARCHAR(255),
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_cpf_format CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
@@ -83,6 +86,9 @@ CREATE TABLE IF NOT EXISTS postgrad_students (
     proof_of_address_file_path VARCHAR(255),
     academic_transcript_file_path VARCHAR(255),
     foto_url VARCHAR(255),
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT,
     registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_postgrad_cpf CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
 );
@@ -97,7 +103,7 @@ CREATE TABLE IF NOT EXISTS student_documents (
     student_id BIGINT REFERENCES students(id)
 );
 
--- 5. TABELA DE CURSOS (SISTEMA E-MEC 2026 - UUID MANTIDO PARA CURSOS)
+-- 5. TABELA DE CURSOS (GESTÃO DO MEC - UUID MANTIDO PARA CURSOS)
 CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     codigo_ies VARCHAR(255) NOT NULL,
@@ -157,6 +163,9 @@ CREATE TABLE IF NOT EXISTS staff_members (
     position VARCHAR(255) NOT NULL,
     department VARCHAR(255) NOT NULL,
     foto_url VARCHAR(255),
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -170,7 +179,10 @@ CREATE TABLE IF NOT EXISTS repair_tickets (
     main_photo_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP,
-    reported_by_id BIGINT REFERENCES users(id)
+    reported_by_id BIGINT REFERENCES users(id),
+    creator_name VARCHAR(255),
+    creator_position VARCHAR(255),
+    creator_photo_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS repair_photos (
@@ -245,8 +257,8 @@ ANALYZE postgrad_students;
 ANALYZE courses;
 ANALYZE payments;
 
--- REGISTRO DE INICIALIZAÇÃO OMEGA
+-- REGISTRO DE INICIALIZAÇÃO OMEGA V30.9
 INSERT INTO deployment_logs (version, status, environment, summary) 
-VALUES ('V30.4-PHOTO', 'SUCCESS', 'PHOTO-INTEGRATION', 'Colunas de foto 3x4 adicionadas em todos os módulos.');
+VALUES ('V30.9-SUPREME', 'SUCCESS', 'UNIVERSAL-CRUD', 'Protocolo de Auditoria Universal e CRUD implementado em todos os módulos.');
 
--- SCRIPT CONCLUÍDO - V30.4-PHOTO-SUPREME
+-- SCRIPT CONCLUÍDO - V30.9-SUPREME

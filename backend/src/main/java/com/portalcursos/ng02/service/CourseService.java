@@ -75,10 +75,10 @@ public class CourseService {
     }
 
     private void validateMECRules(Course course) {
-        // 1. Validação de Carga Horária (MEC 2026 - Lato Sensu)
+        // 1. Validação de Carga Horária (Gestão do MEC - Lato Sensu)
         if (course.getNivelPosGraduacao() == Course.ENivelPosGraduacao.LATO_SENSU) {
             if (course.getCargaHorariaTotal() == null || course.getCargaHorariaTotal() < 360) {
-                throw new RuntimeException("Regra MEC 2026: Cursos Lato Sensu devem ter no mínimo 360 horas.");
+                throw new RuntimeException("Regra Gestão do MEC: Cursos Lato Sensu devem ter no mínimo 360 horas.");
             }
         }
 

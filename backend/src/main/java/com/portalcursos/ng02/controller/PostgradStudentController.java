@@ -1,9 +1,9 @@
 package com.portalcursos.ng02.controller;
 
-import com.portalcursos.ng02.model.PostgradStudent;
-import com.portalcursos.ng02.dto.MessageResponse;
-import com.portalcursos.ng02.repository.PostgradStudentRepository;
-import com.portalcursos.ng02.service.StorageService;
+import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.security.services.UserDetailsImpl;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +21,9 @@ public class PostgradStudentController {
 
     @Autowired
     private PostgradStudentRepository studentRepository;
+
+    @Autowired
+    private StaffMemberRepository staffMemberRepository;
 
     @Autowired
     private StorageService storageService;
@@ -71,6 +74,22 @@ public class PostgradStudentController {
         }
 
         try {
+            // --- [AUDITORIA V30.9-SUPREME] ---
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String creatorName = "Sistema";
+            String creatorPosition = "Automático";
+            String creatorPhotoUrl = null;
+
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                Optional<StaffMember> creatorStaff = staffMemberRepository.findByUserId(userDetails.getId());
+                if (creatorStaff.isPresent()) {
+                    creatorName = creatorStaff.get().getFullName();
+                    creatorPosition = creatorStaff.get().getPosition();
+                    creatorPhotoUrl = creatorStaff.get().getFotoUrl();
+                }
+            }
+
             // Fazer upload dos documentos
             String diplomaPath = storageService.store(diplomaFile, "diplomas");
             String rgPath = storageService.store(rgCpfFile, "documentos");
@@ -95,6 +114,9 @@ public class PostgradStudentController {
                     .proofOfAddressFilePath(addressPath)
                     .academicTranscriptFilePath(transcriptPath)
                     .fotoUrl(fotoPath)
+                    .creatorName(creatorName)
+                    .creatorPosition(creatorPosition)
+                    .creatorPhotoUrl(creatorPhotoUrl)
                     .build();
 
             PostgradStudent saved = studentRepository.save(student);
@@ -107,13 +129,50 @@ public class PostgradStudentController {
     }
 
     // PUT /api/v1/postgrad-students/{id}/status - Atualizar status de matrícula
-    @PutMapping("/{id}/status")
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // PUT /api/v1/postgrad-students/{id} - Atualização completa do aluno
+    @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @RequestParam("fullName") String fullName,
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "address", required = false) String address,
+            @RequestParam("desiredCourse") String desiredCourse,
+            @RequestParam("enrollmentStatus") String enrollmentStatus,
+            @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
+    ) {
         return studentRepository.findById(id).map(student -> {
-            student.setEnrollmentStatus(status);
-            studentRepository.save(student);
-            return ResponseEntity.ok(student);
+            student.setFullName(fullName);
+            student.setPhone(phone);
+            student.setAddress(address);
+            student.setDesiredCourse(desiredCourse);
+            student.setEnrollmentStatus(enrollmentStatus);
+
+            if (foto3x4File != null && !foto3x4File.isEmpty()) {
+                try {
+                    storageService.delete(student.getFotoUrl());
+                    String fotoPath = storageService.store(foto3x4File, "fotos-perfil");
+                    student.setFotoUrl(fotoPath);
+                } catch (IOException e) {
+                    // Log error
+                }
+            }
+
+            // Atualizar auditoria
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
+                    student.setCreatorName(creator.getFullName());
+                    student.setCreatorPosition(creator.getPosition());
+                    student.setCreatorPhotoUrl(creator.getFotoUrl());
+                });
+            }
+
+            return ResponseEntity.ok(studentRepository.save(student));
         }).orElse(ResponseEntity.notFound().build());
     }
 

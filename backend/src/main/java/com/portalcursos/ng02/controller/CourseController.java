@@ -59,6 +59,17 @@ public class CourseController {
     @PutMapping("/{id}")
     public ResponseEntity<Course> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
         try {
+            // Injeção de Auditoria Visual (Rastreabilidade de Emissor V30.9-SUPREME)
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    courseDetails.setCreatorName(staff.getFullName());
+                    courseDetails.setCreatorPosition(staff.getPosition());
+                    courseDetails.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
+
             Course updatedCourse = courseService.updateCourse(id, courseDetails);
             return ResponseEntity.ok(updatedCourse);
         } catch (RuntimeException e) {

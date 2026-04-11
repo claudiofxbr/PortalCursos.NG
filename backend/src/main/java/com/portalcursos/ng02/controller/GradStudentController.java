@@ -8,10 +8,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.portalcursos.ng02.security.services.UserDetailsImpl;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class GradStudentController {
 
     private final StudentRepository studentRepository;
+    private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
     private final String UPLOAD_DIR = "uploads/grad-students/";
 
     @GetMapping
@@ -74,6 +78,22 @@ public class GradStudentController {
         try {
             Files.createDirectories(Paths.get(UPLOAD_DIR));
 
+            // --- [AUDITORIA V30.9-SUPREME] ---
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String creatorName = "Sistema";
+            String creatorPosition = "Automático";
+            String creatorPhotoUrl = null;
+
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                Optional<StaffMember> creatorStaff = staffMemberRepository.findByUserId(userDetails.getId());
+                if (creatorStaff.isPresent()) {
+                    creatorName = creatorStaff.get().getFullName();
+                    creatorPosition = creatorStaff.get().getPosition();
+                    creatorPhotoUrl = creatorStaff.get().getFotoUrl();
+                }
+            }
+
             Student student = Student.builder()
                     .registrationNumber("GRAD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                     .fullName(fullName)
@@ -93,6 +113,9 @@ public class GradStudentController {
                     .formaIngresso(formaIngresso)
                     .tipoCota(tipoCota)
                     .documents(new ArrayList<>())
+                    .creatorName(creatorName)
+                    .creatorPosition(creatorPosition)
+                    .creatorPhotoUrl(creatorPhotoUrl)
                     .build();
 
             // Persistir primeiro o estudante para gerar ID
@@ -155,16 +178,49 @@ public class GradStudentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
-        if (id == null) return ResponseEntity.badRequest().build();
-        return studentRepository.findById(id)
-                .map(student -> {
-                    student.setEnrollmentStatus(status.toUpperCase());
-                    Student updated = studentRepository.save(student);
-                    return ResponseEntity.ok(updated);
-                })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    public ResponseEntity<?> updateStudent(
+            @PathVariable Long id,
+            @RequestParam("fullName") String fullName,
+            @RequestParam("phone") String phone,
+            @RequestParam("address") String address,
+            @RequestParam("currentCourse") String currentCourse,
+            @RequestParam("enrollmentStatus") String enrollmentStatus,
+            @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
+    ) {
+        return studentRepository.findById(id).map(student -> {
+            student.setFullName(fullName);
+            student.setPhone(phone);
+            student.setAddress(address);
+            student.setCurrentCourse(currentCourse);
+            student.setEnrollmentStatus(enrollmentStatus);
+
+            if (foto3x4 != null && !foto3x4.isEmpty()) {
+                try {
+                    String fileName = saveFile(foto3x4, "foto3x4_update");
+                    student.setFotoUrl("/" + UPLOAD_DIR + fileName);
+                } catch (IOException e) {
+                    // Log error
+                }
+            }
+
+            // Atualizar auditoria
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
+                    student.setCreatorName(creator.getFullName());
+                    student.setCreatorPosition(creator.getPosition());
+                    student.setCreatorPhotoUrl(creator.getFotoUrl());
+                });
+            }
+
+            return ResponseEntity.ok(studentRepository.save(student));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
