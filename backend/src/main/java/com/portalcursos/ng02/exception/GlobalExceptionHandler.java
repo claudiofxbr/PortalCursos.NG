@@ -75,6 +75,20 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<?> handleDatabaseException(org.springframework.dao.DataAccessException ex, WebRequest request) {
+        logger.error("[DATABASE ERROR] Falha de persistência: ", ex);
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", new Date());
+        body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
+        body.put("error", "Service Unavailable");
+        body.put("message", "O banco de dados está ocupado ou indisponível. Tente novamente em instantes.");
+        body.put("path", request.getDescription(false));
+        body.put("hint", "Protocolo V30.0-SUPREME detetou latência na Cloud Neon.");
+
+        return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
         logger.error("[SERVER ERROR] Unhandled Exception: ", ex);
@@ -82,7 +96,7 @@ public class GlobalExceptionHandler {
         body.put("timestamp", new Date());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Internal Server Error");
-        body.put("message", ex.getMessage());
+        body.put("message", "Erro inesperado. Protocolo V30.0-SUPREME registrou a ocorrência.");
         body.put("path", request.getDescription(false));
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);

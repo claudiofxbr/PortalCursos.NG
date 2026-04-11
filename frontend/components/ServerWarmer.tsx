@@ -4,26 +4,29 @@ import { useEffect } from 'react';
 import { checkServerHealth } from '../app/services/api';
 
 /**
- * ServerWarmer Component - SIGMA V18.1
- * Realiza um ping silencioso e unificado para o backend.
- * utiliza a URL centralizada do motor de API para evitar discrepâncias.
+ * ServerWarmer Component - V30.0-SUPREME
+ * Realiza o despertar inteligente da infraestrutura Cloud (Render + Neon).
+ * Sincronizado com o Motor de Conectividade do sistema.
  */
 export default function ServerWarmer() {
     useEffect(() => {
-        const warmServer = async () => {
+        const warmInfrastructure = async () => {
             try {
-                console.log(`[WARMER-V18.1] Iniciando aquecimento unificado...`);
-                await checkServerHealth();
-                console.info('[WARMER-V18.1] Canal estabelecido.');
+                console.log(`[V30.0-SUPREME] Iniciando sincronização de infraestrutura...`);
+                const health = await checkServerHealth();
+                console.info('[V30.0-SUPREME] Canal de dados estabelecido com sucesso.');
+                
+                // Dispara evento de sucesso para componentes interessados
+                window.dispatchEvent(new CustomEvent('SUPREME_HEALTH', { detail: { isHealthy: true, isBooting: false, ...health } }));
             } catch (error) {
-                console.warn('[WARMER-V18.1] Backend em Cold Start. Despertar assistido em curso.');
+                console.warn('[V30.0-SUPREME] Infraestrutura em Cold Start. Motor de resiliência ativo.');
             }
         };
 
-        // Delay de 1.5s para priorizar o carregamento dos assets da landing page
-        const timer = setTimeout(warmServer, 1500);
+        // Delay estratégico para não competir com a hidratação inicial do Next.js
+        const timer = setTimeout(warmInfrastructure, 2000);
         return () => clearTimeout(timer);
     }, []);
 
-    return null; // Componente de infraestrutura (invisível)
+    return null; // Componente de infraestrutura silencioso
 }

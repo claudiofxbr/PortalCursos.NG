@@ -33,7 +33,11 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         String servletPath = request.getServletPath();
         String method = request.getMethod();
         
-        try {
+        // Protocolo V30.0-SUPREME: Bypass de logout para evitar travamentos de 401
+        if ("/api/auth/signout".equals(servletPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
             String jwt = parseJwt(request);
             if (jwt != null) {
                 if (jwtUtils.validateJwtToken(jwt)) {

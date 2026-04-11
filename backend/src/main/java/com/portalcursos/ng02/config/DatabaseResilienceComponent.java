@@ -39,20 +39,32 @@ public class DatabaseResilienceComponent {
 
     @PostConstruct
     public void startHealthCheck() {
-        logger.info("[V22-ULTRA] Iniciando Monitor de Resiliência REATIVO (Non-Blocking)...");
-        new Thread(this::checkDatabaseConnection, "Neon-Health-Monitor").start();
+        logger.info("[V30.0-SUPREME] Iniciando Monitor de Resiliência de Dados...");
+        new Thread(this::checkDatabaseConnection, "Neon-Supreme-Monitor").start();
     }
 
     private void checkDatabaseConnection() {
         int attempt = 1;
         while (attempt <= MAX_ATTEMPTS && !databaseReady) {
+            String maskedUrl = dbUrl.replaceAll(":[^/@]+@", ":****@");
+            logger.info("[V30.0-SUPREME] Tentativa {}/{} - Verificando conexão: {}", attempt, MAX_ATTEMPTS, maskedUrl);
+            
             try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword)) {
                 if (connection.isValid(5)) {
-                    logger.info("[V22-ULTRA] SUCESSO: Conexão com o banco estabelecida na tentativa {}!", attempt);
-                    databaseReady = true;
+                    // Deep Health Check: Verificar se pelo menos a tabela 'users' existe
+                    try (var statement = connection.createStatement()) {
+                        statement.executeQuery("SELECT 1 FROM users LIMIT 1");
+                        logger.info("[V30.0-SUPREME] SUCESSO: Banco Neon e Esquema validados na tentativa {}!", attempt);
+                        databaseReady = true;
+                    } catch (SQLException schemaEx) {
+                        logger.warn("[V30.0-SUPREME] Conectado, mas esquema (tabelas) ainda não detectado. Aguardando inicialização SQL...");
+                    }
                 }
             } catch (SQLException e) {
-                logger.warn("[V22-ULTRA] Aguardando Banco Neon (Tentativa {}/{})...", attempt, MAX_ATTEMPTS);
+                logger.warn("[V30.0-SUPREME] Infraestrutura Cloud em aquecimento (Cold Start). Erro: {}", e.getMessage());
+            }
+
+            if (!databaseReady) {
                 try {
                     Thread.sleep(SLEEP_TIME);
                 } catch (InterruptedException ie) {
@@ -64,7 +76,7 @@ public class DatabaseResilienceComponent {
         }
 
         if (!databaseReady) {
-            logger.error("[V22-ULTRA] CRÍTICO: Banco de dados inacessível após {}s.", (MAX_ATTEMPTS * SLEEP_TIME / 1000));
+            logger.error("[V30.0-SUPREME] CRÍTICO: Banco de dados ou esquema inacessível após {}s.", (MAX_ATTEMPTS * SLEEP_TIME / 1000));
         }
     }
 }

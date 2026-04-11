@@ -19,11 +19,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>
-        <InfrastructureIndicator />
-        <ServerWarmer />
+      <body suppressHydrationWarning={true}>
         <ThemeProvider>
           <AuthProvider>
+            <ServerWarmer />
+            <InfrastructureIndicator />
             <AuthModal />
             <AppShell>
               {children}

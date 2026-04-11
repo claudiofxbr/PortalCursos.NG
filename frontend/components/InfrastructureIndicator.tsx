@@ -4,48 +4,61 @@ import { useEffect, useState } from 'react';
 import { V_BUILD_ID } from '../app/services/api';
 
 /**
- * Protocolo V20.0-ULTRA: Infraestrutura Ativa & Resiliente
- * Fornece feedback visual premium (Glassmorphism) durante boot de serviços cloud.
+ * Protocolo V30.0-SUPREME: Dashboard de Saúde de Infraestrutura
+ * Monitora o estado síncrono da nuvem e fornece feedback não-intrusivo.
  */
 export default function InfrastructureIndicator() {
   const [status, setStatus] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Sincronização de BUILD_ID (Silenciosa)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('PC_ULTRA_V', V_BUILD_ID);
-    }
-
-    // Listener para o Motor ULTRA
-    const handleUltraBooting = (e: any) => {
+    setMounted(true);
+    
+    const handleSupremeBooting = (e: any) => {
       setStatus(e.detail);
     };
 
-    const handleHealthSuccess = () => {
-        setStatus(null); // Esconde a barra ao normalizar
+    const handleSupremeHealth = (e: any) => {
+        // Se estiver saudável, limpamos o status após um pequeno delay para suavidade
+        if (e.detail.isHealthy && !e.detail.isBooting) {
+            setTimeout(() => setStatus(null), 3000);
+        } else {
+            setStatus(e.detail);
+        }
     };
 
-    window.addEventListener('ULTRA_BOOTING' as any, handleUltraBooting);
-    window.addEventListener('HEALTH_SUCCESS' as any, handleHealthSuccess);
+    window.addEventListener('SUPREME_BOOTING' as any, handleSupremeBooting);
+    window.addEventListener('SUPREME_HEALTH' as any, handleSupremeHealth);
     
     return () => {
-      window.removeEventListener('ULTRA_BOOTING' as any, handleUltraBooting);
-      window.removeEventListener('HEALTH_SUCCESS' as any, handleHealthSuccess);
+      window.removeEventListener('SUPREME_BOOTING' as any, handleSupremeBooting);
+      window.removeEventListener('SUPREME_HEALTH' as any, handleSupremeHealth);
     };
   }, []);
 
-  if (!status || !status.isBooting) return null;
+  if (!mounted || !status) return null;
+  if (!status.isBooting && status.isHealthy) return null;
 
   return (
     <div style={CONTAINER_STYLE}>
       <div style={GLASS_STYLE}>
-        <div style={DOT_STYLE} />
-        <span style={TEXT_STYLE}>
-          Infraestrutura em Nuvem: <strong>Despertando</strong> (Tentativa {status.attempt}/10)
-        </span>
-        <div style={PROGRESS_CONTAINER}>
-            <div style={{ ...PROGRESS_BAR, width: `${(status.attempt / 10) * 100}%` }} />
+        <div style={{...DOT_STYLE, backgroundColor: status.isBooting ? '#fbbf24' : '#10b981'}} />
+        <div style={CONTENT_STYLE}>
+            <span style={TITLE_STYLE}>SUPREME INFRASTRUCTURE GUARD</span>
+            <span style={TEXT_STYLE}>
+              {status.isBooting 
+                ? `Despertando Cloud (Tentativa ${status.attempt}/12)...` 
+                : 'Sincronizado com Neon PostgreSQL'}
+            </span>
+            <div style={PROGRESS_CONTAINER}>
+                <div style={{ 
+                    ...PROGRESS_BAR, 
+                    width: `${(status.attempt / 12) * 100}%`,
+                    background: status.isBooting ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : '#10b981'
+                }} />
+            </div>
         </div>
+        <span style={VERSION_STYLE}>{V_BUILD_ID}</span>
       </div>
     </div>
   );
@@ -53,54 +66,73 @@ export default function InfrastructureIndicator() {
 
 const CONTAINER_STYLE: React.CSSProperties = {
   position: 'fixed',
-  top: '20px',
-  left: '50%',
-  transform: 'translateX(-50%)',
+  bottom: '24px',
+  right: '24px',
   zIndex: 9999,
-  width: 'auto',
-  minWidth: '320px',
+  width: '300px',
 };
 
 const GLASS_STYLE: React.CSSProperties = {
-  background: 'rgba(15, 23, 42, 0.8)',
-  backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '16px',
-  padding: '12px 20px',
+  background: 'rgba(2, 6, 23, 0.85)',
+  backdropFilter: 'blur(16px)',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  borderRadius: '12px',
+  padding: '16px',
   display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: '12px',
+  boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.5)',
+  position: 'relative',
+};
+
+const CONTENT_STYLE: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    flex: 1,
+};
+
+const TITLE_STYLE: React.CSSProperties = {
+    color: '#94a3b8',
+    fontSize: '0.65rem',
+    fontWeight: '700',
+    letterSpacing: '0.05em',
 };
 
 const TEXT_STYLE: React.CSSProperties = {
   color: '#f8fafc',
-  fontSize: '0.85rem',
-  textAlign: 'center',
+  fontSize: '0.8rem',
+  fontWeight: '500',
+};
+
+const VERSION_STYLE: React.CSSProperties = {
+    position: 'absolute',
+    top: '8px',
+    right: '12px',
+    color: 'rgba(255,255,255,0.2)',
+    fontSize: '0.6rem',
+    fontFamily: 'monospace',
 };
 
 const DOT_STYLE: React.CSSProperties = {
-    width: '8px',
-    height: '8px',
+    width: '10px',
+    height: '10px',
     borderRadius: '50%',
-    backgroundColor: '#38bdf8',
-    boxShadow: '0 0 10px #38bdf8',
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    animation: 'pulse 1.5s infinite',
+    marginTop: '12px',
+    boxShadow: '0 0 12px currentColor',
 };
 
 const PROGRESS_CONTAINER: React.CSSProperties = {
     width: '100%',
-    height: '4px',
-    background: 'rgba(255,255,255,0.1)',
+    height: '3px',
+    background: 'rgba(255,255,255,0.05)',
     borderRadius: '2px',
+    marginTop: '8px',
     overflow: 'hidden',
 };
 
 const PROGRESS_BAR: React.CSSProperties = {
     height: '100%',
-    background: 'linear-gradient(90deg, #0ea5e9, #38bdf8)',
-    transition: 'width 0.5s ease-out',
+    transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
 };

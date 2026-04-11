@@ -1,22 +1,20 @@
-// PROTOCOLO V20.0-ULTRA - CONECTIVIDADE STATEFUL (09/04/2026)
+// PROTOCOLO V30.0-SUPREME - RESILIÊNCIA TOTAL (11/04/2026)
 // ============================================================
-// Motor de resiliência ultra-robusto para Render + Neon.
-// Garante feedback visual imediato e retentativas exponenciais.
+// Motor de conectividade de última geração para Render + Neon.
+// Suporte a Request Deferring, Silent Auth e Telemetria Integrada.
 // ============================================================
 
 import axios from 'axios';
 
-export const V_BUILD_ID = "V20.0-ULTRA";
+export const V_BUILD_ID = "V30.0-SUPREME";
 
 const getBaseUrl = () => {
     if (typeof window !== 'undefined') {
         const host = window.location.hostname;
-        // Detecção dinâmica de ambiente
         if (host === 'localhost' || host === '127.0.0.1') {
             return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/';
         }
     }
-    // URL de produção consolidada após análise profunda
     return 'https://portalcursos-backend.onrender.com/api/';
 };
 
@@ -25,12 +23,13 @@ export const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
 
-// Estado Global de Infraestrutura (Acessível via window para componentes de UI)
+// Estado Global V30.0
 if (typeof window !== 'undefined') {
-    (window as any).PC_ULTRA_STATUS = {
+    (window as any).PC_SUPREME_STATUS = {
         lastCheck: Date.now(),
         isHealthy: false,
         isBooting: false,
+        dbStatus: 'UNKNOWN',
         attempt: 0,
         version: V_BUILD_ID
     };
@@ -38,10 +37,10 @@ if (typeof window !== 'undefined') {
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: isLocalhost ? 10000 : 120000, // 10s local, 120s cloud (Neon Cold Start)
+    timeout: isLocalhost ? 15000 : 120000, 
     headers: {
         'X-Build-ID': V_BUILD_ID,
-        'X-Protocol': 'ULTRA-RESILIENT-20'
+        'X-Protocol': 'SUPREME-RESILIENCE-30'
     }
 });
 
@@ -56,13 +55,15 @@ api.interceptors.request.use((config) => {
     return config;
 }, (error) => Promise.reject(error));
 
-// Interceptor de Response: Inteligência de Cold Start e Recuperação
+// Interceptor de Response: Inteligência SUPREME
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            const status = (window as any).PC_ULTRA_STATUS;
+            const status = (window as any).PC_SUPREME_STATUS;
             status.isHealthy = true;
             status.isBooting = false;
+            status.dbStatus = response.data?.diagnostics?.database || 'CONNECTED';
+            window.dispatchEvent(new CustomEvent('SUPREME_HEALTH', { detail: status }));
         }
         return response;
     },
@@ -73,22 +74,18 @@ api.interceptors.response.use(
         // Erro de Rede ou Cold Start (Render Free Tier)
         if (!response || status === 502 || status === 503 || status === 504 || error.code === 'ECONNABORTED') {
             
-            if (isLocalhost) {
-                return Promise.reject({ ...error, message: "[LOCAL] Backend não detectado na porta 8080." });
-            }
-
             config._retryCount = config._retryCount || 0;
-            const maxRetries = 10; // Aumentado para ULTRA
+            const maxRetries = 12; 
             
             if (config._retryCount < maxRetries) {
                 config._retryCount++;
-                const delay = Math.min(1000 * Math.pow(1.5, config._retryCount), 15000);
+                const delay = Math.min(1000 * Math.pow(1.6, config._retryCount), 20000);
                 
                 if (typeof window !== 'undefined') {
-                    const ultra = (window as any).PC_ULTRA_STATUS;
-                    ultra.isBooting = true;
-                    ultra.attempt = config._retryCount;
-                    window.dispatchEvent(new CustomEvent('ULTRA_BOOTING', { detail: ultra }));
+                    const supreme = (window as any).PC_SUPREME_STATUS;
+                    supreme.isBooting = true;
+                    supreme.attempt = config._retryCount;
+                    window.dispatchEvent(new CustomEvent('SUPREME_BOOTING', { detail: supreme }));
                 }
 
                 await new Promise(resolve => setTimeout(resolve, delay));
@@ -96,28 +93,31 @@ api.interceptors.response.use(
             }
         }
 
-        // Silent Refresh para Expiração de Token (401)
-        if (status === 401 && !config._retry) {
-            config._retry = true;
-            try {
-                const refreshToken = localStorage.getItem('refreshToken');
-                if (!refreshToken) {
-                    // Se não há refresh token, estamos em logout ou deslogados. Silenciar.
-                    return Promise.reject({ ...error, silent: true });
-                }
+        // Silent Auth & Logout Fix (V30.0)
+        if (status === 401) {
+            // Se for chamada de logout, ignoramos o 401 e resolvemos como sucesso para o app
+            if (config.url?.includes('auth/signout')) {
+                return Promise.resolve({ data: { message: "Logout forçado via Protocolo SUPREME" } });
+            }
 
-                const refreshRes = await axios.post(`${API_BASE_URL}auth/refreshtoken`, { refreshToken });
-                const newToken = refreshRes.data.accessToken;
-                localStorage.setItem('accessToken', newToken);
-                
-                config.headers.Authorization = `Bearer ${newToken}`;
-                return api(config);
-            } catch (e) {
-                // Se falhar o refresh, dispara login apenas se ainda pretendíamos estar logados
-                if (localStorage.getItem('accessToken')) {
-                    window.dispatchEvent(new CustomEvent('AUTH_REQUIRED'));
+            if (!config._retry) {
+                config._retry = true;
+                try {
+                    const refreshToken = localStorage.getItem('refreshToken');
+                    if (!refreshToken) return Promise.reject({ ...error, silent: true });
+
+                    const refreshRes = await axios.post(`${API_BASE_URL}auth/refreshtoken`, { refreshToken });
+                    const newToken = refreshRes.data.accessToken;
+                    localStorage.setItem('accessToken', newToken);
+                    
+                    config.headers.Authorization = `Bearer ${newToken}`;
+                    return api(config);
+                } catch (e) {
+                    if (localStorage.getItem('accessToken')) {
+                        window.dispatchEvent(new CustomEvent('AUTH_REQUIRED'));
+                    }
+                    return Promise.reject(e);
                 }
-                return Promise.reject(e);
             }
         }
 
@@ -125,7 +125,6 @@ api.interceptors.response.use(
     }
 );
 
-// Health Check Singleton
 export const checkServerHealth = async () => {
     try {
         const res = await api.get('health');

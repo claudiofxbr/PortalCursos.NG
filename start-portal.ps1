@@ -1,8 +1,8 @@
-# PortalCursos.NG: Orquestrador Maestro V21.1-ULTRA (Robust Edition)
+# PortalCursos.NG: Orquestrador Maestro V30.0-SUPREME (Diagnostic Edition)
 
 Clear-Host
 echo "==========================================================="
-echo "   PORTAL CURSOS NG - ORQUESTRADOR MAESTRO V21.1-ULTRA    "
+echo "   PORTAL CURSOS NG - ORQUESTRADOR MAESTRO V30.0-SUPREME  "
 echo "==========================================================="
 
 # Verificacao de Diretorio
@@ -12,23 +12,40 @@ if (-not (Test-Path "backend") -or -not (Test-Path "frontend")) {
     exit
 }
 
-# 1. Limpeza de Portas (Auto-Healing)
-echo "[V21.1] Verificando integridade das portas 8080 e 3000..."
+# 1. Pre-Flight Check: Infraestrutura Neon
+echo "[V30.0] Verificando conectividade com Neon Cloud..."
+$neonHost = "ep-small-shadow-acm4l09l-pooler.sa-east-1.aws.neon.tech"
+$neonPort = 5432
+try {
+    $tcpCheck = Test-NetConnection -ComputerName $neonHost -Port $neonPort -ErrorAction SilentlyContinue
+    if (-not $tcpCheck.TcpTestSucceeded) {
+        echo "ALERTA: O Banco de Dados Neon não parece estar acessível."
+        echo "Verifique sua conexão de rede ou se o serviço Neon está ativo."
+        $confirm = Read-Host "Deseja tentar iniciar mesmo assim? (S/N)"
+        if ($confirm -ne "S") { exit }
+    } else {
+        echo "[V30.0] Confirmado: Tunel de rede para Neon OK."
+    }
+} catch {
+    echo "Aviso: Não foi possível testar a rede (Ignorado)."
+}
+
+# 2. Limpeza de Portas (Auto-Healing)
+echo "[V30.0] Verificando integridade das portas 8080 e 3000..."
 $ports = @(8080, 3000)
 foreach ($port in $ports) {
-    $proc = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+    # Comando mais robusto para Windows 11
+    $proc = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($proc) {
-        echo "[V21.1] Liberando porta $port (Processo: $($proc.OwningProcess))..."
-        Stop-Process -Id $proc.OwningProcess -Force -ErrorAction SilentlyContinue
-        if ($port -eq 8080) {
-            # Limpeza profunda para Java zumbi no Windows
-            taskkill /F /FI "PID eq $($proc.OwningProcess)" /T 2>$null
-        }
+        $pidToKill = $proc.OwningProcess
+        echo "[V30.0] Liberando porta $port (Processo: $pidToKill)..."
+        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+        taskkill /F /PID $pidToKill /T 2>$null
     }
 }
 
-# 2. Boot do Backend (Interface com Neon)
-echo "[V22.2] Despertando Backend e Banco Neon..."
+# 3. Boot do Backend (Interface com Neon)
+echo "[V30.0] Despertando Backend e Banco Neon..."
 $backendPath = Join-Path $PSScriptRoot "backend"
 if (Test-Path $backendPath) {
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$backendPath'; .\mvnw.cmd spring-boot:run" -WindowStyle Normal
@@ -36,9 +53,9 @@ if (Test-Path $backendPath) {
     echo "ERRO: Pasta 'backend' não encontrada em $backendPath"
 }
 
-# 3. Sincronizacao de Saude (Health Check)
-echo "[V22.2] Aguardando estabilizacao da infraestrutura..."
-$maxAttempts = 30 # Aumentado para tolerar Cold Start do Neon
+# 4. Sincronizacao de Saude (Health Check)
+echo "[V30.0] Aguardando estabilizacao da infraestrutura..."
+$maxAttempts = 40 # Aumentado para 120s (Protocolo V30.0)
 $attempt = 1
 $healthUrl = "http://localhost:8080/api/health"
 $ready = $false
@@ -47,30 +64,28 @@ while ($attempt -le $maxAttempts -and -not $ready) {
     try {
         $response = Invoke-WebRequest -Uri $healthUrl -Method Get -TimeoutSec 5 -ErrorAction SilentlyContinue
         if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 202) {
-            echo "`n[V22.2] SUCESSO: Backend Ativo (Status: $($response.StatusCode))!"
+            echo "`n[V30.0] SUCESSO: Backend Ativo e Banco Sincronizado!"
             $ready = $true
         }
     } catch {
-        Write-Host "($attempt..)" -NoNewline
+        Write-Host "." -NoNewline
         Start-Sleep -Seconds 3
         $attempt++
     }
 }
 
 if (-not $ready) {
-    echo "`n[!] ALERTA: O Backend está demorando. Verifique a janela do Maven."
+    echo "`n[!] ALERTA: O Backend está demorando além do normal."
 }
 
-# 4. Boot do Frontend
-echo "[V22.2] Lancando Interface de Usuario (Turbopack)..."
+# 5. Boot do Frontend
+echo "[V30.0] Lancando Interface de Usuario (Next.js)..."
 $frontendPath = Join-Path $PSScriptRoot "frontend"
 if (Test-Path $frontendPath) {
     Start-Process "npm.cmd" -ArgumentList "run dev" -WorkingDirectory $frontendPath -WindowStyle Normal
-} else {
-    echo "ERRO: Pasta 'frontend' não encontrada em $frontendPath"
 }
 
-echo "`n[V22.2] AMBIENTE PRONTO E ESTABILIZADO!"
+echo "`n[V30.0] AMBIENTE PRONTO E ESTABILIZADO!"
 echo "-----------------------------------------------------------"
 echo "URL Local: http://localhost:3000"
 echo "-----------------------------------------------------------"

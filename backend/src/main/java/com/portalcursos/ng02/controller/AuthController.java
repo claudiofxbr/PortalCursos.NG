@@ -151,13 +151,18 @@ public class AuthController {
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser(@Valid @RequestBody com.portalcursos.ng02.dto.TokenRefreshRequest request) {
         String refreshToken = request.getRefreshToken();
+        logger.info("[AUTH API] [SIGNOUT] Iniciando encerramento de sessão.");
         
-        if (refreshToken != null) {
+        if (refreshToken != null && !refreshToken.isEmpty()) {
             userSessionRepository.findByRefreshToken(refreshToken)
-                .ifPresent(userSessionRepository::delete);
+                .ifPresent(session -> {
+                    userSessionRepository.delete(session);
+                    logger.info("[AUTH API] [SIGNOUT] Sessão encerrada para o token finalizado em: ...{}", 
+                        refreshToken.substring(Math.max(0, refreshToken.length() - 5)));
+                });
         }
 
-        return ResponseEntity.ok(new MessageResponse("Logout realizado com sucesso."));
+        return ResponseEntity.ok(new MessageResponse("Logout realizado com sucesso. Protocolo V30.0-SUPREME."));
     }
 
     @PostMapping("/signup")
