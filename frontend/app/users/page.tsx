@@ -124,10 +124,16 @@ export default function UsersManagementPage() {
             data.append('username', formData.username);
             data.append('email', formData.email);
             data.append('password', formData.password);
-            data.append('roles', formData.roles.join(','));
+            
+            // Suporte a múltiplos parâmetros de roles conforme esperado pelo Spring Boot
+            formData.roles.forEach(role => {
+                data.append('roles', role);
+            });
+
             data.append('fullName', formData.fullName);
             data.append('position', formData.position);
             data.append('department', formData.department);
+            
             if (formData.foto3x4File) {
                 data.append('foto3x4File', formData.foto3x4File);
             }
@@ -135,24 +141,28 @@ export default function UsersManagementPage() {
             // Início da Sincronização
             setSuccess('⏳ Iniciando registro e ativação institucional no Neon...');
 
-            await api.post('v1/users', data, {
+            const response = await api.post('v1/users', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
+            console.log("[SUPREME-SUCCESS] Colaborador registrado:", response.data);
             setSuccess('🚀 Perfil institucional registrado e ativado com sucesso!');
             
-            // Limpeza Imediata para evitar re-envios
+            // Limpeza Imediata para evitar re-envios e transição suave
             setFormData({ 
                 username: '', email: '', password: '', roles: ['ALUNO'], 
                 fullName: '', position: '', department: '', foto3x4File: null 
             });
-            setShowForm(false);
+            setTimeout(() => {
+                setShowForm(false);
+                setSuccess(null);
+            }, 3000);
             
             // Recarga da lista em background
             loadUsers();
         } catch (e: any) {
             console.error("[SUPREME-ERROR]", e);
-            const errorMsg = e?.response?.data?.message || 'Erro ao sincronizar colaborador. Verifique se o CPF/E-mail já existe.';
+            const errorMsg = e?.response?.data?.message || 'Erro ao sincronizar colaborador. Verifique se o Username/E-mail já existe ou se há falha de rede.';
             setError(errorMsg);
             setSuccess(null);
         } finally {

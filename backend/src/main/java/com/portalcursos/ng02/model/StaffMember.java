@@ -20,7 +20,6 @@ import org.hibernate.annotations.Where;
 @Where(clause = "active = true")
 public class StaffMember {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank
@@ -44,7 +43,8 @@ public class StaffMember {
     @Builder.Default
     private boolean active = true;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @OneToOne
+    @MapsId
+    @JoinColumn(name = "id")
     private User user;
 }

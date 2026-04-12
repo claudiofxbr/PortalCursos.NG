@@ -68,7 +68,7 @@ public class StaffMemberController {
 
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> creatorStaff = staffRepository.findByUserId(userDetails.getId());
+                Optional<StaffMember> creatorStaff = staffRepository.findById(userDetails.getId());
                 if (creatorStaff.isPresent()) {
                     creatorName = creatorStaff.get().getFullName();
                     creatorPosition = creatorStaff.get().getPosition();
@@ -127,7 +127,7 @@ public class StaffMemberController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffRepository.findByUserId(userDetails.getId()).ifPresent(creator -> {
+                staffRepository.findById(userDetails.getId()).ifPresent(creator -> {
                     staff.setCreatorName(creator.getFullName());
                     staff.setCreatorPosition(creator.getPosition());
                     staff.setCreatorPhotoUrl(creator.getFotoUrl());

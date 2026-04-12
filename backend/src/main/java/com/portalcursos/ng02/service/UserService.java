@@ -69,7 +69,7 @@ public class UserService {
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
-        // Lógica COLLAB V37.1: Sincronização Institucional Robusta
+        // Lógica COLLAB V37.1: Sincronização Institucional Atômica e Robusta
         long startTime = System.currentTimeMillis();
         try {
             boolean isStaff = strRoles != null && strRoles.stream().anyMatch(r -> {
@@ -78,12 +78,14 @@ public class UserService {
             });
 
             if (isStaff && fullName != null) {
-                System.out.println("[SUPREME-COLLAB] Iniciando sincronização institucional para: " + fullName);
+                System.out.println("[SUPREME-COLLAB] Iniciando ativação institucional para: " + fullName);
                 
-                StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
+                // Mapeia o StaffMember usando o mesmo ID do User (Protocolo MapsId)
+                StaffMember staff = staffMemberRepository.findById(savedUser.getId())
                         .orElse(new StaffMember());
                 
                 staff.setUser(savedUser);
+                staff.setId(savedUser.getId()); // Garantia redundante de ID
                 staff.setFullName(fullName);
                 staff.setPosition(position != null && !position.isBlank() ? position : "COLABORADOR");
                 staff.setDepartment(department != null && !department.isBlank() ? department : "INSTITUCIONAL");
@@ -91,12 +93,12 @@ public class UserService {
                 staff.setActive(true);
                 
                 staffMemberRepository.save(staff);
-                System.out.println("[SUPREME-COLLAB] Sincronização concluída com sucesso em " + (System.currentTimeMillis() - startTime) + "ms");
+                System.out.println("[SUPREME-COLLAB] Ativação concluída com sucesso em " + (System.currentTimeMillis() - startTime) + "ms");
             }
         } catch (Exception e) {
-            System.err.println("[SUPREME-COLLAB-ERROR] Falha crítica na sincronização institucional: " + e.getMessage());
-            // Lançamos a exceção para garantir o Rollback Total conforme aprovado no plano
-            throw new RuntimeException("Falha ao ativar registro institucional. O cadastro foi cancelado para garantir integridade. Detalhes: " + e.getMessage());
+            System.err.println("[SUPREME-COLLAB-ERROR] Falha crítica na ativação: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Falha ao sincronizar o perfil institucional. O registro foi cancelado para manter a integridade.");
         }
 
         return savedUser;
@@ -135,10 +137,11 @@ public class UserService {
             });
 
             if (isStaff) {
-                StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
+                StaffMember staff = staffMemberRepository.findById(savedUser.getId())
                         .orElse(new StaffMember());
                 
                 staff.setUser(savedUser);
+                staff.setId(savedUser.getId());
                 if (staff.getFullName() == null) staff.setFullName(savedUser.getUsername().toUpperCase());
                 if (staff.getPosition() == null) staff.setPosition("CARGO_PENDENTE");
                 if (staff.getDepartment() == null) staff.setDepartment("SETOR_PENDENTE");
