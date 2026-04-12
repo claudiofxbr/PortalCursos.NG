@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import jakarta.validation.ConstraintViolationException;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -75,6 +77,35 @@ public class GlobalExceptionHandler {
         body.put("hint", "Se o banco parecer vazio, verifique registros desativados (Soft Delete) ou campos NOT NULL.");
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<?> handleMissingParams(MissingServletRequestParameterException ex, WebRequest request) {
+        logger.warn("[FRONTEND-BAD-REQUEST] Parâmetro obrigatório ausente: {}", ex.getParameterName());
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request / Missing Parameter");
+        body.put("message", "O campo '" + ex.getParameterName() + "' é obrigatório para concluir o cadastro.");
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+        body.put("hint", "Verifique se todos os campos marcados com * foram preenchidos corretamente.");
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<?> handleConstraintViolation(ConstraintViolationException ex, WebRequest request) {
+        logger.warn("[VALIDATION-ERROR] Falha de validação de dados: {}", ex.getMessage());
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Validation Error");
+        body.put("message", "Dados inválidos: " + ex.getMessage());
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

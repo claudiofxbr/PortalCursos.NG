@@ -72,7 +72,7 @@ public class PostgradStudentController {
             @RequestParam("fullName") String fullName,
             @RequestParam("email") String email,
             @RequestParam("cpf") String cpf,
-            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam("phone") String phone,
             @RequestParam(value = "dateOfBirth", required = false) String dateOfBirth,
             @RequestParam(value = "address", required = false) String address,
             @RequestParam("graduationInstitution") String graduationInstitution,

@@ -108,9 +108,15 @@ export default function PostgradStudentsPage() {
             setFiles({ diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null, foto3x4File: null });
             loadStudents();
         } catch (e: any) {
-            console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data);
+            console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data || e);
             const data = e?.response?.data;
-            const errorMsg = data?.message || data?.details || 'Erro crítico ao cadastrar aluno.';
+            let errorMsg = data?.message || data?.details || 'Erro crítico ao cadastrar aluno.';
+            
+            // Tratamento especial para objetos de erro do Spring Boot sem corpo formatado
+            if (typeof data === 'object' && Object.keys(data).length === 0 && e.response?.status === 400) {
+                errorMsg = "Erro de validação: Verifique se todos os campos obrigatórios (*) foram preenchidos.";
+            }
+
             const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : '';
             setError(`${errorMsg}${hint}`);
         } finally {
@@ -213,7 +219,7 @@ export default function PostgradStudentsPage() {
                             { label: 'Nome Completo *', name: 'fullName', type: 'text', required: true },
                             { label: 'E-mail *', name: 'email', type: 'email', required: true },
                             { label: 'CPF *', name: 'cpf', type: 'text', required: true, placeholder: '000.000.000-00' },
-                            { label: 'Telefone', name: 'phone', type: 'text', placeholder: '(00) 00000-0000' },
+                            { label: 'Telefone *', name: 'phone', type: 'text', required: true, placeholder: '(00) 00000-0000' },
                             { label: 'Data de Nascimento', name: 'dateOfBirth', type: 'date' },
                             { label: 'Endereço Completo', name: 'address', type: 'text' },
                             { label: 'Instituição de Graduação *', name: 'graduationInstitution', type: 'text', required: true },
@@ -247,7 +253,8 @@ export default function PostgradStudentsPage() {
                         </select>
                     </div>
 
-                    <h2 style={{ margin: '1.5rem 0 1rem', fontSize: '1.1rem' }}>📁 Documentos Obrigatórios</h2>
+                    <h2 style={{ margin: '1.5rem 0 0.2rem', fontSize: '1.1rem' }}>📁 Documentos (Opcionais)</h2>
+                    <p style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '1rem' }}>Candidatos sem documentos agora ficarão com status <strong>PENDENTE</strong> para regularização posterior.</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                         {[
                             { label: '🎓 Diploma de Graduação (PDF/Imagem)', name: 'diplomaFile' },
