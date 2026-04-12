@@ -15,6 +15,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Service
 public class UserService {
@@ -32,10 +34,70 @@ public class UserService {
     private PasswordEncoder encoder;
 
     /**
-     * Lista todos os usuários cadastrados.
+     * Retorna o nível numérico da role para fins de hierarquia CRUD.
+     */
+    public int getRoleLevel(Role.ERole role) {
+        if (role == null) return 0;
+        switch (role) {
+            case ROLE_ROOT_MASTER: return 100;
+            case ROLE_ADMIN: return 80;
+            case ROLE_COORDENADOR: return 60;
+            case ROLE_SECRETARIA: return 40;
+            case ROLE_FINANCEIRO:
+            case ROLE_ACADEMICO:
+            case ROLE_MATRICULA:
+            case ROLE_PROFESSOR:
+            case ROLE_MONITOR:
+            case ROLE_BIBLIOTECARIO: return 20;
+            default: return 0;
+        }
+    }
+
+    /**
+     * Retorna o nível mais alto entre as roles do usuário.
+     */
+    public int getMaxRoleLevel(User user) {
+        if (user == null || user.getRoles() == null) return 0;
+        return user.getRoles().stream()
+                .map(r -> getRoleLevel(r.getName()))
+                .max(Integer::compare)
+                .orElse(0);
+    }
+
+    /**
+     * Retorna o usuário atualmente autenticado no sistema.
+     */
+    public User getCurrentAuthenticatedUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String username;
+        if (principal instanceof UserDetails) {
+            username = ((UserDetails) principal).getUsername();
+        } else {
+            username = principal.toString();
+        }
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Erro: Usuário autenticado não encontrado no banco."));
+    }
+
+    /**
+     * Lista usuários filtrados pela hierarquia do usuário logado.
      */
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        User currentUser = getCurrentAuthenticatedUser();
+        int currentLevel = getMaxRoleLevel(currentUser);
+        boolean isRoot = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == Role.ERole.ROLE_ROOT_MASTER);
+
+        List<User> allUsers = userRepository.findAll();
+
+        if (isRoot) {
+            return allUsers; // Root vê todos
+        }
+
+        // Outros veem apenas quem tem nível estritamente inferior
+        return allUsers.stream()
+                .filter(u -> getMaxRoleLevel(u) < currentLevel)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -44,6 +106,25 @@ public class UserService {
      */
     @Transactional
     public User createUser(User user, Set<String> strRoles, String fullName, String position, String department) {
+        User currentUser = getCurrentAuthenticatedUser();
+        int currentLevel = getMaxRoleLevel(currentUser);
+        boolean isRoot = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == Role.ERole.ROLE_ROOT_MASTER);
+
+        // Validar se o criador tem permissão para atribuir as roles solicitadas
+        if (!isRoot) {
+            for (String rStr : strRoles) {
+                try {
+                    String roleName = rStr.toUpperCase();
+                    if (!roleName.startsWith("ROLE_")) roleName = "ROLE_" + roleName;
+                    Role.ERole eRole = Role.ERole.valueOf(roleName);
+                    if (getRoleLevel(eRole) >= currentLevel) {
+                        throw new RuntimeException("Permissão insuficiente: Você não pode criar usuários com nível " + eRole + " (Nível igual ou superior ao seu).");
+                    }
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
         // Encriptar senha
         user.setPassword(encoder.encode(user.getPassword()));
 
@@ -121,13 +202,61 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
+        User targetUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        
+        User currentUser = getCurrentAuthenticatedUser();
+        
+        // Proteções Invioláveis
+        if (targetUser.getUsername().equals("rootmaster")) {
+            throw new RuntimeException("Atenção: O perfil Root Master original é protegido pelo protocolo de infraestrutura e não pode ser removido.");
+        }
+        
+        if (targetUser.getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Você não pode remover seu próprio perfil através deste controle.");
+        }
+
+        int currentLevel = getMaxRoleLevel(currentUser);
+        int targetLevel = getMaxRoleLevel(targetUser);
+        boolean isRoot = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == Role.ERole.ROLE_ROOT_MASTER);
+
+        if (!isRoot && targetLevel >= currentLevel) {
+            throw new RuntimeException("Permissão insuficiente: Você não pode remover um usuário de nível superior ou igual ao seu.");
+        }
+
         userRepository.deleteById(id);
     }
 
     @Transactional
     public User updateUserRoles(Long id, Set<String> strRoles) {
-        User user = userRepository.findById(id)
+        User targetUser = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+
+        User currentUser = getCurrentAuthenticatedUser();
+        int currentLevel = getMaxRoleLevel(currentUser);
+        int targetLevel = getMaxRoleLevel(targetUser);
+        boolean isRoot = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == Role.ERole.ROLE_ROOT_MASTER);
+
+        // Validação de quem está sendo editado
+        if (!isRoot && targetLevel >= currentLevel) {
+            throw new RuntimeException("Permissão insuficiente: Você não pode alterar as permissões de um usuário de nível superior ou igual ao seu.");
+        }
+
+        // Validação das novas roles sendo atribuídas
+        if (!isRoot) {
+            for (String rStr : strRoles) {
+                try {
+                    String roleName = rStr.toUpperCase();
+                    if (!roleName.startsWith("ROLE_")) roleName = "ROLE_" + roleName;
+                    Role.ERole eRole = Role.ERole.valueOf(roleName);
+                    if (getRoleLevel(eRole) >= currentLevel) {
+                        throw new RuntimeException("Permissão insuficiente: Você não pode atribuir o nível " + eRole + " (Nível igual ou superior ao seu).");
+                    }
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
 
         Set<Role> roles = strRoles.stream()
                 .map(r -> getOrCreateRole(Role.ERole.valueOf("ROLE_" + r.toUpperCase())))

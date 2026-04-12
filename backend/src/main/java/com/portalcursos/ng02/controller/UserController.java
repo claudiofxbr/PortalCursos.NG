@@ -25,7 +25,7 @@ public class UserController {
     private StorageService storageService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> getAllUsers() {
         try {
             return ResponseEntity.ok(userService.getAllUsers());
@@ -36,7 +36,7 @@ public class UserController {
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
-    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> createUser(
             @RequestParam("username") String username,
             @RequestParam("email") String email,
@@ -73,7 +73,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/roles")
-    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> updateUserRoles(@PathVariable Long id, @RequestBody Set<String> roles) {
         try {
             return ResponseEntity.ok(userService.updateUserRoles(id, roles));
@@ -84,7 +84,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             userService.deleteUser(id);

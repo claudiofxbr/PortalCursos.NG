@@ -61,6 +61,29 @@ const SELECT_STYLE = {
     backgroundSize: '1.2em'
 };
 
+// Funções de Auxílio à Hierarquia (Protocolo V39.0)
+const getRoleLevel = (roleName: string) => {
+    const rn = roleName.startsWith('ROLE_') ? roleName : `ROLE_${roleName}`;
+    switch (rn) {
+        case 'ROLE_ROOT_MASTER': return 100;
+        case 'ROLE_ADMIN': return 80;
+        case 'ROLE_COORDENADOR': return 60;
+        case 'ROLE_SECRETARIA': return 40;
+        case 'ROLE_FINANCEIRO':
+        case 'ROLE_ACADEMICO':
+        case 'ROLE_MATRICULA':
+        case 'ROLE_PROFESSOR':
+        case 'ROLE_MONITOR':
+        case 'ROLE_BIBLIOTECARIO': return 20;
+        default: return 0;
+    }
+};
+
+const getCurrentMaxLevel = (user: any) => {
+    if (!user?.roles) return 0;
+    return Math.max(...user.roles.map((r: any) => getRoleLevel(typeof r === 'string' ? r : r.name)));
+};
+
 export default function UsersManagementPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
@@ -73,10 +96,11 @@ export default function UsersManagementPage() {
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => { setIsMounted(true); }, []);
 
-    // Verificação de Permissão para ver o formulário
+    // Verificação de Permissão para ver o formulário (Expandido V39.0)
     const canCreateUser = currentUser?.roles?.some((r: any) => {
         const roleName = typeof r === 'string' ? r : r.name;
-        return roleName === 'ROLE_ROOT_MASTER' || roleName === 'ROLE_ADMIN';
+        const permitted = ['ROLE_ROOT_MASTER', 'ROLE_ADMIN', 'ROLE_COORDENADOR', 'ROLE_SECRETARIA'];
+        return permitted.includes(roleName);
     });
 
     // Form State
@@ -171,21 +195,13 @@ export default function UsersManagementPage() {
     };
 
     const handleDelete = async (id: number, targetUsername: string, targetRoles: Role[]) => {
-        // Regras de Proteção
-        if (targetUsername === 'rootmaster') {
-            alert('O perfil Root Master é protegido e não pode ser removido.');
-            return;
-        }
+        // Verificação Hierárquica (V39.0)
+        const currentLevel = getCurrentMaxLevel(currentUser);
+        const targetLevel = targetRoles.reduce((max, r) => Math.max(max, getRoleLevel(typeof r === 'string' ? r : r.name)), 0);
+        const isCurrentRoot = currentLevel === 100;
 
-        // Impede que ADMIN remova ROOT_MASTER ou outro ADMIN de nível igual (opcional)
-        const isTargetRootOrAdmin = targetRoles.some((r: any) => {
-            const rn = typeof r === 'string' ? r : r.name;
-            return rn === 'ROLE_ROOT_MASTER' || rn === 'ROLE_ADMIN';
-        });
-        const isCurrentRoot = currentUser?.roles?.some((r: any) => (typeof r === 'string' ? r : r.name) === 'ROLE_ROOT_MASTER');
-
-        if (isTargetRootOrAdmin && !isCurrentRoot) {
-            alert('Você não possui permissão para remover perfis de Alta Diretoria.');
+        if (targetLevel >= currentLevel && !isCurrentRoot) {
+            alert('Permissão Insuficiente: Você não possui autoridade para remover perfis de nível igual ou superior ao seu na hierarquia institucional.');
             return;
         }
 
@@ -333,11 +349,17 @@ export default function UsersManagementPage() {
                                     value={formData.roles[0]} 
                                     onChange={e => setFormData({...formData, roles: [e.target.value]})}
                                 >
-                                    {Object.keys(ROLE_CONFIG).map(roleKey => (
-                                        <option key={roleKey} value={roleKey.replace('ROLE_', '')} style={{ backgroundColor: '#222' }}>
-                                            {ROLE_CONFIG[roleKey].level} - {ROLE_CONFIG[roleKey].label}
-                                        </option>
-                                    ))}
+                                    {Object.keys(ROLE_CONFIG)
+                                        .filter(roleKey => {
+                                            if (getCurrentMaxLevel(currentUser) === 100) return true; // Root vê todos
+                                            return getRoleLevel(roleKey) < getCurrentMaxLevel(currentUser);
+                                        })
+                                        .map(roleKey => (
+                                            <option key={roleKey} value={roleKey.replace('ROLE_', '')} style={{ backgroundColor: '#222' }}>
+                                                {ROLE_CONFIG[roleKey].level} - {ROLE_CONFIG[roleKey].label}
+                                            </option>
+                                        ))
+                                    }
                                 </select>
                                 <p style={{ fontSize: '0.7rem', opacity: 0.4, marginTop: '0.5rem' }}>
                                     * O perfil selecionado define as permissões automáticas conforme o regimento institucional.
@@ -433,12 +455,12 @@ export default function UsersManagementPage() {
                                 <td style={{ padding: '1.2rem', textAlign: 'right' }}>
                                     <button 
                                         onClick={() => handleDelete(u.id, u.username, u.roles)}
-                                        disabled={u.username === currentUser?.username || u.username === 'rootmaster'}
+                                        disabled={u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)}
                                         style={{ 
                                             backgroundColor: 'transparent', border: '1px solid rgba(255, 60, 60, 0.3)', 
                                             color: '#ff3c3c', padding: '6px 14px', borderRadius: '8px', 
                                             cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
-                                            opacity: (u.username === currentUser?.username || u.username === 'rootmaster') ? 0.2 : 1,
+                                            opacity: (u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)) ? 0.2 : 1,
                                             transition: 'all 0.2s ease'
                                         }}
                                     >
