@@ -12,6 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.portalcursos.ng02.repository.StudentDocumentRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import com.portalcursos.ng02.dto.MessageResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/grad-students")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class GradStudentController {
 
     private final StudentRepository studentRepository;
@@ -48,6 +51,7 @@ public class GradStudentController {
     }
 
     @PostMapping("/enroll")
+    @Transactional
     public ResponseEntity<?> enrollStudent(
             @RequestParam("fullName") String fullName,
             @RequestParam("email") String email,

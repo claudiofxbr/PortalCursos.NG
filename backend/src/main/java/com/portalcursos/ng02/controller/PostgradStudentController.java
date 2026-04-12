@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.io.IOException;
@@ -21,6 +23,7 @@ import java.util.Optional;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/postgrad-students")
+@Slf4j
 public class PostgradStudentController {
 
     @Autowired
@@ -60,7 +63,7 @@ public class PostgradStudentController {
     }
 
     @PostMapping(consumes = "multipart/form-data")
-    @PreAuthorize("isAuthenticated()")
+    @Transactional
     public ResponseEntity<?> create(
             @RequestParam("fullName") String fullName,
             @RequestParam("email") String email,

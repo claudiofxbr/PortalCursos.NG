@@ -61,6 +61,20 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityException(org.springframework.dao.DataIntegrityViolationException ex, WebRequest request) {
+        logger.warn("[SUPREME-WARN] Violação de integridade nos dados: {}", ex.getMostSpecificCause().getMessage());
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", "Conflito de dados: Este CPF ou E-mail já está em uso no sistema.");
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<?> handleNoResourceFoundException(NoResourceFoundException ex, WebRequest request) {
         logger.warn("[404 NOT FOUND] Recurso não encontrado: {}", ex.getResourcePath());
