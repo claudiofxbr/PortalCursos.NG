@@ -139,12 +139,31 @@ export default function GraduationPage() {
         if (!editingStudent) return;
         setSubmitting(true);
         try {
-            await api.put(`v1/grad-students/${editingStudent.id}`, editingStudent);
-            toast.success('Dados atualizados!');
+            const form = new FormData();
+            form.append('fullName', editingStudent.fullName);
+            form.append('phone', editingStudent.phone || "");
+            form.append('address', editingStudent.address || "");
+            form.append('currentCourse', editingStudent.currentCourse);
+            form.append('enrollmentStatus', editingStudent.enrollmentStatus);
+            
+            if (files.foto3x4_update) {
+                form.append('foto3x4', files.foto3x4_update);
+            }
+
+            await api.put(`v1/grad-students/${editingStudent.id}`, form, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            toast.success('✅ Dados atualizados com sucesso!');
             setEditingStudent(null);
+            // Limpar arquivo de update após sucesso
+            setFiles(prev => ({ ...prev, foto3x4_update: null }));
             loadStudents();
-        } catch (e) { toast.error('Erro ao atualizar.'); }
-        finally { setSubmitting(false); }
+        } catch (e: any) { 
+            toast.error(e?.response?.data?.message || 'Erro ao atualizar registro.'); 
+        } finally { 
+            setSubmitting(false); 
+        }
     };
 
     const handleDocumentAudit = async (docId: number, status: string) => {
@@ -383,7 +402,7 @@ export default function GraduationPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 {s.fotoMatricula ? (
                                                     <img 
-                                                        src={`${BASE_URL}/uploads/fotos-perfil/${s.fotoMatricula}`} 
+                                                        src={`${BASE_URL}/uploads/${s.fotoMatricula}`} 
                                                         alt={s.fullName} 
                                                         style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
@@ -535,7 +554,7 @@ export default function GraduationPage() {
                         <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
                             <div style={{ width: '120px', height: '160px', border: '1px solid #ddd', overflow: 'hidden' }}>
                                 {viewingStudent.fotoMatricula && (
-                                    <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={`${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 )}
                             </div>
                             <div style={{ flexGrow: 1 }}>
@@ -596,7 +615,7 @@ export default function GraduationPage() {
                             <div style={{ width: '220px', flexShrink: 0 }}>
                                 <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--secondary-color)', marginBottom: '1.5rem' }}>
                                     {viewingStudent.fotoMatricula ? (
-                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoMatricula}`} alt="Foto 3x4" style={{ width: '100%', height: '100%', objectPosition: 'center', objectFit: 'cover' }} />
+                                        <img src={`${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="Foto 3x4" style={{ width: '100%', height: '100%', objectPosition: 'center', objectFit: 'cover' }} />
                                     ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}><User size={30} /></div>
                                     )}

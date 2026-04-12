@@ -63,26 +63,6 @@ public class Payment extends BaseAuditEntity {
     @Column(columnDefinition = "TEXT")
     private String studentPhotoUrl;
 
-    public enum EPaymentStatus {
-        PENDING, PAID, CANCELLED, OVERDUE
-    }
-
-    public enum EPaymentMethod {
-        PIX, BOLETO
-    }
-
-    public enum EAcademicLevel {
-        GRADUATION, POSTGRADUATE
-    }
-
-    public enum EPaymentCategory {
-        TUITION, DOCUMENT_REQUEST, ENROLLMENT_FEE, LAB_FEE, INTERNAL_PROCESS, OTHER
-    }
-
-    public enum ESecretaryProcessType {
-        TRANSCRIPT, DIPLOMA_COPY, CERTIFICATE, ENROLLMENT_CANCELLATION, COURSE_CHANGE, OTHER
-    }
-
     /**
      * Calcula o valor dos juros (1.8% ao mês pro-rata die)
      */

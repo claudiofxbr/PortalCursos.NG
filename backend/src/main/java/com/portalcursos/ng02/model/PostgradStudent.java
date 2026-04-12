@@ -82,6 +82,10 @@ public class PostgradStudent extends BaseAuditEntity {
     @Column(name = "foto_url")
     private String fotoUrl;
 
+    @OneToMany(mappedBy = "postgradStudent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @lombok.Builder.Default
+    private java.util.List<Payment> payments = new java.util.ArrayList<>();
+
     @Override
     @PrePersist
     protected void onCreate() {

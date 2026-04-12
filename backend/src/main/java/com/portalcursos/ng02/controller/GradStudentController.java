@@ -13,6 +13,8 @@ import com.portalcursos.ng02.repository.StudentDocumentRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import org.springframework.http.HttpStatus;
 import com.portalcursos.ng02.dto.MessageResponse;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -259,7 +261,7 @@ public class GradStudentController {
         return studentRepository.findById(id).map(student -> {
             // Verificar se já existe taxa de matrícula ativa
             boolean exists = student.getPayments().stream()
-                    .anyMatch(p -> p.getCategory() == Payment.EPaymentCategory.ENROLLMENT_FEE && p.isActive());
+                    .anyMatch(p -> p.getCategory() == EPaymentCategory.ENROLLMENT_FEE && p.isActive());
             
             if (exists) {
                 return ResponseEntity.badRequest().body(new MessageResponse("Taxa de matrícula já gerada anteriormente."));
@@ -269,9 +271,9 @@ public class GradStudentController {
                     .student(student)
                     .amount(new java.math.BigDecimal("150.00")) // Valor padrão ou configure dinâmico
                     .dueDate(java.time.LocalDate.now().plusDays(5))
-                    .status(Payment.EPaymentStatus.PENDING)
-                    .category(Payment.EPaymentCategory.ENROLLMENT_FEE)
-                    .academicLevel(Payment.EAcademicLevel.GRADUATION)
+                    .status(EPaymentStatus.PENDING)
+                    .category(EPaymentCategory.ENROLLMENT_FEE)
+                    .academicLevel(EAcademicLevel.GRADUATION)
                     .description("Taxa de Matrícula - Processo Acadêmico Robust")
                     .active(true)
                     .build();

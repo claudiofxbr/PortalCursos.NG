@@ -299,7 +299,7 @@ export default function PostgradStudentsPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                                                 <div style={{ width: '45px', height: '60px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
                                                     {(s as any).fotoUrl ? (
-                                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${(s as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <img src={`${BASE_URL}/uploads/${(s as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (
                                                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={20} /></div>
                                                     )}
@@ -353,7 +353,7 @@ export default function PostgradStudentsPage() {
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
-                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${s.creatorPhotoUrl}` : undefined}
+                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/${s.creatorPhotoUrl}` : undefined}
                                                 date={s.registrationDate}
                                             />
                                         </td>
@@ -439,7 +439,7 @@ export default function PostgradStudentsPage() {
                             <div style={{ width: '220px', flexShrink: 0 }}>
                                 <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
                                     {viewingStudent.fotoUrl ? (
-                                        <img src={`${BASE_URL}/uploads/fotos-perfil/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={`${BASE_URL}/uploads/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
                                     )}
@@ -484,7 +484,7 @@ export default function PostgradStudentsPage() {
                                     <AuditStamp 
                                         name={viewingStudent.creatorName || 'Sistema'}
                                         position={viewingStudent.creatorPosition || 'Administrador'}
-                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${viewingStudent.creatorPhotoUrl}` : undefined}
+                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/${viewingStudent.creatorPhotoUrl}` : undefined}
                                         date={viewingStudent.registrationDate}
                                     />
                                 </div>

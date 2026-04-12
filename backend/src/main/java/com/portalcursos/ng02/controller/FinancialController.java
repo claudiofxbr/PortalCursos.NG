@@ -1,8 +1,6 @@
 package com.portalcursos.ng02.controller;
 
-import com.portalcursos.ng02.model.Payment;
-import com.portalcursos.ng02.model.PostgradStudent;
-import com.portalcursos.ng02.model.Student;
+import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
@@ -39,18 +37,18 @@ public class FinancialController {
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
     public List<Payment> getInvoicesByLevel(@PathVariable String level) {
-        Payment.EAcademicLevel academicLevel = Payment.EAcademicLevel.valueOf(level.toUpperCase());
+        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
         return paymentRepository.findByAcademicLevelAndStatusIn(
             academicLevel, 
-            java.util.List.of(Payment.EPaymentStatus.PENDING, Payment.EPaymentStatus.OVERDUE)
+            java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)
         );
     }
 
     @GetMapping("/history/{level}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
     public List<Payment> getHistoryByLevel(@PathVariable String level) {
-        Payment.EAcademicLevel academicLevel = Payment.EAcademicLevel.valueOf(level.toUpperCase());
-        return paymentRepository.findByAcademicLevelAndStatus(academicLevel, Payment.EPaymentStatus.PAID);
+        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
+        return paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
     }
 
     @PostMapping("/charge")
@@ -59,7 +57,7 @@ public class FinancialController {
         Payment.PaymentBuilder<?, ?> paymentBuilder = Payment.builder()
                 .amount(request.getAmount())
                 .dueDate(request.getDueDate())
-                .status(Payment.EPaymentStatus.PENDING)
+                .status(EPaymentStatus.PENDING)
                 .category(request.getCategory())
                 .secretaryProcessType(request.getSecretaryProcessType())
                 .academicLevel(request.getAcademicLevel())
@@ -68,7 +66,7 @@ public class FinancialController {
         // Injetar auditoria SUPREME
         injectAuditStamps(paymentBuilder);
 
-        if (request.getAcademicLevel() == Payment.EAcademicLevel.GRADUATION) {
+        if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
             Optional<Student> student = studentRepository.findById(request.getStudentId());
             if (student.isEmpty()) return ResponseEntity.badRequest().body("Estudante de graduação não encontrado");
             paymentBuilder.student(student.get());
@@ -136,9 +134,9 @@ public class FinancialController {
         private java.math.BigDecimal amount;
         private java.time.LocalDate dueDate;
         private Long studentId;
-        private Payment.EAcademicLevel academicLevel;
-        private Payment.EPaymentCategory category;
-        private Payment.ESecretaryProcessType secretaryProcessType;
+        private EAcademicLevel academicLevel;
+        private EPaymentCategory category;
+        private ESecretaryProcessType secretaryProcessType;
         private String description;
 
         // Getters e Setters
@@ -148,12 +146,12 @@ public class FinancialController {
         public void setDueDate(java.time.LocalDate dueDate) { this.dueDate = dueDate; }
         public Long getStudentId() { return studentId; }
         public void setStudentId(Long studentId) { this.studentId = studentId; }
-        public Payment.EAcademicLevel getAcademicLevel() { return academicLevel; }
-        public void setAcademicLevel(Payment.EAcademicLevel academicLevel) { this.academicLevel = academicLevel; }
-        public Payment.EPaymentCategory getCategory() { return category; }
-        public void setCategory(Payment.EPaymentCategory category) { this.category = category; }
-        public Payment.ESecretaryProcessType getSecretaryProcessType() { return secretaryProcessType; }
-        public void setSecretaryProcessType(Payment.ESecretaryProcessType secretaryProcessType) { this.secretaryProcessType = secretaryProcessType; }
+        public EAcademicLevel getAcademicLevel() { return academicLevel; }
+        public void setAcademicLevel(EAcademicLevel academicLevel) { this.academicLevel = academicLevel; }
+        public EPaymentCategory getCategory() { return category; }
+        public void setCategory(EPaymentCategory category) { this.category = category; }
+        public ESecretaryProcessType getSecretaryProcessType() { return secretaryProcessType; }
+        public void setSecretaryProcessType(ESecretaryProcessType secretaryProcessType) { this.secretaryProcessType = secretaryProcessType; }
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
     }
@@ -167,13 +165,13 @@ public class FinancialController {
     @GetMapping("/invoices")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
     public List<Payment> getInvoices() {
-        return paymentRepository.findByStatusIn(java.util.List.of(Payment.EPaymentStatus.PENDING, Payment.EPaymentStatus.OVERDUE));
+        return paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE));
     }
 
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
     public List<Payment> getHistory() {
-        return paymentRepository.findByStatus(Payment.EPaymentStatus.PAID);
+        return paymentRepository.findByStatus(EPaymentStatus.PAID);
     }
 
     @PostMapping("/generate-pix/{paymentId}")
@@ -182,7 +180,7 @@ public class FinancialController {
         Optional<Payment> payment = paymentRepository.findById(paymentId);
         if (payment.isPresent()) {
             Payment p = payment.get();
-            p.setMethod(Payment.EPaymentMethod.PIX);
+            p.setMethod(EPaymentMethod.PIX);
             p.setPaymentCode("00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-4266141740005204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304");
             paymentRepository.save(p);
             return ResponseEntity.ok(p);
@@ -196,7 +194,7 @@ public class FinancialController {
         Optional<Payment> payment = paymentRepository.findById(paymentId);
         if (payment.isPresent()) {
             Payment p = payment.get();
-            p.setMethod(Payment.EPaymentMethod.BOLETO);
+            p.setMethod(EPaymentMethod.BOLETO);
             p.setPaymentCode("https://portalcursos.edu.br/financeiro/boletos/download/B123456789");
             paymentRepository.save(p);
             return ResponseEntity.ok(p);

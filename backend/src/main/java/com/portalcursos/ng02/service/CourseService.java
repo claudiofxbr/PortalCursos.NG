@@ -1,6 +1,8 @@
 package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.model.Course;
+import com.portalcursos.ng02.model.EModalidade;
+import com.portalcursos.ng02.model.ENivelPosGraduacao;
 import com.portalcursos.ng02.repository.CourseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -76,14 +78,14 @@ public class CourseService {
 
     private void validateMECRules(Course course) {
         // 1. Validação de Carga Horária (Gestão do MEC - Lato Sensu)
-        if (course.getNivelPosGraduacao() == Course.ENivelPosGraduacao.LATO_SENSU) {
+        if (course.getNivelPosGraduacao() == ENivelPosGraduacao.LATO_SENSU) {
             if (course.getCargaHorariaTotal() == null || course.getCargaHorariaTotal() < 360) {
                 throw new RuntimeException("Regra Gestão do MEC: Cursos Lato Sensu devem ter no mínimo 360 horas.");
             }
         }
 
         // 2. Validação de Modalidade (EaD)
-        if (course.getModalidade() == Course.EModalidade.EAD) {
+        if (course.getModalidade() == EModalidade.EAD) {
             // Simulação de verificação de credenciamento da IES no e-MEC
             boolean hasEADAccreditation = true; // Em um cenário real, consultaríamos um config ou API
             if (!hasEADAccreditation) {
@@ -92,7 +94,7 @@ public class CourseService {
         }
 
         // 3. Validação Stricto Sensu (CAPES / Sucupira)
-        if (course.getNivelPosGraduacao() == Course.ENivelPosGraduacao.STRICTO_SENSU) {
+        if (course.getNivelPosGraduacao() == ENivelPosGraduacao.STRICTO_SENSU) {
             if (course.getNumeroDocumentoCriacao() == null || course.getNumeroDocumentoCriacao().isEmpty()) {
                 throw new RuntimeException("Cursos Stricto Sensu exigem aprovação prévia na CAPES (Plataforma Sucupira).");
             }

@@ -71,4 +71,16 @@ public class Student extends BaseAuditEntity {
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<Payment> payments = new java.util.ArrayList<>();
+
+    public String getFotoUrl() {
+        return fotoMatricula;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoMatricula = fotoUrl;
+    }
 }

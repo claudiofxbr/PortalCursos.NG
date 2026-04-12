@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -15,7 +16,6 @@ import org.hibernate.annotations.Where;
 @Table(name = "courses")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
@@ -70,22 +70,4 @@ public class Course extends BaseAuditEntity {
     private Integer totalVacancies;
     private String coordinatorName;
     private Double monthlyFee;
-
-    private Double monthlyFee;
-
-    public enum ENivelPosGraduacao {
-        LATO_SENSU,
-        STRICTO_SENSU,
-        GRADUACAO
-    }
-
-    public enum EModalidade {
-        PRESENCIAL,
-        EAD
-    }
-
-    public enum ECourseType {
-        GRADUATION,
-        POSTGRAD
-    }
 }

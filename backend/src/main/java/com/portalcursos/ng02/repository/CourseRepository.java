@@ -1,7 +1,7 @@
 package com.portalcursos.ng02.repository;
 
 import com.portalcursos.ng02.model.Course;
-import com.portalcursos.ng02.model.Course.ECourseType;
+import com.portalcursos.ng02.model.ECourseType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

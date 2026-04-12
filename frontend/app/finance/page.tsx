@@ -273,7 +273,7 @@ export default function FinancePage() {
               <AuditStamp 
                   name={invoice.creatorName} 
                   position={invoice.creatorPosition} 
-                  photoUrl={invoice.creatorPhotoUrl ? `${BASE_URL}/uploads/fotos-perfil/${invoice.creatorPhotoUrl}` : undefined}
+                  photoUrl={invoice.creatorPhotoUrl ? `${BASE_URL}/uploads/${invoice.creatorPhotoUrl}` : undefined}
                   date={invoice.createdAt}
               />
             </div>
