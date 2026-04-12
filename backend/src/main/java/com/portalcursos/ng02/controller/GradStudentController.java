@@ -111,56 +111,71 @@ public class GradStudentController {
                     .formaIngresso(formaIngresso)
                     .tipoCota(tipoCota)
                     .documents(new ArrayList<>());
-
             Student student = studentBuilder.build();
+            student.setActive(true); // Reforço absoluto de visibilidade
             injectAuditStamps(student);
 
-            logger.info("[SUPREME-AUDIT] Iniciando persistência do aluno: {}", student.getFullName());
-            Student savedStudent = studentRepository.saveAndFlush(student);
-            logger.info("[SUPREME-AUDIT] Aluno persistido com ID: {}. Iniciando salvamento de fotos.", savedStudent.getId());
-
-            String fotoPath = storageService.store(foto3x4, "fotos-perfil");
-            if (fotoPath != null) {
-                savedStudent.setFotoMatricula(fotoPath);
-                logger.info("[SUPREME-PHOTO] Foto armazenada em: {}. Vinculando ao registro...", fotoPath);
-                
-                StudentDocument photoDoc = StudentDocument.builder()
-                        .documentType(EDocumentType.RG) 
-                        .filePath(fotoPath)
-                        .status(EDocumentStatus.PENDING)
-                        .student(savedStudent)
-                        .build();
-                savedStudent.getDocuments().add(photoDoc);
-                
-                // Salvamento imediato da foto para garantir persistência mesmo se outros documentos falharem
-                studentRepository.saveAndFlush(savedStudent);
-                logger.info("[SUPREME-PHOTO] Caminho da foto persistido com sucesso no banco Neon.");
-            } else {
-                logger.warn("[SUPREME-PHOTO] Nenhuma foto detectada ou falha no upload.");
+            System.out.println("[LOG-SUPREME] 1/4: Iniciando persistência básica do aluno: " + student.getFullName());
+            Student savedStudent;
+            try {
+                savedStudent = studentRepository.saveAndFlush(student);
+                System.out.println("[LOG-SUPREME] 2/4: Registro básico salvo com sucesso no Neon. ID: " + savedStudent.getId());
+            } catch (Exception e) {
+                System.err.println("[LOG-SUPREME] ERRO CRÍTICO NA GRAVAÇÃO BÁSICA: " + e.getMessage());
+                throw e; // Falha no cadastro base é fatal
             }
-            
-            addDocument(savedStudent, rgCpf, EDocumentType.RG);
-            addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
-            addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
-            addDocument(savedStudent, historicoEM, EDocumentType.HISTORICO_EM);
-            addDocument(savedStudent, enemSisu, EDocumentType.ENEM_SISU);
-            addDocument(savedStudent, diplomaAnt, EDocumentType.DIPLOMA_ANT);
-            addDocument(savedStudent, historicoIesAnt, EDocumentType.HISTORICO_IES_ANT);
-            addDocument(savedStudent, laudoMedico, EDocumentType.LAUDO_MEDICO);
-            addDocument(savedStudent, rnmRne, EDocumentType.RNM_RNE);
-            addDocument(savedStudent, tituloEleitorFile, EDocumentType.TITULO_ELEITOR);
-            addDocument(savedStudent, reservistaFile, EDocumentType.CERTIFICADO_RESERVISTA);
-            addDocument(savedStudent, certidaoNascimentoFile, EDocumentType.CERTIDAO_NASCIMENTO);
-            addDocument(savedStudent, autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL);
 
-            logger.info("[SUPREME-AUDIT] Todos os documentos processados. Salvando estado final do aluno.");
-            Student finalStudent = studentRepository.saveAndFlush(savedStudent);
-            
-            logger.info("[SUPREME-SUCCESS] Matrícula de {} concluída com sucesso.", finalStudent.getFullName());
-            return ResponseEntity.ok(finalStudent);
+            // Processamento de Foto de Perfil (Prioritário)
+            if (foto3x4 != null && !foto3x4.isEmpty()) {
+                System.out.println("[LOG-SUPREME] 3/4: Processando upload de foto...");
+                try {
+                    String fotoPath = storageService.store(foto3x4, "fotos-perfil");
+                    if (fotoPath != null) {
+                        savedStudent.setFotoMatricula(fotoPath);
+                        StudentDocument photoDoc = StudentDocument.builder()
+                                .documentType(EDocumentType.RG) 
+                                .filePath(fotoPath)
+                                .status(EDocumentStatus.PENDING)
+                                .student(savedStudent)
+                                .build();
+                        savedStudent.getDocuments().add(photoDoc);
+                        studentRepository.saveAndFlush(savedStudent);
+                        System.out.println("[LOG-SUPREME] -> Foto de perfil salva e vinculada.");
+                    }
+                } catch (Exception e) {
+                    System.err.println("[LOG-SUPREME] ALERTA: Falha ao salvar foto, mas cadastro prosseguindo: " + e.getMessage());
+                }
+            }
+
+            // Processamento de Documentos de Apoio (Resiliente)
+            System.out.println("[LOG-SUPREME] 4/4: Processando lista de documentos secundários...");
+            try {
+                addDocument(savedStudent, rgCpf, EDocumentType.RG);
+                addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
+                addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
+                addDocument(savedStudent, historicoEM, EDocumentType.HISTORICO_EM);
+                addDocument(savedStudent, enemSisu, EDocumentType.ENEM_SISU);
+                addDocument(savedStudent, diplomaAnt, EDocumentType.DIPLOMA_ANT);
+                addDocument(savedStudent, historicoIesAnt, EDocumentType.HISTORICO_IES_ANT);
+                addDocument(savedStudent, laudoMedico, EDocumentType.LAUDO_MEDICO);
+                addDocument(savedStudent, rnmRne, EDocumentType.RNM_RNE);
+                addDocument(savedStudent, tituloEleitorFile, EDocumentType.TITULO_ELEITOR);
+                addDocument(savedStudent, reservistaFile, EDocumentType.CERTIFICADO_RESERVISTA);
+                addDocument(savedStudent, certidaoNascimentoFile, EDocumentType.CERTIDAO_NASCIMENTO);
+                addDocument(savedStudent, autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL);
+                
+                studentRepository.saveAndFlush(savedStudent);
+                System.out.println("[LOG-SUPREME] -> Documentos secundários processados.");
+            } catch (Exception e) {
+                System.err.println("[LOG-SUPREME] ALERTA: Erro em documentos secundários, mas aluno já existe: " + e.getMessage());
+            }
+
+            System.out.println("[LOG-SUPREME] MATRÍCULA FINALIZADA PARA: " + savedStudent.getFullName());
+            return ResponseEntity.ok(savedStudent);
 
         } catch (Exception e) {
-            logger.error("[SUPREME-CRITICAL] FALHA NA MATRÍCULA: ", e);
+            System.err.println("[LOG-SUPREME] FALHA TOTAL NA MATRÍCULA: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage()));
         }
     }

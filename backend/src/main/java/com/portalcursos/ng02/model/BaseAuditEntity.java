@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public abstract class BaseAuditEntity {
 
+    @Builder.Default
     @Column(nullable = false)
     protected boolean active = true;
 

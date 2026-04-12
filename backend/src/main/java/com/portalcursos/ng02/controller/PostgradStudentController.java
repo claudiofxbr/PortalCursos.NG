@@ -88,7 +88,9 @@ public class PostgradStudentController {
         }
 
         try {
-            PostgradStudent.PostgradStudentBuilder<?, ?> builder = PostgradStudent.builder()
+            System.out.println("[SUPREME-POSTGRAD] Iniciando processo de matrícula para: " + fullName);
+            
+            PostgradStudent student = PostgradStudent.builder()
                     .registrationNumber("POS-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                     .fullName(fullName)
                     .email(email)
@@ -99,34 +101,60 @@ public class PostgradStudentController {
                     .graduationInstitution(graduationInstitution)
                     .graduationYear(graduationYear)
                     .desiredCourse(desiredCourse)
-                    .enrollmentStatus("PENDENTE");
+                    .enrollmentStatus("PENDENTE")
+                    .build();
 
-            PostgradStudent student = builder.build();
+            // Forçar visibilidade (Soft Delete protection)
+            student.setActive(true);
 
-            // --- [AUDITORIA V30.9-SUPREME] ---
+            // --- [AUDITORIA V31.4-ULTRA] ---
             injectAuditStamps(student);
 
-            // Uploads
-            logger.info("[SUPREME-POSTGRAD] Processando documentos e foto para: {}", student.getFullName());
-            student.setDiplomaFilePath(storageService.store(diplomaFile, "postgrad/diplomas"));
-            student.setRgCpfFilePath(storageService.store(rgCpfFile, "postgrad/documentos"));
-            student.setProofOfAddressFilePath(storageService.store(proofOfAddressFile, "postgrad/residencia"));
-            student.setAcademicTranscriptFilePath(storageService.store(academicTranscriptFile, "postgrad/historicos"));
-            
-            String fotoPath = storageService.store(foto3x4File, "postgrad/fotos-perfil");
-            if (fotoPath != null) {
-                student.setFotoMatricula(fotoPath);
-                logger.info("[SUPREME-POSTGRAD] Foto armazenada em: {}.", fotoPath);
+            // PASSO 1: Persistência Atômica Base
+            System.out.println("[SUPREME-POSTGRAD] Salvando registro base no banco de dados...");
+            PostgradStudent savedInitial = studentRepository.saveAndFlush(student);
+            System.out.println("[SUPREME-POSTGRAD] SUCESSO: Registro base persistido. ID: " + savedInitial.getId());
+
+            // PASSO 2: Processamento Resiliente de Arquivos
+            try {
+                if (foto3x4File != null && !foto3x4File.isEmpty()) {
+                    String path = storageService.store(foto3x4File, "postgrad/fotos-perfil");
+                    savedInitial.setFotoMatricula(path);
+                    System.out.println("[SUPREME-POSTGRAD] Foto processada: " + path);
+                }
+            } catch (Exception e) {
+                System.err.println("[SUPREME-POSTGRAD] AVISO: Falha ao salvar Foto: " + e.getMessage());
             }
 
-            PostgradStudent saved = studentRepository.saveAndFlush(student);
-            logger.info("[SUPREME-POSTGRAD] Matrícula de pós-graduação persistida com sucesso. ID: {}", saved.getId());
-            return ResponseEntity.ok(saved);
+            try {
+                if (diplomaFile != null && !diplomaFile.isEmpty()) {
+                    savedInitial.setDiplomaFilePath(storageService.store(diplomaFile, "postgrad/diplomas"));
+                }
+                if (rgCpfFile != null && !rgCpfFile.isEmpty()) {
+                    savedInitial.setRgCpfFilePath(storageService.store(rgCpfFile, "postgrad/documentos"));
+                }
+                if (proofOfAddressFile != null && !proofOfAddressFile.isEmpty()) {
+                    savedInitial.setProofOfAddressFilePath(storageService.store(proofOfAddressFile, "postgrad/residencia"));
+                }
+                if (academicTranscriptFile != null && !academicTranscriptFile.isEmpty()) {
+                    savedInitial.setAcademicTranscriptFilePath(storageService.store(academicTranscriptFile, "postgrad/historicos"));
+                }
+                System.out.println("[SUPREME-POSTGRAD] Documentos processados com sucesso.");
+            } catch (Exception e) {
+                System.err.println("[SUPREME-POSTGRAD] AVISO: Falha parcial no upload de documentos: " + e.getMessage());
+            }
 
-        } catch (IOException e) {
-            logger.error("[SUPREME-POSTGRAD] Erro de I/O em documentos: ", e);
+            // PASSO 3: Sincronização Final
+            PostgradStudent finalSaved = studentRepository.saveAndFlush(savedInitial);
+            System.out.println("[SUPREME-POSTGRAD] Matrícula concluída com sucesso total para ID: " + finalSaved.getId());
+            
+            return ResponseEntity.ok(finalSaved);
+
+        } catch (Exception e) {
+            System.err.println("[SUPREME-POSTGRAD] ERRO CRÍTICO NA MATRÍCULA: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao salvar documentos no servidor: " + e.getMessage()));
+                    .body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage()));
         }
     }
 
