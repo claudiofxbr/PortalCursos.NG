@@ -132,19 +132,29 @@ export default function UsersManagementPage() {
                 data.append('foto3x4File', formData.foto3x4File);
             }
 
+            // Início da Sincronização
+            setSuccess('⏳ Iniciando registro e ativação institucional no Neon...');
+
             await api.post('v1/users', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             setSuccess('🚀 Perfil institucional registrado e ativado com sucesso!');
+            
+            // Limpeza Imediata para evitar re-envios
             setFormData({ 
                 username: '', email: '', password: '', roles: ['ALUNO'], 
                 fullName: '', position: '', department: '', foto3x4File: null 
             });
             setShowForm(false);
+            
+            // Recarga da lista em background
             loadUsers();
         } catch (e: any) {
-            setError(e?.response?.data?.message || 'Erro ao criar usuário.');
+            console.error("[SUPREME-ERROR]", e);
+            const errorMsg = e?.response?.data?.message || 'Erro ao sincronizar colaborador. Verifique se o CPF/E-mail já existe.';
+            setError(errorMsg);
+            setSuccess(null);
         } finally {
             setSubmitting(false);
         }

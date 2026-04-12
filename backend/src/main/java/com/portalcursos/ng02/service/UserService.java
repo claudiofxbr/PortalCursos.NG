@@ -69,25 +69,34 @@ public class UserService {
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
-        // Lógica COLLAB: Se for um colaborador (não aluno/candidato), criar registro Staff
-        boolean isStaff = strRoles != null && strRoles.stream().anyMatch(r -> {
-            String rUp = r.toUpperCase();
-            return !rUp.contains("ALUNO") && !rUp.contains("CANDIDATO");
-        });
+        // Lógica COLLAB V37.1: Sincronização Institucional Robusta
+        long startTime = System.currentTimeMillis();
+        try {
+            boolean isStaff = strRoles != null && strRoles.stream().anyMatch(r -> {
+                String rUp = r.toUpperCase();
+                return !rUp.contains("ALUNO") && !rUp.contains("CANDIDATO");
+            });
 
-        if (isStaff && fullName != null) {
-            System.out.println("[SUPREME-COLLAB] Sincronizando dados de Staff para: " + fullName);
-            
-            StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
-                    .orElse(new StaffMember());
-            
-            staff.setUser(savedUser);
-            staff.setFullName(fullName);
-            staff.setPosition(position != null ? position : "COLABORADOR");
-            staff.setDepartment(department != null ? department : "INSTITUCIONAL");
-            staff.setFotoUrl(savedUser.getFotoUrl());
-            
-            staffMemberRepository.save(staff);
+            if (isStaff && fullName != null) {
+                System.out.println("[SUPREME-COLLAB] Iniciando sincronização institucional para: " + fullName);
+                
+                StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
+                        .orElse(new StaffMember());
+                
+                staff.setUser(savedUser);
+                staff.setFullName(fullName);
+                staff.setPosition(position != null && !position.isBlank() ? position : "COLABORADOR");
+                staff.setDepartment(department != null && !department.isBlank() ? department : "INSTITUCIONAL");
+                staff.setFotoUrl(savedUser.getFotoUrl());
+                staff.setActive(true);
+                
+                staffMemberRepository.save(staff);
+                System.out.println("[SUPREME-COLLAB] Sincronização concluída com sucesso em " + (System.currentTimeMillis() - startTime) + "ms");
+            }
+        } catch (Exception e) {
+            System.err.println("[SUPREME-COLLAB-ERROR] Falha crítica na sincronização institucional: " + e.getMessage());
+            // Lançamos a exceção para garantir o Rollback Total conforme aprovado no plano
+            throw new RuntimeException("Falha ao ativar registro institucional. O cadastro foi cancelado para garantir integridade. Detalhes: " + e.getMessage());
         }
 
         return savedUser;
@@ -95,7 +104,10 @@ public class UserService {
 
     private Role getOrCreateRole(Role.ERole eRole) {
         return roleRepository.findByName(eRole)
-                .orElseGet(() -> roleRepository.save(Role.builder().name(eRole).build()));
+                .orElseGet(() -> {
+                    System.out.println("[SUPREME-SEED] Criando role inexistente: " + eRole);
+                    return roleRepository.save(Role.builder().name(eRole).build());
+                });
     }
 
     @Transactional
@@ -115,23 +127,28 @@ public class UserService {
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
-        // Lógica COLLAB: Se foi promovido a institucional, garantir que exista Staff
-        boolean isStaff = strRoles != null && strRoles.stream().anyMatch(r -> {
-            String rUp = r.toUpperCase();
-            return !rUp.contains("ALUNO") && !rUp.contains("CANDIDATO");
-        });
+        // Lógica COLLAB V37.1
+        try {
+            boolean isStaff = strRoles != null && strRoles.stream().anyMatch(r -> {
+                String rUp = r.toUpperCase();
+                return !rUp.contains("ALUNO") && !rUp.contains("CANDIDATO");
+            });
 
-        if (isStaff) {
-            StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
-                    .orElse(new StaffMember());
-            
-            staff.setUser(savedUser);
-            if (staff.getFullName() == null) staff.setFullName(savedUser.getUsername().toUpperCase());
-            if (staff.getPosition() == null) staff.setPosition("CARGO_PENDENTE");
-            if (staff.getDepartment() == null) staff.setDepartment("SETOR_PENDENTE");
-            staff.setFotoUrl(savedUser.getFotoUrl());
-            
-            staffMemberRepository.save(staff);
+            if (isStaff) {
+                StaffMember staff = staffMemberRepository.findByUserId(savedUser.getId())
+                        .orElse(new StaffMember());
+                
+                staff.setUser(savedUser);
+                if (staff.getFullName() == null) staff.setFullName(savedUser.getUsername().toUpperCase());
+                if (staff.getPosition() == null) staff.setPosition("CARGO_PENDENTE");
+                if (staff.getDepartment() == null) staff.setDepartment("SETOR_PENDENTE");
+                staff.setFotoUrl(savedUser.getFotoUrl());
+                staff.setActive(true);
+                
+                staffMemberRepository.save(staff);
+            }
+        } catch (Exception e) {
+            System.err.println("[SUPREME-COLLAB-ERROR] Falha na atualização de roles: " + e.getMessage());
         }
 
         return savedUser;
