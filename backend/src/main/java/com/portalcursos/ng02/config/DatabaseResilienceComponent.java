@@ -98,35 +98,70 @@ public class DatabaseResilienceComponent {
     }
 
     private void applySchemaFixes(Connection conn) {
-        logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção)...");
+        logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção V35.0)...");
         String[] tables = {"students", "postgrad_students", "payments", "staff_members"};
         
         try (var stmt = conn.createStatement()) {
             for (String table : tables) {
-                logger.info("[OMEGA-SUPREME] Otimizando tabela: {}", table);
+                logger.info("[OMEGA-SUPREME] Analisando tabela: {}", table);
                 
-                // Colunas de Auditoria SUPREME
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE");
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_name VARCHAR(255)");
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_position VARCHAR(255)");
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_photo_url TEXT");
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
-                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                // Colunas de Administração e Soft Delete (Resiliência Básica)
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE");
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS creator_name VARCHAR(255)");
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS creator_position VARCHAR(255)");
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS creator_photo_url TEXT");
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
                 
-                // Colunas Específicas
+                // Colunas de Foto e Perfil
                 if (table.equals("students") || table.equals("postgrad_students")) {
-                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS foto_matricula VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS foto_matricula VARCHAR(255)");
                 }
+
+                // --- [ESPECÍFICO: PÓS-GRADUAÇÃO] ---
+                if (table.equals("postgrad_students")) {
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS diploma_file_path VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS rg_cpf_file_path VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS proof_of_address_file_path VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS academic_transcript_file_path VARCHAR(255)");
+                }
+
+                // --- [ESPECÍFICO: GRADUAÇÃO ROBUSTA] ---
+                if (table.equals("students")) {
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS nacionalidade VARCHAR(100)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS estado_civil VARCHAR(50)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS numero_reservista VARCHAR(50)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS titulo_eleitor VARCHAR(50)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS is_estrangeiro BOOLEAN DEFAULT FALSE");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS forma_ingresso VARCHAR(50)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS tipo_cota VARCHAR(50)");
+                }
+
+                // --- [ESPECÍFICO: PAGAMENTOS] ---
                 if (table.equals("payments")) {
-                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS student_photo_url TEXT");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS student_photo_url TEXT");
                 }
+
+                // --- [ESPECÍFICO: STAFF] ---
                 if (table.equals("staff_members")) {
-                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255)");
                 }
             }
-            logger.info("[OMEGA-SUPREME] Auto-Correção finalizada com sucesso!");
+            logger.info("[OMEGA-SUPREME] Auto-Correção V35.0 finalizada com sucesso!");
         } catch (SQLException e) {
-            logger.error("[OMEGA-SUPREME] Falha na auto-correção de schema: {}", e.getMessage());
+            logger.error("[OMEGA-SUPREME] Erro ao aplicar correções de schema: {}", e.getMessage());
+        }
+    }
+
+    private void executeAlter(java.sql.Statement stmt, String table, String sql) {
+        try {
+            stmt.execute("ALTER TABLE " + table + " " + sql);
+        } catch (SQLException e) {
+            // Ignorar erros comuns (como coluna já existente se o driver não suportar IF NOT EXISTS em alguns contextos)
+            if (!e.getMessage().contains("already exists")) {
+                logger.warn("[OMEGA-SUPREME] Aviso na tabela {}: {}", table, e.getMessage());
+            }
         }
     }
 }

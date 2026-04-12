@@ -109,8 +109,10 @@ export default function PostgradStudentsPage() {
             loadStudents();
         } catch (e: any) {
             console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data);
-            const serverMsg = e?.response?.data?.message || e?.response?.data?.details;
-            setError(serverMsg || 'Erro crítico ao cadastrar aluno. Verifique se todos os campos obrigatórios e a foto foram preenchidos.');
+            const data = e?.response?.data;
+            const errorMsg = data?.message || data?.details || 'Erro crítico ao cadastrar aluno.';
+            const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : '';
+            setError(`${errorMsg}${hint}`);
         } finally {
             setSubmitting(false);
         }

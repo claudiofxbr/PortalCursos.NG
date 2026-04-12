@@ -1,7 +1,7 @@
 -- ==========================================================
 -- SCRIPT DE INICIALIZAÇÃO COMPLETO: PORTALCURSOS.NG
--- PROTOCOLO OMEGA-SUPREME V30.4 (PHOTO INTEGRATION)
--- FOCO: INTEGRAÇÃO DE FOTO 3X4 E PADRONIZAÇÃO DE CADASTROS
+-- PROTOCOLO OMEGA-SUPREME V35.0 (AUTO-CORREÇÃO TOTAL)
+-- FOCO: RESILIÊNCIA CLOUD E INTEGRAÇÃO DE DOCUMENTOS PÓS
 -- ==========================================================
 
 -- 1. EXTENSÕES NECESSÁRIAS
@@ -157,7 +157,8 @@ CREATE TABLE IF NOT EXISTS payments (
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     student_photo_url TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 6.1 CONTROLE INSTITUCIONAL (PADRONIZADA)
@@ -171,7 +172,8 @@ CREATE TABLE IF NOT EXISTS staff_members (
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS repair_tickets (
@@ -261,8 +263,8 @@ ANALYZE postgrad_students;
 ANALYZE courses;
 ANALYZE payments;
 
--- REGISTRO DE INICIALIZAÇÃO OMEGA V30.9
+-- REGISTRO DE INICIALIZAÇÃO OMEGA V35.0
 INSERT INTO deployment_logs (version, status, environment, summary) 
-VALUES ('V30.9-SUPREME', 'SUCCESS', 'UNIVERSAL-CRUD', 'Protocolo de Auditoria Universal e CRUD implementado em todos os módulos.');
+VALUES ('V35.0-ULTRA-SUPREME', 'SUCCESS', 'HYBRID-CLOUD', 'Protocolo de Auto-Correção de Schema e Estabilização de Pós-Graduação concluídos.');
 
--- SCRIPT CONCLUÍDO - V30.9-SUPREME
+-- SCRIPT CONCLUÍDO - V35.0-ULTRA-SUPREME

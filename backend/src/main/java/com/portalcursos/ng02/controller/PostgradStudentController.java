@@ -155,9 +155,16 @@ public class PostgradStudentController {
             return ResponseEntity.ok(finalSaved);
 
         } catch (Exception e) {
-            log.error("[SUPREME-POSTGRAD] ERRO NA MATRÍCULA: {}", e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao processar matrícula de pós-graduação. Por favor, tente novamente ou entre em contato com o suporte técnico."));
+            log.error("[SUPREME-POSTGRAD] ERRO CRÍTICO NA MATRÍCULA: {}", e.getMessage(), e);
+            String errorMsg = "Erro ao processar matrícula de pós-graduação. Por favor, tente novamente.";
+            
+            // Diagnóstico para o Desenvolvedor/Frontend
+            java.util.Map<String, String> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("message", errorMsg);
+            errorResponse.put("details", e.getMessage());
+            errorResponse.put("hint", "Verifique a conexão com o banco Neon ou se o tempo de boot expirou.");
+            
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
