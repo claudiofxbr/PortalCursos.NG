@@ -68,9 +68,11 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.CONFLICT.value());
-        body.put("error", "Conflict");
-        body.put("message", "Conflito de dados: Este CPF ou E-mail já está em uso no sistema.");
+        body.put("error", "Conflict / Integrity Violation");
+        body.put("message", "Violação de integridade: Verifique se o CPF/E-mail já existe ou se há campos obrigatórios vazios.");
+        body.put("details", ex.getMostSpecificCause().getMessage());
         body.put("path", request.getDescription(false).replace("uri=", ""));
+        body.put("hint", "Se o banco parecer vazio, verifique registros desativados (Soft Delete) ou campos NOT NULL.");
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }

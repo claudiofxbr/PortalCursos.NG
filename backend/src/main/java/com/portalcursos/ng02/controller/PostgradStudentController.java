@@ -84,11 +84,11 @@ public class PostgradStudentController {
             @RequestParam(value = "academicTranscriptFile", required = false) MultipartFile academicTranscriptFile,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        if (studentRepository.existsByEmail(email)) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro: E-mail já cadastrado no sistema."));
+        if (studentRepository.existsByEmailGlobal(email)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Erro: Este E-mail já possui um registro (ativo ou inativo) no sistema de Pós-Graduação."));
         }
-        if (studentRepository.existsByCpf(cpf)) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro: CPF já cadastrado no sistema."));
+        if (studentRepository.existsByCpfGlobal(cpf)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Erro: Este CPF já possui um registro (ativo ou inativo) no sistema de Pós-Graduação."));
         }
 
         // O tratamento de exceções agora é delegado ao GlobalExceptionHandler

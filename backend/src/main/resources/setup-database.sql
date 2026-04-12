@@ -251,6 +251,12 @@ SELECT u.id, r.id FROM users u, roles r
 WHERE u.username = 'admin' AND r.name IN ('ROLE_ADMIN', 'ROLE_ROOT_MASTER')
 ON CONFLICT DO NOTHING;
 
+-- VINCULAR STAFFMEMBER AO ADMIN (PARA AUDITORIA OMEGA)
+INSERT INTO staff_members (full_name, position, department, user_id)
+SELECT 'Administrador Supremo', 'ROOT', 'TI-INFRA', u.id FROM users u 
+WHERE u.username = 'admin'
+ON CONFLICT DO NOTHING;
+
 -- ATUALIZAÇÃO DE SEQUÊNCIAS (SE NECESSÁRIO)
 SELECT setval('roles_id_seq', (SELECT MAX(id) FROM roles));
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
