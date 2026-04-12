@@ -118,6 +118,8 @@ public class GradStudentController {
             String fotoPath = storageService.store(foto3x4, "fotos-perfil");
             if (fotoPath != null) {
                 savedStudent.setFotoMatricula(fotoPath);
+                logger.info("[SUPREME-PHOTO] Foto armazenada em: {}. Vinculando ao registro...", fotoPath);
+                
                 StudentDocument photoDoc = StudentDocument.builder()
                         .documentType(EDocumentType.RG) 
                         .filePath(fotoPath)
@@ -125,6 +127,12 @@ public class GradStudentController {
                         .student(savedStudent)
                         .build();
                 savedStudent.getDocuments().add(photoDoc);
+                
+                // Salvamento imediato da foto para garantir persistência mesmo se outros documentos falharem
+                studentRepository.save(savedStudent);
+                logger.info("[SUPREME-PHOTO] Caminho da foto persistido com sucesso no banco Neon.");
+            } else {
+                logger.warn("[SUPREME-PHOTO] Nenhuma foto detectada ou falha no upload.");
             }
             
             addDocument(savedStudent, rgCpf, EDocumentType.RG);

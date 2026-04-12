@@ -104,17 +104,26 @@ public class PostgradStudentController {
             injectAuditStamps(student);
 
             // Uploads
+            logger.info("[SUPREME-POSTGRAD] Processando documentos e foto para: {}", student.getFullName());
             student.setDiplomaFilePath(storageService.store(diplomaFile, "postgrad/diplomas"));
             student.setRgCpfFilePath(storageService.store(rgCpfFile, "postgrad/documentos"));
             student.setProofOfAddressFilePath(storageService.store(proofOfAddressFile, "postgrad/residencia"));
             student.setAcademicTranscriptFilePath(storageService.store(academicTranscriptFile, "postgrad/historicos"));
-            student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
+            
+            String fotoPath = storageService.store(foto3x4File, "postgrad/fotos-perfil");
+            if (fotoPath != null) {
+                student.setFotoUrl(fotoPath);
+                logger.info("[SUPREME-POSTGRAD] Foto armazenada em: {}.", fotoPath);
+            }
 
-            return ResponseEntity.ok(studentRepository.save(student));
+            PostgradStudent saved = studentRepository.save(student);
+            logger.info("[SUPREME-POSTGRAD] Matrícula de pós-graduação persistida com sucesso. ID: {}", saved.getId());
+            return ResponseEntity.ok(saved);
 
         } catch (IOException e) {
+            logger.error("[SUPREME-POSTGRAD] Erro de I/O em documentos: ", e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao salvar documentos: " + e.getMessage()));
+                    .body(new MessageResponse("Erro ao salvar documentos no servidor: " + e.getMessage()));
         }
     }
 

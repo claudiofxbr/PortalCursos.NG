@@ -1,26 +1,30 @@
--- PortalCursos.NG - Script de Otimização Supremo V30.9
--- Foco: Performance, Integridade e Robustez nas Matrículas
+-- ---------------------------------------------------------
+-- PROTOCOLO V30.9-SUPREME: CORRECÃO DE BANCO DE DADOS
+-- OBJETIVO: GARANTIR INTEGRIDADE DE FOTOS E PERFORMANCE
+-- ---------------------------------------------------------
 
--- 1. Índices para Busca de Alunos (Graduação e Pós)
-CREATE INDEX IF NOT EXISTS idx_student_cpf ON students(cpf);
-CREATE INDEX IF NOT EXISTS idx_student_email ON students(email);
-CREATE INDEX IF NOT EXISTS idx_student_active ON students(active);
+-- 1. Garantir que a coluna foto_matricula existe na tabela students (Graduação)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='students' AND column_name='foto_matricula') THEN
+        ALTER TABLE students ADD COLUMN foto_matricula VARCHAR(255);
+    END IF;
+END $$;
 
-CREATE INDEX IF NOT EXISTS idx_postgrad_cpf ON postgrad_students(cpf);
-CREATE INDEX IF NOT EXISTS idx_postgrad_email ON postgrad_students(email);
+-- 2. Garantir que a coluna foto_url existe na tabela postgrad_students (Pós-Graduação)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='postgrad_students' AND column_name='foto_url') THEN
+        ALTER TABLE postgrad_students ADD COLUMN foto_url VARCHAR(255);
+    END IF;
+END $$;
 
--- 2. índices para Auditoria (Staff e Usuários)
-CREATE INDEX IF NOT EXISTS idx_staff_user_id ON staff_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+-- 3. Índices de Performance para Auditoria e Busca Rápida
+CREATE INDEX IF NOT EXISTS idx_students_full_name ON students (full_name);
+CREATE INDEX IF NOT EXISTS idx_postgrad_students_full_name ON postgrad_students (full_name);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions (refresh_token);
 
--- 3. índices para Controle Financeiro (Payments)
-CREATE INDEX IF NOT EXISTS idx_payments_student_id ON payments(student_id);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
-CREATE INDEX IF NOT EXISTS idx_payments_due_date ON payments(due_date);
+-- 4. Limpeza de sessões órfãs (Manutenção Preventiva)
+DELETE FROM user_sessions WHERE expiry_date < NOW();
 
--- 4. Garantia de Unicidade em campos críticos (Safe-Guard)
--- Nota: Rodar estas alterações apenas se as constraints ainda não existirem.
--- ALTER TABLE students ADD CONSTRAINT uk_student_cpf UNIQUE (cpf);
--- ALTER TABLE users ADD CONSTRAINT uk_users_username UNIQUE (username);
-
-SELECT 'PROTOCOLO SUPREME: Otimização de Banco de Dados Concluída' as status;
+-- FIM DO PROTOCOLO SUPREME-DATABASE-FIX

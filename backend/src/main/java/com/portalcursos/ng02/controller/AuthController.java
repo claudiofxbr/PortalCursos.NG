@@ -117,27 +117,39 @@ public class AuthController {
     }
 
     @PostMapping("/refreshtoken")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> refreshtoken(@Valid @RequestBody com.portalcursos.ng02.dto.TokenRefreshRequest request) {
         String refreshToken = request.getRefreshToken();
+        logger.info("[SUPREME-AUTH] Solicitando renovação de token para: ...{}", 
+            refreshToken != null && refreshToken.length() > 5 ? refreshToken.substring(refreshToken.length() - 5) : "INVALID");
 
-        if ((refreshToken != null) && (refreshToken.length() > 0)) {
-            return userSessionRepository.findByRefreshToken(refreshToken)
-                    .map(session -> {
-                        // Verificar expiração
-                        if (session.getExpiryDate().isBefore(Instant.now())) {
-                            userSessionRepository.delete(session);
-                            return ResponseEntity.status(403).body(new MessageResponse("Refresh token expirado. Faça login novamente."));
-                        }
+        try {
+            if ((refreshToken != null) && (refreshToken.length() > 0)) {
+                return userSessionRepository.findByRefreshToken(refreshToken)
+                        .map(session -> {
+                            // Verificar expiração
+                            if (session.getExpiryDate().isBefore(Instant.now())) {
+                                userSessionRepository.delete(session);
+                                logger.warn("[SUPREME-AUTH] Refresh token expirado.");
+                                return ResponseEntity.status(403).body(new MessageResponse("Refresh token expirado. Faça login novamente."));
+                            }
 
-                        User user = session.getUser();
-                        String token = jwtUtils.generateTokenFromUsername(user.getUsername());
-
-                        return ResponseEntity.ok(new com.portalcursos.ng02.dto.TokenRefreshResponse(token, refreshToken));
-                    })
-                    .orElse(ResponseEntity.status(403).body(new MessageResponse("Refresh token não encontrado no banco.")));
+                            User user = session.getUser();
+                            String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+                            
+                            logger.info("[SUPREME-AUTH] Token renovado com sucesso para o usuário: {}", user.getUsername());
+                            return ResponseEntity.ok(new com.portalcursos.ng02.dto.TokenRefreshResponse(token, refreshToken));
+                        })
+                        .orElseGet(() -> {
+                            logger.warn("[SUPREME-AUTH] Refresh token não encontrado no banco.");
+                            return ResponseEntity.status(403).body(new MessageResponse("Refresh token não encontrado no banco."));
+                        });
+            }
+            return ResponseEntity.badRequest().body(new MessageResponse("Refresh Token é obrigatório."));
+        } catch (Exception e) {
+            logger.error("[SUPREME-AUTH] Erro crítico no refresh token: ", e);
+            return ResponseEntity.status(500).body(new MessageResponse("Erro interno ao processar renovação de token. Protocolo V30.9."));
         }
-
-        return ResponseEntity.badRequest().body(new MessageResponse("Refresh Token é obrigatório."));
     }
 
     @GetMapping("/me")
