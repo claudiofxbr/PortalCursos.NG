@@ -8,6 +8,7 @@ import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.TeacherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,57 +35,77 @@ public class AcademicController {
 
     @GetMapping("/students")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
-    public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+    public ResponseEntity<?> getAllStudents() {
+        try {
+            return ResponseEntity.ok(studentRepository.findAll());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar estudantes: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar estudantes."));
+        }
     }
 
     @GetMapping("/teachers")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
-    public List<Teacher> getAllTeachers() {
-        return teacherRepository.findAll();
+    public ResponseEntity<?> getAllTeachers() {
+        try {
+            return ResponseEntity.ok(teacherRepository.findAll());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar professores: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar professores."));
+        }
     }
 
     @GetMapping("/staff")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<StaffMember> getAllStaff() {
-        return staffMemberRepository.findAll();
+    public ResponseEntity<?> getAllStaff() {
+        try {
+            return ResponseEntity.ok(staffMemberRepository.findAll());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar staff: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar membros da equipe."));
+        }
     }
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<Map<String, Object>> getAllAcademicUsers() {
-        List<Map<String, Object>> allUsers = new ArrayList<>();
+    public ResponseEntity<?> getAllAcademicUsers() {
+        try {
+            List<Map<String, Object>> allUsers = new ArrayList<>();
 
-        studentRepository.findAll().forEach(s -> {
-            Map<String, Object> u = new HashMap<>();
-            u.put("id", "S_" + s.getId());
-            u.put("name", s.getFullName());
-            u.put("doc", s.getRegistrationNumber());
-            u.put("course", s.getCurrentCourse());
-            u.put("role", "ALUNO");
-            allUsers.add(u);
-        });
+            studentRepository.findAll().forEach(s -> {
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", "S_" + s.getId());
+                u.put("name", s.getFullName());
+                u.put("doc", s.getRegistrationNumber());
+                u.put("course", s.getCurrentCourse());
+                u.put("role", "ALUNO");
+                allUsers.add(u);
+            });
 
-        teacherRepository.findAll().forEach(t -> {
-            Map<String, Object> u = new HashMap<>();
-            u.put("id", "T_" + t.getId());
-            u.put("name", t.getFullName());
-            u.put("doc", t.getDepartment());
-            u.put("course", t.getSpecialization());
-            u.put("role", "PROFESSOR");
-            allUsers.add(u);
-        });
+            teacherRepository.findAll().forEach(t -> {
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", "T_" + t.getId());
+                u.put("name", t.getFullName());
+                u.put("doc", t.getDepartment());
+                u.put("course", t.getSpecialization());
+                u.put("role", "PROFESSOR");
+                allUsers.add(u);
+            });
 
-        staffMemberRepository.findAll().forEach(sm -> {
-            Map<String, Object> u = new HashMap<>();
-            u.put("id", "M_" + sm.getId());
-            u.put("name", sm.getFullName());
-            u.put("doc", sm.getPosition());
-            u.put("course", sm.getDepartment());
-            u.put("role", "STAFF");
-            allUsers.add(u);
-        });
+            staffMemberRepository.findAll().forEach(sm -> {
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", "M_" + sm.getId());
+                u.put("name", sm.getFullName());
+                u.put("doc", sm.getPosition());
+                u.put("course", sm.getDepartment());
+                u.put("role", "STAFF");
+                allUsers.add(u);
+            });
 
-        return allUsers;
+            return ResponseEntity.ok(allUsers);
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro na lista unificada acadêmica: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao processar lista acadêmica."));
+        }
     }
 }

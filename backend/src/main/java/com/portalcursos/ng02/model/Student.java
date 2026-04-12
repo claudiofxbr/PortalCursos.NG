@@ -11,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "students")
@@ -74,9 +75,14 @@ public class Student extends BaseAuditEntity {
     @JsonIgnore
     private User user;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private java.util.List<Payment> payments = new java.util.ArrayList<>();
+
+    @JsonProperty("registrationDate")
+    public String getRegistrationDate() {
+        return getCreatedAt() != null ? getCreatedAt().toString() : null;
+    }
 
     public String getFotoUrl() {
         return fotoMatricula;

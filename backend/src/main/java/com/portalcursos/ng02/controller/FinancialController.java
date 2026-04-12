@@ -36,79 +36,103 @@ public class FinancialController {
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
-    public List<Payment> getInvoicesByLevel(@PathVariable String level) {
-        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
-        return paymentRepository.findByAcademicLevelAndStatusIn(
-            academicLevel, 
-            java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)
-        );
+    public ResponseEntity<?> getInvoicesByLevel(@PathVariable String level) {
+        try {
+            EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
+            List<Payment> invoices = paymentRepository.findByAcademicLevelAndStatusIn(
+                academicLevel, 
+                java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)
+            );
+            return ResponseEntity.ok(invoices);
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao buscar faturas por nível: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao buscar faturas: nível inválido ou falha interna."));
+        }
     }
 
     @GetMapping("/history/{level}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
-    public List<Payment> getHistoryByLevel(@PathVariable String level) {
-        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
-        return paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
+    public ResponseEntity<?> getHistoryByLevel(@PathVariable String level) {
+        try {
+            EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
+            List<Payment> history = paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao buscar histórico por nível: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao buscar histórico: nível inválido ou falha interna."));
+        }
     }
 
     @PostMapping("/charge")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> createManualCharge(@RequestBody ManualChargeRequest request) {
-        Payment.PaymentBuilder<?, ?> paymentBuilder = Payment.builder()
-                .amount(request.getAmount())
-                .dueDate(request.getDueDate())
-                .status(EPaymentStatus.PENDING)
-                .category(request.getCategory())
-                .secretaryProcessType(request.getSecretaryProcessType())
-                .academicLevel(request.getAcademicLevel())
-                .description(request.getDescription());
+        try {
+            Payment.PaymentBuilder<?, ?> paymentBuilder = Payment.builder()
+                    .amount(request.getAmount())
+                    .dueDate(request.getDueDate())
+                    .status(EPaymentStatus.PENDING)
+                    .category(request.getCategory())
+                    .secretaryProcessType(request.getSecretaryProcessType())
+                    .academicLevel(request.getAcademicLevel())
+                    .description(request.getDescription());
 
-        // Injetar auditoria SUPREME
-        injectAuditStamps(paymentBuilder);
+            injectAuditStamps(paymentBuilder);
 
-        if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
-            Optional<Student> student = studentRepository.findById(request.getStudentId());
-            if (student.isEmpty()) return ResponseEntity.badRequest().body("Estudante de graduação não encontrado");
-            paymentBuilder.student(student.get());
-            paymentBuilder.studentPhotoUrl(student.get().getFotoUrl());
-        } else {
-            Optional<PostgradStudent> postgradStudent = postgradStudentRepository.findById(request.getStudentId());
-            if (postgradStudent.isEmpty()) return ResponseEntity.badRequest().body("Estudante de pós-graduação não encontrado");
-            paymentBuilder.postgradStudent(postgradStudent.get());
-            paymentBuilder.studentPhotoUrl(postgradStudent.get().getFotoUrl());
+            if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
+                Optional<Student> student = studentRepository.findById(request.getStudentId());
+                if (student.isEmpty()) return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Estudante de graduação não encontrado"));
+                paymentBuilder.student(student.get());
+                paymentBuilder.studentPhotoUrl(student.get().getFotoUrl());
+            } else {
+                Optional<PostgradStudent> postgradStudent = postgradStudentRepository.findById(request.getStudentId());
+                if (postgradStudent.isEmpty()) return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Estudante de pós-graduação não encontrado"));
+                paymentBuilder.postgradStudent(postgradStudent.get());
+                paymentBuilder.studentPhotoUrl(postgradStudent.get().getFotoUrl());
+            }
+
+            Payment saved = paymentRepository.save(paymentBuilder.build());
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao criar cobrança manual: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao criar cobrança: " + e.getMessage()));
         }
-
-        Payment saved = paymentRepository.save(paymentBuilder.build());
-        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/invoices/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
-        return paymentRepository.findById(id).map(payment -> {
-            payment.setAmount(request.getAmount());
-            payment.setDueDate(request.getDueDate());
-            payment.setCategory(request.getCategory());
-            payment.setSecretaryProcessType(request.getSecretaryProcessType());
-            payment.setDescription(request.getDescription());
+        try {
+            return paymentRepository.findById(id).map(payment -> {
+                payment.setAmount(request.getAmount());
+                payment.setDueDate(request.getDueDate());
+                payment.setCategory(request.getCategory());
+                payment.setSecretaryProcessType(request.getSecretaryProcessType());
+                payment.setDescription(request.getDescription());
 
-            // Auditoria SUPREME na edição
-            injectAuditStamps(payment);
+                injectAuditStamps(payment);
 
-            return ResponseEntity.ok(paymentRepository.save(payment));
-        }).orElse(ResponseEntity.notFound().build());
+                return ResponseEntity.ok(paymentRepository.save(payment));
+            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Cobrança não encontrada")));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar cobrança ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao atualizar cobrança."));
+        }
     }
 
     @DeleteMapping("/invoices/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
-        return paymentRepository.findById(id).map(payment -> {
-            // Auditoria SUPREME antes de desativar (Soft Delete)
-            injectAuditStamps(payment);
-            paymentRepository.save(payment); // Salva quem deletou
-            paymentRepository.delete(payment); // Executa o SQLDelete (active = false)
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            return paymentRepository.findById(id).map(payment -> {
+                injectAuditStamps(payment);
+                paymentRepository.save(payment);
+                paymentRepository.delete(payment);
+                return ResponseEntity.ok(new com.portalcursos.ng02.payload.response.MessageResponse("Cobrança removida com sucesso"));
+            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Cobrança não encontrada para remoção")));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao deletar cobrança ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao remover cobrança."));
+        }
     }
 
     private void injectAuditStamps(Object p) {
@@ -129,7 +153,6 @@ public class FinancialController {
         }
     }
 
-    // DTO estático para a requisição
     public static class ManualChargeRequest {
         private java.math.BigDecimal amount;
         private java.time.LocalDate dueDate;
@@ -139,7 +162,6 @@ public class FinancialController {
         private ESecretaryProcessType secretaryProcessType;
         private String description;
 
-        // Getters e Setters
         public java.math.BigDecimal getAmount() { return amount; }
         public void setAmount(java.math.BigDecimal amount) { this.amount = amount; }
         public java.time.LocalDate getDueDate() { return dueDate; }
@@ -158,47 +180,72 @@ public class FinancialController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
-    public List<Payment> getStudentPayments(@PathVariable Long studentId) {
-        return paymentRepository.findByStudentId(studentId);
+    public ResponseEntity<?> getStudentPayments(@PathVariable Long studentId) {
+        try {
+            return ResponseEntity.ok(paymentRepository.findByStudentId(studentId));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao buscar pagamentos do aluno ID " + studentId + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar pagamentos do aluno."));
+        }
     }
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
-    public List<Payment> getInvoices() {
-        return paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE));
+    public ResponseEntity<?> getInvoices() {
+        try {
+            return ResponseEntity.ok(paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar faturas gerais: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar faturas."));
+        }
     }
 
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
-    public List<Payment> getHistory() {
-        return paymentRepository.findByStatus(EPaymentStatus.PAID);
+    public ResponseEntity<?> getHistory() {
+        try {
+            return ResponseEntity.ok(paymentRepository.findByStatus(EPaymentStatus.PAID));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar histórico geral: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar histórico."));
+        }
     }
 
     @PostMapping("/generate-pix/{paymentId}")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> generatePix(@PathVariable @NonNull Long paymentId) {
-        Optional<Payment> payment = paymentRepository.findById(paymentId);
-        if (payment.isPresent()) {
-            Payment p = payment.get();
-            p.setMethod(EPaymentMethod.PIX);
-            p.setPaymentCode("00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-4266141740005204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304");
-            paymentRepository.save(p);
-            return ResponseEntity.ok(p);
+        try {
+            Optional<Payment> payment = paymentRepository.findById(paymentId);
+            if (payment.isPresent()) {
+                Payment p = payment.get();
+                p.setMethod(EPaymentMethod.PIX);
+                p.setPaymentCode("00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-4266141740005204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304");
+                paymentRepository.save(p);
+                return ResponseEntity.ok(p);
+            }
+            return ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Fatura não encontrada para gerar PIX"));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao gerar PIX para fatura ID " + paymentId + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao processar PIX."));
         }
-        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/generate-boleto/{paymentId}")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> generateBoleto(@PathVariable @NonNull Long paymentId) {
-        Optional<Payment> payment = paymentRepository.findById(paymentId);
-        if (payment.isPresent()) {
-            Payment p = payment.get();
-            p.setMethod(EPaymentMethod.BOLETO);
-            p.setPaymentCode("https://portalcursos.edu.br/financeiro/boletos/download/B123456789");
-            paymentRepository.save(p);
-            return ResponseEntity.ok(p);
+        try {
+            Optional<Payment> payment = paymentRepository.findById(paymentId);
+            if (payment.isPresent()) {
+                Payment p = payment.get();
+                p.setMethod(EPaymentMethod.BOLETO);
+                p.setPaymentCode("https://portalcursos.edu.br/financeiro/boletos/download/B123456789");
+                paymentRepository.save(p);
+                return ResponseEntity.ok(p);
+            }
+            return ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Fatura não encontrada para gerar boleto"));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao gerar boleto para fatura ID " + paymentId + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao processar boleto."));
         }
-        return ResponseEntity.notFound().build();
     }
 }

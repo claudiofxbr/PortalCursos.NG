@@ -34,16 +34,29 @@ public class PostgradStudentController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<PostgradStudent>> listAll() {
-        return ResponseEntity.ok(studentRepository.findAll());
+    public ResponseEntity<?> listAll() {
+        try {
+            return ResponseEntity.ok(studentRepository.findAll());
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao listar alunos de pós-graduação: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Erro interno ao recuperar lista de alunos de pós-graduação."));
+        }
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> findById(@PathVariable Long id) {
-        return studentRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return studentRepository.findById(id)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao buscar aluno de pós-graduação ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Erro ao recuperar dados do aluno."));
+        }
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -116,57 +129,73 @@ public class PostgradStudentController {
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        return studentRepository.findById(id).map(student -> {
-            student.setFullName(fullName);
-            student.setPhone(phone);
-            student.setAddress(address);
-            student.setDesiredCourse(desiredCourse);
-            student.setEnrollmentStatus(enrollmentStatus);
+        try {
+            return studentRepository.findById(id).map(student -> {
+                student.setFullName(fullName);
+                student.setPhone(phone);
+                student.setAddress(address);
+                student.setDesiredCourse(desiredCourse);
+                student.setEnrollmentStatus(enrollmentStatus);
 
-            if (foto3x4File != null && !foto3x4File.isEmpty()) {
-                try {
-                    storageService.delete(student.getFotoUrl());
-                    student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
-                } catch (IOException e) {
-                    // Log error
+                if (foto3x4File != null && !foto3x4File.isEmpty()) {
+                    try {
+                        storageService.delete(student.getFotoUrl());
+                        student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
+                    } catch (IOException e) {
+                        System.err.println("[SUPREME-ERROR] Erro ao processar foto (Pós): " + e.getMessage());
+                    }
                 }
-            }
 
-            // Atualizar auditoria SUPREME
-            injectAuditStamps(student);
-
-            return ResponseEntity.ok(studentRepository.save(student));
-        }).orElse(ResponseEntity.notFound().build());
+                injectAuditStamps(student);
+                return ResponseEntity.ok(studentRepository.save(student));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar aluno Pós: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do aluno de pós-graduação."));
+        }
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
-        return studentRepository.findById(id).map(student -> {
-            student.setEnrollmentStatus(status);
-            injectAuditStamps(student);
-            return ResponseEntity.ok(studentRepository.save(student));
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            return studentRepository.findById(id).map(student -> {
+                student.setEnrollmentStatus(status);
+                injectAuditStamps(student);
+                return ResponseEntity.ok(studentRepository.save(student));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar status Pós: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status da matrícula de pós-graduação."));
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        return studentRepository.findById(id).map(student -> {
-            studentRepository.delete(student);
-            return ResponseEntity.ok(new MessageResponse("Aluno de pós-graduação desativado com sucesso (Soft Delete)."));
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            return studentRepository.findById(id).map(student -> {
+                studentRepository.delete(student);
+                return ResponseEntity.ok(new MessageResponse("Aluno de pós-graduação desativado com sucesso (Soft Delete)."));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao desativar aluno ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Falha ao processar exclusão lógica do aluno."));
+        }
     }
 
     private void injectAuditStamps(PostgradStudent s) {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                s.setCreatorName(staff.getFullName());
-                s.setCreatorPosition(staff.getPosition());
-                s.setCreatorPhotoUrl(staff.getFotoUrl());
-            });
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    s.setCreatorName(staff.getFullName());
+                    s.setCreatorPosition(staff.getPosition());
+                    s.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
         }
     }
 }

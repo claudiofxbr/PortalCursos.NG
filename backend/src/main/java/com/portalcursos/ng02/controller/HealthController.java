@@ -22,7 +22,7 @@ public class HealthController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final String VERSION = "V30.9-SUPREME";
+    private static final String VERSION = "V30.9-SUPREME-FINAL";
 
     @GetMapping("/health")
     public ResponseEntity<HealthResponse> checkHealth() {

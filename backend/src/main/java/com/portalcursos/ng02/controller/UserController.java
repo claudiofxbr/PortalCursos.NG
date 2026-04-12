@@ -25,52 +25,72 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            return ResponseEntity.ok(userService.getAllUsers());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar usuários: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao listar usuários: " + e.getMessage()));
+        }
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
-    public ResponseEntity<User> createUser(
+    public ResponseEntity<?> createUser(
             @RequestParam("username") String username,
             @RequestParam("email") String email,
             @RequestParam("password") String password,
             @RequestParam("roles") Set<String> roles,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        String fotoPath = null;
-        if (foto3x4File != null && !foto3x4File.isEmpty()) {
-            try {
-                fotoPath = storageService.store(foto3x4File, "staff-photos");
-            } catch (Exception e) {
-                return ResponseEntity.internalServerError().build();
+        try {
+            String fotoPath = null;
+            if (foto3x4File != null && !foto3x4File.isEmpty()) {
+                try {
+                    fotoPath = storageService.store(foto3x4File, "staff-photos");
+                } catch (Exception e) {
+                    System.err.println("[SUPREME-ERROR] Erro no upload de foto: " + e.getMessage());
+                    return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro no upload da foto: " + e.getMessage()));
+                }
             }
-        }
 
-        User user = User.builder()
-                .username(username)
-                .email(email)
-                .password(password)
-                .fotoUrl(fotoPath)
-                .build();
-                 
-        return ResponseEntity.ok(userService.createUser(user, roles));
+            User user = User.builder()
+                    .username(username)
+                    .email(email)
+                    .password(password)
+                    .fotoUrl(fotoPath)
+                    .build();
+                     
+            return ResponseEntity.ok(userService.createUser(user, roles));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao criar usuário: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao criar usuário: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
-    public ResponseEntity<User> updateUserRoles(@PathVariable Long id, @RequestBody Set<String> roles) {
-        return ResponseEntity.ok(userService.updateUserRoles(id, roles));
+    public ResponseEntity<?> updateUserRoles(@PathVariable Long id, @RequestBody Set<String> roles) {
+        try {
+            return ResponseEntity.ok(userService.updateUserRoles(id, roles));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar roles: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao atualizar permissões: " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
-        return ResponseEntity.ok().build();
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok(new com.portalcursos.ng02.payload.response.MessageResponse("Usuário removido com sucesso"));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao remover usuário ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao remover usuário: " + e.getMessage()));
+        }
     }
 
-    // DTO para Criação
     @lombok.Data
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor

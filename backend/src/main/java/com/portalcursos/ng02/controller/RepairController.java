@@ -63,11 +63,17 @@ public class RepairController {
 
     @GetMapping({"", "/tickets"})
     @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
-    public List<RepairTicketDTO> getAllTickets() {
-        logger.info("[REPAIR API] Buscando todos os tickets de reparo...");
-        return repairRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<?> getAllTickets() {
+        try {
+            logger.info("[REPAIR API] Buscando todos os tickets de reparo...");
+            List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(tickets);
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao listar tickets: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar tickets de reparo."));
+        }
     }
 
     @PostMapping(value = {"", "/tickets"}, consumes = {"multipart/form-data"})
@@ -78,82 +84,32 @@ public class RepairController {
             @RequestParam("location") String location,
             @RequestParam(value = "mainPhotoFile", required = false) MultipartFile mainPhotoFile
     ) {
-        logger.info("[REPAIR API] Iniciando criação de ticket: {}", title);
-        
-        RepairTicket ticket = new RepairTicket();
-        ticket.setTitle(title);
-        ticket.setDescription(description);
-        ticket.setLocation(location);
-        ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
+        try {
+            logger.info("[REPAIR API] Iniciando criação de ticket: {}", title);
+            
+            RepairTicket ticket = new RepairTicket();
+            ticket.setTitle(title);
+            ticket.setDescription(description);
+            ticket.setLocation(location);
+            ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        
-        Optional<User> user = userRepository.findByUsername(username);
-        if (user.isPresent()) {
-            ticket.setReportedBy(user.get());
-        }
-
-        if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
-            try {
-                String photoPath = storageService.store(mainPhotoFile, "repairs-main");
-                ticket.setMainPhotoUrl(photoPath);
-            } catch (Exception e) {
-                logger.error("[REPAIR API] Erro ao salvar foto principal", e);
-                return ResponseEntity.status(500).body("Erro ao processar imagem.");
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            Optional<User> user = userRepository.findByUsername(username);
+            if (user.isPresent()) {
+                ticket.setReportedBy(user.get());
             }
-        }
 
-        // --- [AUDITORIA V30.9-SUPREME] ---
-        // Quem está gerando a cobrança (ou ticket) é o funcionário logado
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                ticket.setCreatorName(staff.getFullName());
-                ticket.setCreatorPosition(staff.getPosition());
-                ticket.setCreatorPhotoUrl(staff.getFotoUrl());
-            });
-        }
-
-        RepairTicket savedTicket = repairRepository.save(ticket);
-        logger.info("[REPAIR API] Ticket ID {} salvo com sucesso.", savedTicket.getId());
-        return ResponseEntity.ok(convertToDTO(savedTicket));
-    }
-
-    @PostMapping("/{id}/photo")
-    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
-    public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
-        logger.info("[REPAIR API] Upload de foto para ticket ID: {}", id);
-        Optional<RepairTicket> ticketOptional = repairRepository.findById(id);
-        
-        if (ticketOptional.isPresent()) {
-            RepairTicket t = ticketOptional.get();
-            if (t.getPhotoUrls().size() >= 4) {
-                logger.warn("[REPAIR API] Limite de fotos atingido para o ticket {}", id);
-                return ResponseEntity.badRequest().body("Limite de 4 fotos por ticket atingido.");
+            if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
+                try {
+                    String photoPath = storageService.store(mainPhotoFile, "repairs-main");
+                    ticket.setMainPhotoUrl(photoPath);
+                } catch (Exception e) {
+                    System.err.println("[SUPREME-ERROR] Erro ao salvar foto do reparo: " + e.getMessage());
+                }
             }
-            
-            // Simulação de salvamento de arquivo (Em produção usaria S3 ou similar)
-            String fileName = "repair_" + id + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            t.getPhotoUrls().add("/uploads/repairs/" + fileName);
-            repairRepository.save(t);
-            
-            logger.info("[REPAIR API] Foto adicionada com sucesso ao ticket {}", id);
-            return ResponseEntity.ok(convertToDTO(t));
-        }
-        
-        logger.error("[REPAIR API] Tentativa de upload para ticket inexistente: {}", id);
-        return ResponseEntity.notFound().build();
-    }
 
-    @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
-    public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
-        return repairRepository.findById(id).map(ticket -> {
-            ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-            
-            // Auditoria de quem alterou o status
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
@@ -164,17 +120,77 @@ public class RepairController {
                 });
             }
 
-            return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
-        }).orElse(ResponseEntity.notFound().build());
+            RepairTicket savedTicket = repairRepository.save(ticket);
+            logger.info("[REPAIR API] Ticket ID {} salvo com sucesso.", savedTicket.getId());
+            return ResponseEntity.ok(convertToDTO(savedTicket));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao criar ticket ID: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao registrar ticket."));
+        }
+    }
+
+    @PostMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'STAFF', 'ADMIN')")
+    public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
+        try {
+            logger.info("[REPAIR API] Upload de foto para ticket ID: {}", id);
+            Optional<RepairTicket> ticketOptional = repairRepository.findById(id);
+            
+            if (ticketOptional.isPresent()) {
+                RepairTicket t = ticketOptional.get();
+                if (t.getPhotoUrls().size() >= 4) {
+                    return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Limite de 4 fotos por ticket atingido."));
+                }
+                
+                String photoPath = storageService.store(file, "repairs-gallery");
+                t.getPhotoUrls().add(photoPath);
+                repairRepository.save(t);
+                
+                return ResponseEntity.ok(convertToDTO(t));
+            }
+            return ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para upload."));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro no upload de foto para ticket ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao enviar foto."));
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
+    public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
+        try {
+            return repairRepository.findById(id).map(ticket -> {
+                ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
+                
+                Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                if (principal instanceof UserDetailsImpl) {
+                    UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                    staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                        ticket.setCreatorName(staff.getFullName());
+                        ticket.setCreatorPosition(staff.getPosition());
+                        ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+                    });
+                }
+
+                return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
+            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para atualização.")));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar status ticket ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao atualizar status."));
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
-        return repairRepository.findById(id).map(ticket -> {
-            // Soft Delete automatizado via Hibernate @SQLDelete
-            repairRepository.delete(ticket);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            return repairRepository.findById(id).map(ticket -> {
+                repairRepository.delete(ticket);
+                return ResponseEntity.ok(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket removido com sucesso."));
+            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para remoção.")));
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao deletar ticket ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao remover ticket."));
+        }
     }
 }

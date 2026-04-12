@@ -35,8 +35,16 @@ public class GradStudentController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Student>> getAllGradStudents() {
-        return ResponseEntity.ok(studentRepository.findAll());
+    public ResponseEntity<?> getAllGradStudents() {
+        try {
+            List<Student> students = studentRepository.findAll();
+            return ResponseEntity.ok(students);
+        } catch (Exception e) {
+            System.err.println("CRITICAL ERROR in getAllGradStudents: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Erro ao carregar lista de alunos: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/enroll")
@@ -72,14 +80,14 @@ public class GradStudentController {
             @RequestParam(value = "certidaoNascimentoFile", required = false) MultipartFile certidaoNascimentoFile,
             @RequestParam(value = "autodeclaracaoRacialFile", required = false) MultipartFile autodeclaracaoRacialFile) {
 
-        if (studentRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body("Email já cadastrado.");
-        }
-        if (studentRepository.findByCpf(cpf).isPresent()) {
-            return ResponseEntity.badRequest().body("CPF já cadastrado.");
-        }
-
         try {
+            if (studentRepository.findByEmail(email).isPresent()) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Email já cadastrado."));
+            }
+            if (studentRepository.findByCpf(cpf).isPresent()) {
+                return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado."));
+            }
+
             Student.StudentBuilder<?, ?> studentBuilder = Student.builder()
                     .registrationNumber("GRAD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                     .fullName(fullName)
@@ -101,20 +109,17 @@ public class GradStudentController {
                     .documents(new ArrayList<>());
 
             Student student = studentBuilder.build();
-
-            // --- [AUDITORIA V30.9-SUPREME] ---
             injectAuditStamps(student);
 
-            // Persistir primeiro o estudante para gerar ID
+            logger.info("[SUPREME-AUDIT] Iniciando persistência do aluno: {}", student.getFullName());
             Student savedStudent = studentRepository.save(student);
+            logger.info("[SUPREME-AUDIT] Aluno persistido com ID: {}. Iniciando salvamento de fotos.", savedStudent.getId());
 
-            // Processar Documentos usando o StorageService unificado
             String fotoPath = storageService.store(foto3x4, "fotos-perfil");
             if (fotoPath != null) {
                 savedStudent.setFotoMatricula(fotoPath);
-                // Adicionar foto como documento oficial para auditoria
                 StudentDocument photoDoc = StudentDocument.builder()
-                        .documentType(EDocumentType.RG) // Placeholder ou criar tipo FOTO_PERFIL
+                        .documentType(EDocumentType.RG) 
                         .filePath(fotoPath)
                         .status(EDocumentStatus.PENDING)
                         .student(savedStudent)
@@ -136,10 +141,15 @@ public class GradStudentController {
             addDocument(savedStudent, certidaoNascimentoFile, EDocumentType.CERTIDAO_NASCIMENTO);
             addDocument(savedStudent, autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL);
 
-            return ResponseEntity.ok(studentRepository.save(savedStudent));
+            logger.info("[SUPREME-AUDIT] Todos os documentos processados. Salvando estado final do aluno.");
+            Student finalStudent = studentRepository.save(savedStudent);
+            
+            logger.info("[SUPREME-SUCCESS] Matrícula de {} concluída com sucesso.", finalStudent.getFullName());
+            return ResponseEntity.ok(finalStudent);
 
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Erro ao processar matrícula: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("[SUPREME-CRITICAL] FALHA NA MATRÍCULA: ", e);
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage()));
         }
     }
 
@@ -182,54 +192,62 @@ public class GradStudentController {
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
     ) {
-        return studentRepository.findById(id).map(student -> {
-            student.setFullName(fullName);
-            student.setPhone(phone);
-            student.setAddress(address);
-            student.setCurrentCourse(currentCourse);
-            student.setEnrollmentStatus(enrollmentStatus);
+        try {
+            return studentRepository.findById(id).map(student -> {
+                student.setFullName(fullName);
+                student.setPhone(phone);
+                student.setAddress(address);
+                student.setCurrentCourse(currentCourse);
+                student.setEnrollmentStatus(enrollmentStatus);
 
-            if (foto3x4 != null && !foto3x4.isEmpty()) {
-                try {
-                    storageService.delete(student.getFotoMatricula());
-                    String fileName = storageService.store(foto3x4, "fotos-perfil");
-                    student.setFotoMatricula(fileName);
-                } catch (IOException e) {
-                    // Log error
+                if (foto3x4 != null && !foto3x4.isEmpty()) {
+                    try {
+                        storageService.delete(student.getFotoMatricula());
+                        String fileName = storageService.store(foto3x4, "fotos-perfil");
+                        student.setFotoMatricula(fileName);
+                    } catch (IOException e) {
+                        System.err.println("[SUPREME-ERROR] Erro ao processar foto: " + e.getMessage());
+                    }
                 }
-            }
 
-            // Atualizar auditoria SUPREME
-            injectAuditStamps(student);
-
-            return ResponseEntity.ok(studentRepository.save(student));
-        }).orElse(ResponseEntity.notFound().build());
+                injectAuditStamps(student);
+                return ResponseEntity.ok(studentRepository.save(student));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar estudante: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do aluno."));
+        }
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
-        if (id == null) return ResponseEntity.badRequest().build();
-        return studentRepository.findById(id).map(student -> {
-            student.setEnrollmentStatus(status);
-            
-            // Injetar auditoria SUPREME
-            injectAuditStamps(student);
-            
-            return ResponseEntity.ok(studentRepository.save(student));
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            return studentRepository.findById(id).map(student -> {
+                student.setEnrollmentStatus(status);
+                injectAuditStamps(student);
+                return ResponseEntity.ok(studentRepository.save(student));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar status: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status da matrícula."));
+        }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
-        if (id == null) return ResponseEntity.badRequest().build();
-        return studentRepository.findById(id)
-                .map(student -> {
-                    // Auditoria SUPREME na remoção
-                    injectAuditStamps(student);
-                    studentRepository.delete(student);
-                    return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
-                })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            if (id == null) return ResponseEntity.badRequest().build();
+            return studentRepository.findById(id)
+                    .map(student -> {
+                        injectAuditStamps(student);
+                        studentRepository.delete(student);
+                        return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
+                    })
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("[SUPREME-ERROR] Erro ao excluir/desativar aluno: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar exclusão do aluno."));
+        }
     }
 
     // --- PROCEDIMENTOS CRUD EXPANDIDOS (V31.1-ULTRA) ---
@@ -287,29 +305,30 @@ public class GradStudentController {
     }
 
     private void injectAuditStampsInPayment(Payment p) {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                p.setCreatorName(staff.getFullName());
-                p.setCreatorPosition(staff.getPosition());
-                p.setCreatorPhotoUrl(staff.getFotoUrl());
-            });
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    p.setCreatorName(staff.getFullName());
+                    p.setCreatorPosition(staff.getPosition());
+                    p.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
         }
     }
 
-    /**
-     * Auxiliar para injetar os carimbos de auditoria Protocolo V30.9-SUPREME.
-     */
     private void injectAuditStamps(Student s) {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                s.setCreatorName(staff.getFullName());
-                s.setCreatorPosition(staff.getPosition());
-                s.setCreatorPhotoUrl(staff.getFotoUrl());
-            });
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    s.setCreatorName(staff.getFullName());
+                    s.setCreatorPosition(staff.getPosition());
+                    s.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
         }
     }
 }

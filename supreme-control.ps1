@@ -1,17 +1,19 @@
-# PortalCursos.NG: Painel de Controle Supremo V30.0-SUPREME
-# Desenvolvido para estabilidade total e automação simplificada.
+# PortalCursos.NG: Painel de Controle Supremo V30.9-SUPREME-FINAL
+# Orquestrador Universal - Protocolo de Robustez
 
 function Show-Menu {
     Clear-Host
     echo "==========================================================="
-    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V30.0-SUPREME        "
+    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V30.9-SUPREME        "
+    echo "   Status: RESILIENTE | Ambiente: WINDOWS                 "
     echo "==========================================================="
     echo "   1. [EXECUTAR] Iniciar Portal (Backend + Frontend)       "
-    echo "   2. [GITHUB]   Sincronizar e Enviar para Nuvem          "
-    echo "   3. [TESTE]    Verificar Conexão Neon PostgreSQL        "
+    echo "   2. [GITHUB]   Sincronizar e Enviar para GitHub         "
+    echo "   3. [TESTE]    Verificar Conexao Neon PostgreSQL        "
     echo "   4. [INFO]     Verificar Logs de Telemetria             "
     echo "   5. [SAIR]     Encerrar Painel                          "
     echo "==========================================================="
+    echo "DICA: Use o comando 'GO' no terminal para este painel."
 }
 
 while ($true) {
@@ -20,13 +22,21 @@ while ($true) {
     
     switch ($choice) {
         "1" {
-            echo "`n[INFO] Iniciando orquestrador maestro..."
-            ./start-portal.ps1
+            echo "`n[SUPREME] Verificando scripts de inicializacao..."
+            if (Test-Path "./start-portal.ps1") {
+                powershell -ExecutionPolicy Bypass -File "./start-portal.ps1"
+            } else {
+                echo "[ERRO] Arquivo 'start-portal.ps1' nao encontrado!"
+            }
             Pause
         }
         "2" {
-            echo "`n[INFO] Iniciando sincronização GitHub..."
-            ./push-to-github.ps1
+            echo "`n[SUPREME] Iniciando sincronizacao GitHub..."
+            if (Test-Path "./push-to-github.ps1") {
+                powershell -ExecutionPolicy Bypass -File "./push-to-github.ps1"
+            } else {
+                echo "[ERRO] Arquivo 'push-to-github.ps1' nao encontrado!"
+            }
             Pause
         }
         "3" {

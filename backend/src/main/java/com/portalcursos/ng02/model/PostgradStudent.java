@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
@@ -82,9 +83,14 @@ public class PostgradStudent extends BaseAuditEntity {
     @Column(name = "foto_url")
     private String fotoUrl;
 
-    @OneToMany(mappedBy = "postgradStudent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "postgradStudent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @lombok.Builder.Default
     private java.util.List<Payment> payments = new java.util.ArrayList<>();
+
+    @JsonProperty("registrationDate")
+    public LocalDateTime getRegistrationDate() {
+        return this.createdAt;
+    }
 
     @Override
     @PrePersist

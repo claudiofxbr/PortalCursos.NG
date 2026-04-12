@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.UserDetailsImpl;
+import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,17 +26,29 @@ public class CourseController {
     private StaffMemberRepository staffMemberRepository;
 
     @GetMapping
-    public List<Course> getAllCourses() {
-        return courseService.getAllCourses();
+    public ResponseEntity<?> getAllCourses() {
+        try {
+            return ResponseEntity.ok(courseService.getAllCourses());
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao listar cursos: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(new MessageResponse("Erro ao carregar lista de cursos."));
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Course> getCourseById(@PathVariable UUID id) {
-        return ResponseEntity.ok(courseService.getCourseById(id));
+    public ResponseEntity<?> getCourseById(@PathVariable UUID id) {
+        try {
+            return ResponseEntity.ok(courseService.getCourseById(id));
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao buscar curso ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(404)
+                    .body(new MessageResponse("Curso não encontrado ou erro na recuperação."));
+        }
     }
 
     @PostMapping
-    public ResponseEntity<Course> createCourse(@RequestBody Course course) {
+    public ResponseEntity<?> createCourse(@RequestBody Course course) {
         try {
             // Injeção de Auditoria Visual (Rastreabilidade de Emissor)
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -51,13 +64,14 @@ public class CourseController {
 
             Course savedCourse = courseService.createCourse(course);
             return ResponseEntity.ok(savedCourse);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao criar curso: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse("Falha ao criar curso: " + e.getMessage()));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Course> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
+    public ResponseEntity<?> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
         try {
             // Injeção de Auditoria Visual (Rastreabilidade de Emissor V30.9-SUPREME)
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -72,8 +86,9 @@ public class CourseController {
 
             Course updatedCourse = courseService.updateCourse(id, courseDetails);
             return ResponseEntity.ok(updatedCourse);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao atualizar curso ID " + id + ": " + e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse("Erro na atualização: " + e.getMessage()));
         }
     }
 
@@ -81,9 +96,10 @@ public class CourseController {
     public ResponseEntity<?> deleteCourse(@PathVariable UUID id) {
         try {
             courseService.deleteCourse(id);
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.ok(new MessageResponse("Curso removido com sucesso."));
+        } catch (Exception e) {
+            System.err.println("[CRITICAL] Erro ao remover curso ID " + id + ": " + e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse("Falha ao remover curso: " + e.getMessage()));
         }
     }
 }
