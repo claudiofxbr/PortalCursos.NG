@@ -10,6 +10,7 @@ import lombok.experimental.SuperBuilder;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "students")
@@ -70,6 +71,7 @@ public class Student extends BaseAuditEntity {
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @JsonIgnore
     private User user;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
