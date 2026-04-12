@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
+import com.portalcursos.ng02.dto.MessageResponse;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -30,7 +31,7 @@ public class UserController {
             return ResponseEntity.ok(userService.getAllUsers());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao listar usuários: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao listar usuários: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao listar usuários: " + e.getMessage()));
         }
     }
 
@@ -50,7 +51,7 @@ public class UserController {
                     fotoPath = storageService.store(foto3x4File, "staff-photos");
                 } catch (Exception e) {
                     System.err.println("[SUPREME-ERROR] Erro no upload de foto: " + e.getMessage());
-                    return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro no upload da foto: " + e.getMessage()));
+                    return ResponseEntity.badRequest().body(new MessageResponse("Erro no upload da foto: " + e.getMessage()));
                 }
             }
 
@@ -64,7 +65,7 @@ public class UserController {
             return ResponseEntity.ok(userService.createUser(user, roles));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao criar usuário: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao criar usuário: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao criar usuário: " + e.getMessage()));
         }
     }
 
@@ -75,7 +76,7 @@ public class UserController {
             return ResponseEntity.ok(userService.updateUserRoles(id, roles));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar roles: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao atualizar permissões: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar permissões: " + e.getMessage()));
         }
     }
 
@@ -84,10 +85,10 @@ public class UserController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             userService.deleteUser(id);
-            return ResponseEntity.ok(new com.portalcursos.ng02.payload.response.MessageResponse("Usuário removido com sucesso"));
+            return ResponseEntity.ok(new MessageResponse("Usuário removido com sucesso"));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao remover usuário ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao remover usuário: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao remover usuário: " + e.getMessage()));
         }
     }
 

@@ -170,28 +170,33 @@ public class PostgradStudentController {
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
         try {
-            return studentRepository.findById(id).map(student -> {
-                student.setFullName(fullName);
-                student.setPhone(phone);
-                student.setAddress(address);
-                student.setDesiredCourse(desiredCourse);
-                student.setEnrollmentStatus(enrollmentStatus);
+            Optional<PostgradStudent> studentOpt = studentRepository.findById(id);
+            if (studentOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(new MessageResponse("Estudante de pós-graduação não encontrado."));
+            }
 
-                if (foto3x4File != null && !foto3x4File.isEmpty()) {
-                    try {
-                        storageService.delete(student.getFotoMatricula());
-                        student.setFotoMatricula(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
-                    } catch (IOException e) {
-                        System.err.println("[SUPREME-ERROR] Erro ao processar foto (Pós): " + e.getMessage());
-                    }
+            PostgradStudent student = studentOpt.get();
+            student.setFullName(fullName);
+            student.setPhone(phone);
+            student.setAddress(address);
+            student.setDesiredCourse(desiredCourse);
+            student.setEnrollmentStatus(enrollmentStatus);
+
+            if (foto3x4File != null && !foto3x4File.isEmpty()) {
+                try {
+                    storageService.delete(student.getFotoMatricula());
+                    String fileName = storageService.store(foto3x4File, "fotos-perfil");
+                    student.setFotoMatricula(fileName);
+                } catch (IOException e) {
+                    System.err.println("[SUPREME-ERROR] Erro ao processar foto: " + e.getMessage());
                 }
+            }
 
-                injectAuditStamps(student);
-                return ResponseEntity.ok(studentRepository.saveAndFlush(student));
-            }).orElse(ResponseEntity.notFound().build());
+            injectAuditStamps(student);
+            return ResponseEntity.ok(studentRepository.save(student));
         } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao atualizar aluno Pós: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do aluno de pós-graduação."));
+            System.err.println("[SUPREME-ERROR] Erro ao atualizar pós-graduando: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do pós-graduando."));
         }
     }
 

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.portalcursos.ng02.dto.MessageResponse;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +41,7 @@ public class AcademicController {
             return ResponseEntity.ok(studentRepository.findAll());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao listar estudantes: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar estudantes."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar estudantes."));
         }
     }
 
@@ -51,7 +52,7 @@ public class AcademicController {
             return ResponseEntity.ok(teacherRepository.findAll());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao listar professores: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar professores."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar professores."));
         }
     }
 
@@ -62,7 +63,7 @@ public class AcademicController {
             return ResponseEntity.ok(staffMemberRepository.findAll());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao listar staff: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar membros da equipe."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar membros da equipe."));
         }
     }
 
@@ -105,7 +106,7 @@ public class AcademicController {
             return ResponseEntity.ok(allUsers);
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro na lista unificada acadêmica: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao processar lista acadêmica."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar lista acadêmica."));
         }
     }
 }

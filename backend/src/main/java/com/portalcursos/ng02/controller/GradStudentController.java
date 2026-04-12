@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -220,26 +221,30 @@ public class GradStudentController {
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
     ) {
         try {
-            return studentRepository.findById(id).map(student -> {
-                student.setFullName(fullName);
-                student.setPhone(phone);
-                student.setAddress(address);
-                student.setCurrentCourse(currentCourse);
-                student.setEnrollmentStatus(enrollmentStatus);
+            Optional<Student> studentOpt = studentRepository.findById(id);
+            if (studentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
 
-                if (foto3x4 != null && !foto3x4.isEmpty()) {
-                    try {
-                        storageService.delete(student.getFotoMatricula());
-                        String fileName = storageService.store(foto3x4, "fotos-perfil");
-                        student.setFotoMatricula(fileName);
-                    } catch (IOException e) {
-                        System.err.println("[SUPREME-ERROR] Erro ao processar foto: " + e.getMessage());
-                    }
+            Student student = studentOpt.get();
+            student.setFullName(fullName);
+            student.setPhone(phone);
+            student.setAddress(address);
+            student.setCurrentCourse(currentCourse);
+            student.setEnrollmentStatus(enrollmentStatus);
+
+            if (foto3x4 != null && !foto3x4.isEmpty()) {
+                try {
+                    storageService.delete(student.getFotoMatricula());
+                    String fileName = storageService.store(foto3x4, "fotos-perfil");
+                    student.setFotoMatricula(fileName);
+                } catch (IOException e) {
+                    System.err.println("[SUPREME-ERROR] Erro ao processar foto: " + e.getMessage());
                 }
+            }
 
-                injectAuditStamps(student);
-                return ResponseEntity.ok(studentRepository.save(student));
-            }).orElse(ResponseEntity.notFound().build());
+            injectAuditStamps(student);
+            return ResponseEntity.ok(studentRepository.save(student));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar estudante: " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do aluno."));
@@ -249,11 +254,15 @@ public class GradStudentController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
         try {
-            return studentRepository.findById(id).map(student -> {
-                student.setEnrollmentStatus(status);
-                injectAuditStamps(student);
-                return ResponseEntity.ok(studentRepository.save(student));
-            }).orElse(ResponseEntity.notFound().build());
+            Optional<Student> studentOpt = studentRepository.findById(id);
+            if (studentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Student student = studentOpt.get();
+            student.setEnrollmentStatus(status);
+            injectAuditStamps(student);
+            return ResponseEntity.ok(studentRepository.save(student));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar status: " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status da matrícula."));
@@ -264,13 +273,15 @@ public class GradStudentController {
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
         try {
             if (id == null) return ResponseEntity.badRequest().build();
-            return studentRepository.findById(id)
-                    .map(student -> {
-                        injectAuditStamps(student);
-                        studentRepository.delete(student);
-                        return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
-                    })
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+            Optional<Student> studentOpt = studentRepository.findById(id);
+            if (studentOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Student student = studentOpt.get();
+            injectAuditStamps(student);
+            studentRepository.delete(student);
+            return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao excluir/desativar aluno: " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar exclusão do aluno."));

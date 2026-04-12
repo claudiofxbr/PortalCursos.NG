@@ -21,6 +21,7 @@ import org.springframework.lang.NonNull;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.portalcursos.ng02.dto.MessageResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,7 @@ public class RepairController {
             return ResponseEntity.ok(tickets);
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao listar tickets: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao carregar tickets de reparo."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar tickets de reparo."));
         }
     }
 
@@ -125,7 +126,7 @@ public class RepairController {
             return ResponseEntity.ok(convertToDTO(savedTicket));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao criar ticket ID: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao registrar ticket."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao registrar ticket."));
         }
     }
 
@@ -139,7 +140,7 @@ public class RepairController {
             if (ticketOptional.isPresent()) {
                 RepairTicket t = ticketOptional.get();
                 if (t.getPhotoUrls().size() >= 4) {
-                    return ResponseEntity.badRequest().body(new com.portalcursos.ng02.payload.response.MessageResponse("Limite de 4 fotos por ticket atingido."));
+                    return ResponseEntity.badRequest().body(new MessageResponse("Limite de 4 fotos por ticket atingido."));
                 }
                 
                 String photoPath = storageService.store(file, "repairs-gallery");
@@ -148,10 +149,10 @@ public class RepairController {
                 
                 return ResponseEntity.ok(convertToDTO(t));
             }
-            return ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para upload."));
+            return ResponseEntity.status(404).body(new MessageResponse("Ticket não encontrado para upload."));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro no upload de foto para ticket ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao enviar foto."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao enviar foto."));
         }
     }
 
@@ -159,24 +160,28 @@ public class RepairController {
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
         try {
-            return repairRepository.findById(id).map(ticket -> {
-                ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-                
-                Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                if (principal instanceof UserDetailsImpl) {
-                    UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                    staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
-                        ticket.setCreatorName(staff.getFullName());
-                        ticket.setCreatorPosition(staff.getPosition());
-                        ticket.setCreatorPhotoUrl(staff.getFotoUrl());
-                    });
-                }
+            Optional<RepairTicket> ticketOpt = repairRepository.findById(id);
+            if (ticketOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(new MessageResponse("Ticket não encontrado para atualização."));
+            }
 
-                return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
-            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para atualização.")));
+            RepairTicket ticket = ticketOpt.get();
+            ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
+            
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                    ticket.setCreatorName(staff.getFullName());
+                    ticket.setCreatorPosition(staff.getPosition());
+                    ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
+
+            return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar status ticket ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao atualizar status."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status."));
         }
     }
 
@@ -184,13 +189,16 @@ public class RepairController {
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         try {
-            return repairRepository.findById(id).map(ticket -> {
-                repairRepository.delete(ticket);
-                return ResponseEntity.ok(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket removido com sucesso."));
-            }).orElse(ResponseEntity.status(404).body(new com.portalcursos.ng02.payload.response.MessageResponse("Ticket não encontrado para remoção.")));
+            Optional<RepairTicket> ticketOpt = repairRepository.findById(id);
+            if (ticketOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(new MessageResponse("Ticket não encontrado para remoção."));
+            }
+            
+            repairRepository.delete(ticketOpt.get());
+            return ResponseEntity.ok(new MessageResponse("Ticket removido com sucesso."));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao deletar ticket ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.portalcursos.ng02.payload.response.MessageResponse("Erro ao remover ticket."));
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao remover ticket."));
         }
     }
 }
