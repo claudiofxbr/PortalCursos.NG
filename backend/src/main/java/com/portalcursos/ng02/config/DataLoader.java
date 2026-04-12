@@ -49,8 +49,11 @@ public class DataLoader implements CommandLineRunner {
         // 2. Criar ou Atualizar Usuário Root Master (TI/Desenvolvedor)
         userRepository.findByUsername("rootmaster").ifPresentOrElse(
             root -> {
-                System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER já existe. Sincronizando...");
-                root.setPassword(encoder.encode("qzWX312#!@"));
+                System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER localizado. Validando integridade da senha...");
+                if (!encoder.matches("qzWX312#!@", root.getPassword())) {
+                    System.out.println("[DataLoader] [AUTH] Senha divergente detectada. Sincronizando novo hash...");
+                    root.setPassword(encoder.encode("qzWX312#!@"));
+                }
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER).orElseGet(() -> 
                     roleRepository.save(Role.builder().name(Role.ERole.ROLE_ROOT_MASTER).build()));

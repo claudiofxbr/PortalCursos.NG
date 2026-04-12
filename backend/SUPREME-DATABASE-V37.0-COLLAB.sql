@@ -1,6 +1,6 @@
 -- ==========================================================
 -- SCRIPT DE CURA INSTITUCIONAL: PORTALCURSOS.NG
--- PROTOCOLO COLLAB-SUPREME V38.1 (ULTRA-RESILIENTE)
+-- PROTOCOLO COLLAB-SUPREME V38.2 (ULTRA-RESILIENTE)
 -- OBJETIVO: GARANTIR REGISTROS ÓRFÃOS, ÍNDICES, PERFORMANCE E SEGURANÇA ROOT
 -- ==========================================================
 
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS staff_members (
 CREATE INDEX IF NOT EXISTS idx_staff_full_name ON staff_members(full_name);
 CREATE INDEX IF NOT EXISTS idx_staff_active ON staff_members(active);
 
--- 2. LIMPEZA DE REGISTROSÓRFÃOS (EVITA DUPLICIDADE QUE CAUSA TRAVAMENTO)
+-- 2. LIMPEZA DE REGISTROS ÓRFÃOS (EVITA DUPLICIDADE QUE CAUSA TRAVAMENTO)
 DELETE FROM staff_members 
 WHERE user_id IS NULL OR NOT EXISTS (SELECT 1 FROM users WHERE users.id = staff_members.user_id);
 
@@ -56,10 +56,14 @@ CREATE TABLE IF NOT EXISTS deployment_logs (
     summary TEXT
 );
 
--- 5. SEGURANÇA SUPREMA (ROOTMASTER)
+-- 5. SEGURANÇA SUPREMA (ROOTMASTER - PROTOCOLO V38.2)
+-- GARANTE QUE O USUÁRIO EXISTE
 INSERT INTO users (username, email, password, active) 
-SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$10$fN4Y6pC2E.MvA9XjA1vG8.s5V4S8X8jA1vG8.s5V4S8X8jA1vG8', true
+SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$12$52.S5lgBkOdRSBkGHRByIu43Lxq7c13FTjuwhE7dZemPDs.ck73D.', true
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'rootmaster');
+
+-- GARANTE O HASH CORRETO (qzWX312#!@)
+UPDATE users SET password = '$2a$12$52.S5lgBkOdRSBkGHRByIu43Lxq7c13FTjuwhE7dZemPDs.ck73D.' WHERE username = 'rootmaster';
 
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id FROM users u, roles r 
@@ -67,6 +71,6 @@ WHERE u.username = 'rootmaster' AND r.name = 'ROLE_ROOT_MASTER'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO deployment_logs (version, status, environment, summary) 
-VALUES ('V38.1-ULTRA', 'SUCCESS', 'HYBRID-CLOUD', 'Protocolo COLLAB V38.1: Segurança RootMaster e Sincronização de IDs aplicada.');
+VALUES ('V38.2-ULTRA', 'SUCCESS', 'HYBRID-CLOUD', 'Protocolo COLLAB V38.2: Segurança RootMaster e Sincronização de IDs aplicada.');
 
--- SCRIPT CONCLUÍDO - V37.2-ULTRA-RESILIENTE
+-- SCRIPT CONCLUÍDO - V38.2-ULTRA-RESILIENTE

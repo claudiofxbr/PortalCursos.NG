@@ -248,7 +248,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 -- 11. USUÁRIO ROOT MASTER (TI/DESENVOLVIMENTO)
 -- SENHA: qzWX312#!@ (Sincronizada via DataLoader no boot)
 INSERT INTO users (username, email, password, active) 
-SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$10$fN4Y6pC2E.MvA9XjA1vG8.s5V4S8X8jA1vG8.s5V4S8X8jA1vG8', true
+SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$12$52.S5lgBkOdRSBkGHRByIu43Lxq7c13FTjuwhE7dZemPDs.ck73D.', true
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'rootmaster');
 
 -- VINCULAR USUÁRIOS ÀS ROLES NECESSÁRIAS
