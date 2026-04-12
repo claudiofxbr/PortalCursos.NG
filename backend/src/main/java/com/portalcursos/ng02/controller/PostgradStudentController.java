@@ -115,11 +115,11 @@ public class PostgradStudentController {
             
             String fotoPath = storageService.store(foto3x4File, "postgrad/fotos-perfil");
             if (fotoPath != null) {
-                student.setFotoUrl(fotoPath);
+                student.setFotoMatricula(fotoPath);
                 logger.info("[SUPREME-POSTGRAD] Foto armazenada em: {}.", fotoPath);
             }
 
-            PostgradStudent saved = studentRepository.save(student);
+            PostgradStudent saved = studentRepository.saveAndFlush(student);
             logger.info("[SUPREME-POSTGRAD] Matrícula de pós-graduação persistida com sucesso. ID: {}", saved.getId());
             return ResponseEntity.ok(saved);
 
@@ -151,15 +151,15 @@ public class PostgradStudentController {
 
                 if (foto3x4File != null && !foto3x4File.isEmpty()) {
                     try {
-                        storageService.delete(student.getFotoUrl());
-                        student.setFotoUrl(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
+                        storageService.delete(student.getFotoMatricula());
+                        student.setFotoMatricula(storageService.store(foto3x4File, "postgrad/fotos-perfil"));
                     } catch (IOException e) {
                         System.err.println("[SUPREME-ERROR] Erro ao processar foto (Pós): " + e.getMessage());
                     }
                 }
 
                 injectAuditStamps(student);
-                return ResponseEntity.ok(studentRepository.save(student));
+                return ResponseEntity.ok(studentRepository.saveAndFlush(student));
             }).orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar aluno Pós: " + e.getMessage());
@@ -174,7 +174,7 @@ public class PostgradStudentController {
             return studentRepository.findById(id).map(student -> {
                 student.setEnrollmentStatus(status);
                 injectAuditStamps(student);
-                return ResponseEntity.ok(studentRepository.save(student));
+                return ResponseEntity.ok(studentRepository.saveAndFlush(student));
             }).orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar status Pós: " + e.getMessage());

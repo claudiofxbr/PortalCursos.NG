@@ -80,8 +80,8 @@ public class PostgradStudent extends BaseAuditEntity {
     @Column(name = "academic_transcript_file_path")
     private String academicTranscriptFilePath;
 
-    @Column(name = "foto_url")
-    private String fotoUrl;
+    @Column(name = "foto_matricula")
+    private String fotoMatricula;
 
     @OneToMany(mappedBy = "postgradStudent", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @lombok.Builder.Default

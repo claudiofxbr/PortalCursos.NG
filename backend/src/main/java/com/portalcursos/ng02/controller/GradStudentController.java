@@ -116,7 +116,7 @@ public class GradStudentController {
             injectAuditStamps(student);
 
             logger.info("[SUPREME-AUDIT] Iniciando persistência do aluno: {}", student.getFullName());
-            Student savedStudent = studentRepository.save(student);
+            Student savedStudent = studentRepository.saveAndFlush(student);
             logger.info("[SUPREME-AUDIT] Aluno persistido com ID: {}. Iniciando salvamento de fotos.", savedStudent.getId());
 
             String fotoPath = storageService.store(foto3x4, "fotos-perfil");
@@ -133,7 +133,7 @@ public class GradStudentController {
                 savedStudent.getDocuments().add(photoDoc);
                 
                 // Salvamento imediato da foto para garantir persistência mesmo se outros documentos falharem
-                studentRepository.save(savedStudent);
+                studentRepository.saveAndFlush(savedStudent);
                 logger.info("[SUPREME-PHOTO] Caminho da foto persistido com sucesso no banco Neon.");
             } else {
                 logger.warn("[SUPREME-PHOTO] Nenhuma foto detectada ou falha no upload.");
@@ -154,7 +154,7 @@ public class GradStudentController {
             addDocument(savedStudent, autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL);
 
             logger.info("[SUPREME-AUDIT] Todos os documentos processados. Salvando estado final do aluno.");
-            Student finalStudent = studentRepository.save(savedStudent);
+            Student finalStudent = studentRepository.saveAndFlush(savedStudent);
             
             logger.info("[SUPREME-SUCCESS] Matrícula de {} concluída com sucesso.", finalStudent.getFullName());
             return ResponseEntity.ok(finalStudent);

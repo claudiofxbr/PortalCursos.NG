@@ -28,7 +28,7 @@ interface PostgradStudent {
     creatorName?: string;
     creatorPosition?: string;
     creatorPhotoUrl?: string;
-    fotoUrl?: string;
+    fotoMatricula?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -299,8 +299,8 @@ export default function PostgradStudentsPage() {
                                         <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                                                 <div style={{ width: '45px', height: '60px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
-                                                    {(s as any).fotoUrl ? (
-                                                        <img src={`${BASE_URL}/uploads/${(s as any).fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    {s.fotoMatricula ? (
+                                                        <img src={`${BASE_URL}/uploads/${s.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (
                                                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={20} /></div>
                                                     )}
@@ -437,8 +437,8 @@ export default function PostgradStudentsPage() {
                         <div style={{ padding: '2.5rem', display: 'flex', gap: '2.5rem' }}>
                             <div style={{ width: '220px', flexShrink: 0 }}>
                                 <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
-                                    {viewingStudent.fotoUrl ? (
-                                        <img src={viewingStudent.fotoUrl.startsWith('http') ? viewingStudent.fotoUrl : `${BASE_URL}/uploads/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    {viewingStudent.fotoMatricula ? (
+                                        <img src={viewingStudent.fotoMatricula.startsWith('http') ? viewingStudent.fotoMatricula : `${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
                                     )}

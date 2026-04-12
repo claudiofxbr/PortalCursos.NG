@@ -39,10 +39,10 @@ if (typeof window !== 'undefined') {
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: isLocalhost ? 20000 : 150000, 
+    timeout: isLocalhost ? 60000 : 300000, 
     headers: {
         'X-Build-ID': V_BUILD_ID,
-        'X-Protocol': 'OMEGA-SUPREME-30.3'
+        'X-Protocol': 'ULTRA-RESILIENT-31.2'
     }
 });
 
