@@ -38,18 +38,17 @@ const INPUT_STYLE = {
 };
 
 const ROLE_CONFIG: { [key: string]: { label: string, color: string, bg: string, level: string } } = {
-    ROLE_ROOT_MASTER: { label: 'Root Master (TI)', color: '#fff', bg: '#e74c3c', level: 'Nível 1' },
-    ROLE_ADMIN: { label: 'Administrador (Reitoria)', color: '#000', bg: '#f1c40f', level: 'Nível 2' },
-    ROLE_SECRETARIA: { label: 'Secretaria (Acadêmico)', color: '#fff', bg: '#3498db', level: 'Nível 3' },
-    ROLE_FINANCEIRO: { label: 'Financeiro', color: '#fff', bg: '#d35400', level: 'Nível 4' },
-    ROLE_ACADEMICO: { label: 'Acadêmico (Notas)', color: '#fff', bg: '#2980b9', level: 'Nível 5' },
-    ROLE_MATRICULA: { label: 'Matrícula (Vendas)', color: '#fff', bg: '#27ae60', level: 'Nível 6' },
-    ROLE_COORDENADOR: { label: 'Coordenador', color: '#fff', bg: '#9b59b6', level: 'Nível 7' },
-    ROLE_PROFESSOR: { label: 'Professor', color: '#fff', bg: '#2ecc71', level: 'Nível 8' },
-    ROLE_MONITOR: { label: 'Monitor', color: '#fff', bg: '#1abc9c', level: 'Nível 9' },
-    ROLE_BIBLIOTECARIO: { label: 'Bibliotecário', color: '#fff', bg: '#34495e', level: 'Nível 10' },
-    ROLE_ALUNO: { label: 'Aluno (Discente)', color: '#fff', bg: '#7f8c8d', level: 'Usuário' },
-    ROLE_CANDIDATO: { label: 'Candidato', color: '#fff', bg: '#bdc3c7', level: 'Visitante' }
+    ROLE_ROOT_MASTER: { label: 'Gerência de Infraestrutura (TI)', color: '#fff', bg: '#e74c3c', level: 'Nível 1' },
+    ROLE_ADMIN: { label: 'Diretoria Geral (Reitoria)', color: '#000', bg: '#f1c40f', level: 'Nível 2' },
+    ROLE_COORDENADOR: { label: 'Coordenação Acadêmica', color: '#fff', bg: '#9b59b6', level: 'Nível 3' },
+    ROLE_SECRETARIA: { label: 'Secretaria Geral', color: '#fff', bg: '#3498db', level: 'Nível 4' },
+    ROLE_FINANCEIRO: { label: 'Departamento Financeiro', color: '#fff', bg: '#d35400', level: 'Operacional' },
+    ROLE_ACADEMICO: { label: 'Registro Acadêmico', color: '#fff', bg: '#2980b9', level: 'Operacional' },
+    ROLE_PROFESSOR: { label: 'Corpo Docente', color: '#fff', bg: '#2ecc71', level: 'Operacional' },
+    ROLE_BIBLIOTECARIO: { label: 'Bibliotecário', color: '#fff', bg: '#34495e', level: 'Operacional' },
+    ROLE_MATRICULA: { label: 'Setor de Matrículas', color: '#fff', bg: '#27ae60', level: 'Operacional' },
+    ROLE_ALUNO: { label: 'Aluno Regular', color: '#fff', bg: '#7f8c8d', level: 'Discente' },
+    ROLE_CANDIDATO: { label: 'Candidato (Visitante)', color: '#fff', bg: '#bdc3c7', level: 'Externo' }
 };
 
 const SELECT_STYLE = {
@@ -92,6 +91,8 @@ export default function UsersManagementPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [newRoles, setNewRoles] = useState<string[]>([]);
 
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => { setIsMounted(true); }, []);
@@ -219,24 +220,44 @@ export default function UsersManagementPage() {
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-1px', background: 'linear-gradient(90deg, #fff, #888)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <h1 style={{ 
+                        fontSize: '2.8rem', 
+                        fontWeight: 900, 
+                        letterSpacing: '-2px', 
+                        background: 'linear-gradient(135deg, #fff 0%, #aaa 100%)', 
+                        WebkitBackgroundClip: 'text', 
+                        WebkitTextFillColor: 'transparent',
+                        marginBottom: '0.2rem'
+                    }}>
                         🛡️ Controle Institucional
                     </h1>
-                    <p style={{ opacity: 0.5, fontSize: '0.9rem', marginTop: '0.4rem' }}>Hierarquia de 10 Níveis: Do Desenvolvedor ao Candidato</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '40px', height: '2px', backgroundColor: 'var(--secondary-color)' }}></div>
+                        <p style={{ opacity: 0.6, fontSize: '0.95rem', fontWeight: 500, letterSpacing: '0.5px' }}>
+                            PROTOCOLO V40.0: GESTÃO HIERÁRQUICA SUPREMA
+                        </p>
+                    </div>
                 </div>
                 {canCreateUser && (
                     <button 
                         onClick={() => setShowForm(!showForm)}
                         style={{
-                            padding: '1rem 2rem', borderRadius: '12px',
-                            backgroundColor: showForm ? 'rgba(255,255,255,0.1)' : 'var(--secondary-color)', 
+                            padding: '1.2rem 2.5rem', borderRadius: '15px',
+                            backgroundColor: showForm ? 'rgba(255,255,255,0.05)' : 'var(--secondary-color)', 
                             color: showForm ? '#fff' : '#000',
-                            border: 'none', cursor: 'pointer', fontWeight: 800,
-                            transition: 'all 0.3s ease',
-                            boxShadow: showForm ? 'none' : '0 10px 20px rgba(0,0,0,0.3)'
+                            border: showForm ? '1px solid rgba(255,255,255,0.1)' : 'none', 
+                            cursor: 'pointer', fontWeight: 900,
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            boxShadow: showForm ? 'none' : '0 15px 30px rgba(0,0,0,0.4)',
+                            transform: showForm ? 'scale(0.95)' : 'scale(1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            fontSize: '1rem'
                         }}
                     >
-                        {showForm ? '✕ Cancelar' : '+ Adicionar Colaborador'}
+                        <span style={{ fontSize: '1.4rem' }}>{showForm ? '✕' : '+'}</span>
+                        {showForm ? 'Cancelar Operação' : 'Novo Colaborador'}
                     </button>
                 )}
             </div>
@@ -453,25 +474,93 @@ export default function UsersManagementPage() {
                                     </div>
                                 </td>
                                 <td style={{ padding: '1.2rem', textAlign: 'right' }}>
-                                    <button 
-                                        onClick={() => handleDelete(u.id, u.username, u.roles)}
-                                        disabled={u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)}
-                                        style={{ 
-                                            backgroundColor: 'transparent', border: '1px solid rgba(255, 60, 60, 0.3)', 
-                                            color: '#ff3c3c', padding: '6px 14px', borderRadius: '8px', 
-                                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
-                                            opacity: (u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)) ? 0.2 : 1,
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                    >
-                                        Remover
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        <button 
+                                            onClick={() => {
+                                                setEditingUser(u);
+                                                setNewRoles(u.roles.map((r: any) => (typeof r === 'string' ? r : r.name).replace('ROLE_', '')));
+                                            }}
+                                            disabled={u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)}
+                                            style={{ 
+                                                backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', 
+                                                color: '#fff', padding: '6px 14px', borderRadius: '8px', 
+                                                cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                                                opacity: (u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)) ? 0.2 : 1,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            Editar
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(u.id, u.username, u.roles)}
+                                            disabled={u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)}
+                                            style={{ 
+                                                backgroundColor: 'transparent', border: '1px solid rgba(255, 60, 60, 0.3)', 
+                                                color: '#ff3c3c', padding: '6px 14px', borderRadius: '8px', 
+                                                cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                                                opacity: (u.username === currentUser?.username || u.username === 'rootmaster' || (getCurrentMaxLevel(u) >= getCurrentMaxLevel(currentUser) && getCurrentMaxLevel(currentUser) < 100)) ? 0.2 : 1,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            Remover
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+            {/* Modal de Edição de Roles (Protocolo V40.0-UPDATE) */}
+            {editingUser && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                    zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div style={{
+                        backgroundColor: '#111', borderRadius: '24px', padding: '2.5rem',
+                        width: '90%', maxWidth: '450px', border: '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: '0 30px 60px rgba(0,0,0,0.8)'
+                    }}>
+                        <h2 style={{ marginBottom: '0.5rem', fontWeight: 800 }}>Alterar Nível de Acesso</h2>
+                        <p style={{ opacity: 0.5, fontSize: '0.85rem', marginBottom: '1.5rem' }}>Editando: {editingUser.username}</p>
+                        
+                        <div style={{ marginBottom: '2rem' }}>
+                            <label style={LABEL_STYLE}>Nova Função Institucional</label>
+                            <select 
+                                style={SELECT_STYLE}
+                                value={newRoles[0]}
+                                onChange={e => setNewRoles([e.target.value])}
+                            >
+                                {Object.keys(ROLE_CONFIG)
+                                    .filter(roleKey => {
+                                        if (getCurrentMaxLevel(currentUser) === 100) return true;
+                                        return getRoleLevel(roleKey) < getCurrentMaxLevel(currentUser);
+                                    })
+                                    .map(roleKey => (
+                                        <option key={roleKey} value={roleKey.replace('ROLE_', '')} style={{ backgroundColor: '#222' }}>
+                                            {ROLE_CONFIG[roleKey].level} - {ROLE_CONFIG[roleKey].label}
+                                        </option>
+                                    ))
+                                }
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button 
+                                onClick={() => setEditingUser(null)}
+                                style={{ flex: 1, padding: '1rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer' }}
+                            >Cancelar</button>
+                            <button 
+                                onClick={() => handleUpdateRoles(editingUser.id, newRoles)}
+                                disabled={submitting}
+                                style={{ flex: 2, padding: '1rem', borderRadius: '12px', background: 'var(--secondary-color)', border: 'none', color: '#000', fontWeight: 800, cursor: 'pointer' }}
+                            >Salvar Alteração</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
