@@ -262,8 +262,8 @@ public class UserService {
                 .map(r -> getOrCreateRole(Role.ERole.valueOf("ROLE_" + r.toUpperCase())))
                 .collect(Collectors.toSet());
 
-        user.setRoles(roles);
-        User savedUser = userRepository.saveAndFlush(user);
+        targetUser.setRoles(roles);
+        User savedUser = userRepository.saveAndFlush(targetUser);
 
         // Lógica COLLAB V38.2
         try {
