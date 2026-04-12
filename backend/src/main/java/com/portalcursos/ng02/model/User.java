@@ -30,12 +30,12 @@ public class User {
 
     @NonNull
     @NotBlank
-    @Size(max = 20)
+    @Size(max = 100)
     private String username;
 
     @NonNull
     @NotBlank
-    @Size(max = 50)
+    @Size(max = 100)
     @Email
     private String email;
 
