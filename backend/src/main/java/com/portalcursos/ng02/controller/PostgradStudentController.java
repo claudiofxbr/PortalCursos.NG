@@ -156,14 +156,8 @@ public class PostgradStudentController {
 
         } catch (Exception e) {
             log.error("[SUPREME-POSTGRAD] ERRO NA MATRÍCULA: {}", e.getMessage());
-            String errorMessage = "Erro na matrícula: " + e.getMessage();
-            
-            if (e.getMessage() != null && (e.getMessage().contains("column") || e.getMessage().contains("Unknown column") || e.getMessage().contains("does not exist"))) {
-                errorMessage = "ERRO DE SCHEMA: Por favor, execute o script SQL 'SUPREME-DATABASE-V31.4-FINAL.sql' no console do Neon para atualizar as colunas de auditoria e foto.";
-            }
-
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse(errorMessage));
+                    .body(new MessageResponse("Erro ao processar matrícula de pós-graduação. Por favor, tente novamente ou entre em contato com o suporte técnico."));
         }
     }
 

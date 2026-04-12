@@ -59,11 +59,13 @@ CREATE TABLE IF NOT EXISTS students (
     forma_ingresso VARCHAR(50),
     tipo_cota VARCHAR(50),
     foto_matricula VARCHAR(255),
+    active BOOLEAN DEFAULT TRUE,
     creator_name VARCHAR(255),
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_cpf_format CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
 );
 
@@ -86,10 +88,12 @@ CREATE TABLE IF NOT EXISTS postgrad_students (
     proof_of_address_file_path VARCHAR(255),
     academic_transcript_file_path VARCHAR(255),
     foto_matricula VARCHAR(255),
+    active BOOLEAN DEFAULT TRUE,
     creator_name VARCHAR(255),
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_postgrad_cpf CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
 );
 

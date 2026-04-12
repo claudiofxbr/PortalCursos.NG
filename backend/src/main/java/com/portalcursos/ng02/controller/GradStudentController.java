@@ -175,9 +175,9 @@ public class GradStudentController {
             return ResponseEntity.ok(savedStudent);
 
         } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException e) {
-            System.err.println("[SUPREME-ERROR] Erro de Integridade/Transação (Provável Schema): " + e.getMessage());
+            log.error("[SUPREME-ERROR] Erro de integridade/transação ao salvar aluno: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new MessageResponse("ERRO DE SCHEMA: Por favor, execute o script SQL 'SUPREME-DATABASE-V32.0-ULTRA-FINAL.sql' no console do Neon para atualizar as colunas de auditoria e foto. Detalhes: " + e.getMessage()));
+                    .body(new MessageResponse("Erro de integridade nos dados. Verifique se o CPF ou Email já estão cadastrados ou se há campos obrigatórios faltando."));
         } catch (Exception e) {
             System.err.println("[LOG-SUPREME] FALHA TOTAL NA MATRÍCULA: " + e.getMessage());
             e.printStackTrace();

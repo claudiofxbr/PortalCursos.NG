@@ -61,10 +61,13 @@ public class DatabaseResilienceComponent {
                         logger.info("[OMEGA-SUPREME] SUCESSO: Banco Neon e Esquema OMEGA validados!");
                         databaseReady = true;
                         
+                        // AUTO-CORREÇÃO DE SCHEMA (SUPREME V32.0 SELF-HEALING)
+                        applySchemaFixes(connection);
+
                         // Registro de Telemetria Interna
                         try {
                             statement.executeUpdate("INSERT INTO system_telemetry (component, status, latency_ms, details) " +
-                                    "VALUES ('DATABASE', 'UP', " + totalWaited + ", 'Resiliência concluída com sucesso')");
+                                    "VALUES ('DATABASE', 'UP', " + totalWaited + ", 'Resiliência e Auto-Correção concluídas')");
                         } catch (Exception e) { /* Ignorar se a tabela de telemetria falhar */ }
                     } catch (SQLException schemaEx) {
                         logger.warn("[OMEGA-SUPREME] Conectado, mas esquema ainda não detectado. Aguardando DDL de inicialização...");
@@ -91,6 +94,39 @@ public class DatabaseResilienceComponent {
 
         if (!databaseReady) {
             logger.error("[OMEGA-SUPREME] CRÍTICO: Banco de dados inacessível após {}s.", totalWaited / 1000);
+        }
+    }
+
+    private void applySchemaFixes(Connection conn) {
+        logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção)...");
+        String[] tables = {"students", "postgrad_students", "payments", "staff_members"};
+        
+        try (var stmt = conn.createStatement()) {
+            for (String table : tables) {
+                logger.info("[OMEGA-SUPREME] Otimizando tabela: {}", table);
+                
+                // Colunas de Auditoria SUPREME
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE");
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_name VARCHAR(255)");
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_position VARCHAR(255)");
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS creator_photo_url TEXT");
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                
+                // Colunas Específicas
+                if (table.equals("students") || table.equals("postgrad_students")) {
+                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS foto_matricula VARCHAR(255)");
+                }
+                if (table.equals("payments")) {
+                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS student_photo_url TEXT");
+                }
+                if (table.equals("staff_members")) {
+                    stmt.execute("ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255)");
+                }
+            }
+            logger.info("[OMEGA-SUPREME] Auto-Correção finalizada com sucesso!");
+        } catch (SQLException e) {
+            logger.error("[OMEGA-SUPREME] Falha na auto-correção de schema: {}", e.getMessage());
         }
     }
 }
