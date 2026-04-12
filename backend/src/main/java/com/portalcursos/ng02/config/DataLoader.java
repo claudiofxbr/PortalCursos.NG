@@ -50,7 +50,7 @@ public class DataLoader implements CommandLineRunner {
         userRepository.findByUsername("rootmaster").ifPresentOrElse(
             root -> {
                 System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER já existe. Sincronizando...");
-                root.setPassword(encoder.encode("root123"));
+                root.setPassword(encoder.encode("qzWX312#!@"));
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER).orElseGet(() -> 
                     roleRepository.save(Role.builder().name(Role.ERole.ROLE_ROOT_MASTER).build()));
@@ -59,7 +59,7 @@ public class DataLoader implements CommandLineRunner {
                 userRepository.save(root);
             },
             () -> {
-                System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER: rootmaster / root123");
+                System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER: rootmaster / qzWX312#!@");
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER)
                         .orElseThrow(() -> new RuntimeException("Error: Role ROLE_ROOT_MASTER is not found."));
@@ -67,7 +67,7 @@ public class DataLoader implements CommandLineRunner {
                 User rootUser = User.builder()
                         .username("rootmaster")
                         .email("ti@portalcursos.com")
-                        .password(encoder.encode("root123"))
+                        .password(encoder.encode("qzWX312#!@"))
                         .roles(roles)
                         .build();
                 userRepository.save(rootUser);
