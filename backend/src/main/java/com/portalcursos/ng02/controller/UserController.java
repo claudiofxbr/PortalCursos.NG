@@ -42,6 +42,9 @@ public class UserController {
             @RequestParam("email") String email,
             @RequestParam("password") String password,
             @RequestParam("roles") Set<String> roles,
+            @RequestParam(value = "fullName", required = false) String fullName,
+            @RequestParam(value = "position", required = false) String position,
+            @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
         try {
@@ -62,7 +65,7 @@ public class UserController {
                     .fotoUrl(fotoPath)
                     .build();
                      
-            return ResponseEntity.ok(userService.createUser(user, roles));
+            return ResponseEntity.ok(userService.createUser(user, roles, fullName, position, department));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao criar usuário: " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao criar usuário: " + e.getMessage()));

@@ -85,6 +85,9 @@ export default function UsersManagementPage() {
         email: '',
         password: '',
         roles: ['ALUNO'],
+        fullName: '',
+        position: '',
+        department: '',
         foto3x4File: null as File | null
     });
 
@@ -122,6 +125,9 @@ export default function UsersManagementPage() {
             data.append('email', formData.email);
             data.append('password', formData.password);
             data.append('roles', formData.roles.join(','));
+            data.append('fullName', formData.fullName);
+            data.append('position', formData.position);
+            data.append('department', formData.department);
             if (formData.foto3x4File) {
                 data.append('foto3x4File', formData.foto3x4File);
             }
@@ -131,7 +137,10 @@ export default function UsersManagementPage() {
             });
 
             setSuccess('🚀 Perfil institucional registrado e ativado com sucesso!');
-            setFormData({ username: '', email: '', password: '', roles: ['ALUNO'], foto3x4File: null });
+            setFormData({ 
+                username: '', email: '', password: '', roles: ['ALUNO'], 
+                fullName: '', position: '', department: '', foto3x4File: null 
+            });
             setShowForm(false);
             loadUsers();
         } catch (e: any) {
@@ -233,6 +242,38 @@ export default function UsersManagementPage() {
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.2rem' }}>
+                            <div>
+                                <label style={LABEL_STYLE}>Nome Completo do Colaborador</label>
+                                <input 
+                                    style={INPUT_STYLE} 
+                                    required 
+                                    value={formData.fullName} 
+                                    onChange={e => setFormData({...formData, fullName: e.target.value})}
+                                    placeholder="ex: Cláudio Felix Braga"
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={LABEL_STYLE}>Cargo / Função</label>
+                                    <input 
+                                        style={INPUT_STYLE} 
+                                        required 
+                                        value={formData.position} 
+                                        onChange={e => setFormData({...formData, position: e.target.value})}
+                                        placeholder="ex: Diretor de TI"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={LABEL_STYLE}>Departamento / Setor</label>
+                                    <input 
+                                        style={INPUT_STYLE} 
+                                        required 
+                                        value={formData.department} 
+                                        onChange={e => setFormData({...formData, department: e.target.value})}
+                                        placeholder="ex: Infraestrutura"
+                                    />
+                                </div>
+                            </div>
                             <div>
                                 <label style={LABEL_STYLE}>Identificação do Usuário (Username)</label>
                                 <input 
