@@ -2,6 +2,7 @@ package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.UserRepository;
