@@ -67,7 +67,7 @@ public class UserService {
         }
 
         user.setRoles(roles);
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
         // Lógica COLLAB V38.2: Sincronização Institucional Atômica e Robusta
         long startTime = System.currentTimeMillis();
@@ -78,14 +78,18 @@ public class UserService {
             });
 
             if (isStaff && fullName != null && !fullName.isBlank()) {
-                System.out.println("[SUPREME-COLLAB-V38.2] Iniciando ativação institucional para: " + fullName);
+                if (savedUser.getId() == null) {
+                    throw new RuntimeException("Falha crítica: O ID do usuário não foi gerado após o persist.");
+                }
+
+                System.out.println("[SUPREME-COLLAB-V38.3] Iniciando ativação institucional para ID: " + savedUser.getId());
                 
                 // Mapeia o StaffMember usando o mesmo ID do User (Protocolo MapsId)
                 StaffMember staff = staffMemberRepository.findById(savedUser.getId())
                         .orElse(new StaffMember());
                 
                 staff.setUser(savedUser);
-                staff.setId(savedUser.getId()); // Garantia redundante de ID
+                // staff.setId(...) removido: O Hibernate gerencia via @MapsId
                 staff.setFullName(fullName.trim());
                 staff.setPosition(position != null && !position.isBlank() ? position.trim() : "COLABORADOR");
                 staff.setDepartment(department != null && !department.isBlank() ? department.trim() : "INSTITUCIONAL");
@@ -130,7 +134,7 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         user.setRoles(roles);
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
         // Lógica COLLAB V38.2
         try {
@@ -144,7 +148,6 @@ public class UserService {
                         .orElse(new StaffMember());
                 
                 staff.setUser(savedUser);
-                staff.setId(savedUser.getId());
                 if (staff.getFullName() == null || staff.getFullName().isBlank()) {
                     staff.setFullName(savedUser.getUsername().toUpperCase());
                 }
