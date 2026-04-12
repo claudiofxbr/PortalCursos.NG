@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import api from '@/app/services/api';
+import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
 import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
@@ -338,7 +338,7 @@ export default function UsersManagementPage() {
                                         }}>
                                             {u.fotoUrl ? (
                                                 <img 
-                                                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/v1/storage/${u.fotoUrl}`} 
+                                                    src={u.fotoUrl ? (u.fotoUrl.startsWith('http') ? u.fotoUrl : `${BASE_URL}/uploads/${u.fotoUrl}`) : ''} 
                                                     alt={u.username}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />

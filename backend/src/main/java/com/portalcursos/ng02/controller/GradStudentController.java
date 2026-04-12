@@ -122,7 +122,7 @@ public class GradStudentController {
                 savedStudent.getDocuments().add(photoDoc);
             }
             
-            addDocument(student, rgCpf, EDocumentType.RG);
+            addDocument(savedStudent, rgCpf, EDocumentType.RG);
             addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
             addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
             addDocument(savedStudent, historicoEM, EDocumentType.HISTORICO_EM);

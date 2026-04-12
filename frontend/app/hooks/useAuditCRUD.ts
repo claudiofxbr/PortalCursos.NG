@@ -13,10 +13,10 @@ export const useAuditCRUD = (endpoint: string) => {
         creatorPhotoUrl: user?.fotoUrl || null
     });
 
-    const list = async (params = {}) => {
+    const list = async (params = {}, subPath = "") => {
         setLoading(true);
         try {
-            const res = await api.get(endpoint, { params });
+            const res = await api.get(`${endpoint}${subPath}`, { params });
             return res.data;
         } catch (error: any) {
             toast.error(`Erro ao carregar dados: ${error.message}`);
@@ -26,11 +26,11 @@ export const useAuditCRUD = (endpoint: string) => {
         }
     };
 
-    const create = async (data: any) => {
+    const create = async (data: any, subPath = "") => {
         setLoading(true);
         try {
             const auditPayload = { ...data, ...getAuditData() };
-            const res = await api.post(endpoint, auditPayload);
+            const res = await api.post(`${endpoint}${subPath}`, auditPayload);
             toast.success('Registro criado com sucesso!');
             return res.data;
         } catch (error: any) {
@@ -41,11 +41,11 @@ export const useAuditCRUD = (endpoint: string) => {
         }
     };
 
-    const update = async (id: number | string, data: any) => {
+    const update = async (id: number | string, data: any, subPath = "") => {
         setLoading(true);
         try {
             const auditPayload = { ...data, ...getAuditData() };
-            const res = await api.put(`${endpoint}/${id}`, auditPayload);
+            const res = await api.put(`${endpoint}${subPath}/${id}`, auditPayload);
             toast.success('Registro atualizado com sucesso!');
             return res.data;
         } catch (error: any) {
@@ -56,10 +56,10 @@ export const useAuditCRUD = (endpoint: string) => {
         }
     };
 
-    const remove = async (id: number | string) => {
+    const remove = async (id: number | string, subPath = "") => {
         setLoading(true);
         try {
-            await api.delete(`${endpoint}/${id}`);
+            await api.delete(`${endpoint}${subPath}/${id}`);
             toast.success('Registro removido com sucesso!');
             return true;
         } catch (error: any) {

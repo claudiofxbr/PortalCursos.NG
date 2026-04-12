@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useAuditCRUD } from '../hooks/useAuditCRUD';
 import { AuditStamp } from '../components/AuditStamp';
@@ -95,7 +95,7 @@ export default function FinancePage() {
         amount: parseFloat(newCharge.amount),
         studentId: parseInt(newCharge.studentId),
         academicLevel: activeTab
-      }, '/charge'); // useAuditCRUD need adjustment if it doesn't support subpaths easily
+      }, '/charge'); 
       fetchFinanceData();
       setShowChargeModal(false);
     } catch (err) {
@@ -273,7 +273,7 @@ export default function FinancePage() {
               <AuditStamp 
                   name={invoice.creatorName} 
                   position={invoice.creatorPosition} 
-                  photoUrl={invoice.creatorPhotoUrl ? `${BASE_URL}/uploads/${invoice.creatorPhotoUrl}` : undefined}
+                  photoUrl={invoice.creatorPhotoUrl ? (invoice.creatorPhotoUrl.startsWith('http') ? invoice.creatorPhotoUrl : `${BASE_URL}/uploads/${invoice.creatorPhotoUrl}`) : undefined}
                   date={invoice.createdAt}
               />
             </div>
@@ -345,7 +345,7 @@ export default function FinancePage() {
                           flexShrink: 0
                       }}>
                           {user?.fotoUrl ? (
-                              <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>
                           )}
@@ -379,7 +379,7 @@ export default function FinancePage() {
                           flexShrink: 0
                       }}>
                           {selectedStudent?.fotoUrl ? (
-                              <img src={selectedStudent.fotoUrl} alt="Aluno" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={selectedStudent.fotoUrl.startsWith('http') ? selectedStudent.fotoUrl : `${BASE_URL}/uploads/${selectedStudent.fotoUrl}`} alt="Aluno" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎓</div>
                           )}

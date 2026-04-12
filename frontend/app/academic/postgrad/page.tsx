@@ -28,6 +28,7 @@ interface PostgradStudent {
     creatorName?: string;
     creatorPosition?: string;
     creatorPhotoUrl?: string;
+    fotoUrl?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -353,7 +354,7 @@ export default function PostgradStudentsPage() {
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
-                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/${s.creatorPhotoUrl}` : undefined}
+                                                photoUrl={s.creatorPhotoUrl ? (s.creatorPhotoUrl.startsWith('http') ? s.creatorPhotoUrl : `${BASE_URL}/uploads/${s.creatorPhotoUrl}`) : undefined}
                                                 date={s.registrationDate}
                                             />
                                         </td>
@@ -388,8 +389,6 @@ export default function PostgradStudentsPage() {
                     </div>
                 )}
             </div>
-            </div>
-
             {/* MODAL: Edição de Aluno (Procedimento U) */}
             {editingStudent && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
@@ -418,7 +417,7 @@ export default function PostgradStudentsPage() {
                             </div>
                             <div style={{ gridColumn: 'span 2' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nova Foto (Opcional)</label>
-                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0]})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
+                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0] || null})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
                             </div>
                             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <button type="button" onClick={() => setEditingStudent(null)} style={{ padding: '12px 25px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', cursor: 'pointer' }}>Cancelar</button>
@@ -439,7 +438,7 @@ export default function PostgradStudentsPage() {
                             <div style={{ width: '220px', flexShrink: 0 }}>
                                 <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '1.5rem' }}>
                                     {viewingStudent.fotoUrl ? (
-                                        <img src={`${BASE_URL}/uploads/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={viewingStudent.fotoUrl.startsWith('http') ? viewingStudent.fotoUrl : `${BASE_URL}/uploads/${viewingStudent.fotoUrl}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}><User size={64} /></div>
                                     )}

@@ -76,6 +76,11 @@ public class AuthController {
             User user = userRepository.findById(userDetails.getId())
                     .orElseThrow(() -> new RuntimeException("Erro: Usuário não encontrado."));
 
+            // --- [ROBUSTEZ: SESSÃO ÚNICA] ---
+            // Invalida todas as sessões anteriores do usuário para garantir estabilidade e evitar trancamento do banco
+            userSessionRepository.deleteByUser(user);
+            logger.info("[AUTH API] [SESSION-CLEANUP] Sessões anteriores invalidadas para: {}", userDetails.getUsername());
+
             // 1. Gerar Tokens
             String jwt = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
             String refreshTokenStr = UUID.randomUUID().toString();

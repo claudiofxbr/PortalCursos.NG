@@ -15,7 +15,10 @@ import { toast } from "sonner";
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
 import { AuditStamp } from '@/app/components/AuditStamp';
-
+interface StudentDocument {
+    id: number;
+    documentType: string;
+    filePath: string;
     status: string;
     rejectionReason?: string;
 }
@@ -402,7 +405,7 @@ export default function GraduationPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 {s.fotoMatricula ? (
                                                     <img 
-                                                        src={`${BASE_URL}/uploads/${s.fotoMatricula}`} 
+                                                        src={s.fotoMatricula.startsWith('http') ? s.fotoMatricula : `${BASE_URL}/uploads/${s.fotoMatricula}`} 
                                                         alt={s.fullName} 
                                                         style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
@@ -425,7 +428,7 @@ export default function GraduationPage() {
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
-                                                photoUrl={s.creatorPhotoUrl ? `${BASE_URL}/uploads/${s.creatorPhotoUrl}` : undefined}
+                                                photoUrl={s.creatorPhotoUrl ? (s.creatorPhotoUrl.startsWith('http') ? s.creatorPhotoUrl : `${BASE_URL}/uploads/${s.creatorPhotoUrl}`) : undefined}
                                                 date={s.registrationDate}
                                             />
                                         </td>
@@ -528,7 +531,7 @@ export default function GraduationPage() {
                              
                             <div style={{ gridColumn: 'span 2' }}>
                                 <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>Nova Foto 3x4 (Opcional)</label>
-                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0]})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
+                                <input type="file" accept="image/*" onChange={e => setFiles({...files, foto3x4_update: e.target.files?.[0] || null})} style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }} />
                             </div>
 
                             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
@@ -554,7 +557,7 @@ export default function GraduationPage() {
                         <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
                             <div style={{ width: '120px', height: '160px', border: '1px solid #ddd', overflow: 'hidden' }}>
                                 {viewingStudent.fotoMatricula && (
-                                    <img src={`${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={viewingStudent.fotoMatricula.startsWith('http') ? viewingStudent.fotoMatricula : `${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 )}
                             </div>
                             <div style={{ flexGrow: 1 }}>
