@@ -4,8 +4,8 @@
 function Show-Menu {
     Clear-Host
     echo "==========================================================="
-    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V30.9-SUPREME        "
-    echo "   Status: RESILIENTE | Ambiente: WINDOWS                 "
+    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V38.1-ROOT           "
+    echo "   Acesso: ROOTMASTER | Status: RESILIENTE                "
     echo "==========================================================="
     echo "   1. [EXECUTAR] Iniciar Portal (Backend + Frontend)       "
     echo "   2. [GITHUB]   Sincronizar e Enviar para GitHub         "
@@ -13,7 +13,7 @@ function Show-Menu {
     echo "   4. [INFO]     Verificar Logs de Telemetria             "
     echo "   5. [SAIR]     Encerrar Painel                          "
     echo "==========================================================="
-    echo "DICA: Use o comando 'GO' no terminal para este painel."
+    echo "DICA: Use o comando 'Oi' ou 'GO' no terminal para este painel."
 }
 
 while ($true) {

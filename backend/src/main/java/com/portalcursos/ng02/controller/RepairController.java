@@ -114,7 +114,7 @@ public class RepairController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                     ticket.setCreatorName(staff.getFullName());
                     ticket.setCreatorPosition(staff.getPosition());
                     ticket.setCreatorPhotoUrl(staff.getFotoUrl());
@@ -171,7 +171,7 @@ public class RepairController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                     ticket.setCreatorName(staff.getFullName());
                     ticket.setCreatorPosition(staff.getPosition());
                     ticket.setCreatorPhotoUrl(staff.getFotoUrl());

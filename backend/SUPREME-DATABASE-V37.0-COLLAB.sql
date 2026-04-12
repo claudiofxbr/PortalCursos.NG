@@ -1,7 +1,7 @@
 -- ==========================================================
 -- SCRIPT DE CURA INSTITUCIONAL: PORTALCURSOS.NG
--- PROTOCOLO COLLAB-SUPREME V37.2 (ULTRA-RESILIENTE)
--- OBJETIVO: GARANTIR REGISTROS ÓRFÃOS, ÍNDICES E PERFORMANCE
+-- PROTOCOLO COLLAB-SUPREME V38.1 (ULTRA-RESILIENTE)
+-- OBJETIVO: GARANTIR REGISTROS ÓRFÃOS, ÍNDICES, PERFORMANCE E SEGURANÇA ROOT
 -- ==========================================================
 
 -- 0. AUTO-REPARO DE TABELAS
@@ -56,7 +56,17 @@ CREATE TABLE IF NOT EXISTS deployment_logs (
     summary TEXT
 );
 
+-- 5. SEGURANÇA SUPREMA (ROOTMASTER)
+INSERT INTO users (username, email, password, active) 
+SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$10$fN4Y6pC2E.MvA9XjA1vG8.s5V4S8X8jA1vG8.s5V4S8X8jA1vG8', true
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'rootmaster');
+
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u, roles r 
+WHERE u.username = 'rootmaster' AND r.name = 'ROLE_ROOT_MASTER'
+ON CONFLICT DO NOTHING;
+
 INSERT INTO deployment_logs (version, status, environment, summary) 
-VALUES ('V37.2-ULTRA', 'SUCCESS', 'HYBRID-CLOUD', 'Protocolo COLLAB V37.2: Refatoração de IDs e Sincronização Robusta aplicada.');
+VALUES ('V38.1-ULTRA', 'SUCCESS', 'HYBRID-CLOUD', 'Protocolo COLLAB V38.1: Segurança RootMaster e Sincronização de IDs aplicada.');
 
 -- SCRIPT CONCLUÍDO - V37.2-ULTRA-RESILIENTE

@@ -235,7 +235,7 @@ public class PostgradStudentController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                     s.setCreatorName(staff.getFullName());
                     s.setCreatorPosition(staff.getPosition());
                     s.setCreatorPhotoUrl(staff.getFotoUrl());

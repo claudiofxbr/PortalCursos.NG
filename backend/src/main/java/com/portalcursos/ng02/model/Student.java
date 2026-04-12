@@ -80,8 +80,8 @@ public class Student extends BaseAuditEntity {
     private java.util.List<Payment> payments = new java.util.ArrayList<>();
 
     @JsonProperty("registrationDate")
-    public String getRegistrationDate() {
-        return getCreatedAt() != null ? getCreatedAt().toString() : null;
+    public java.time.LocalDateTime getRegistrationDate() {
+        return getCreatedAt();
     }
 
     public String getFotoUrl() {

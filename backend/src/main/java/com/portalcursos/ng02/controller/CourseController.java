@@ -54,7 +54,7 @@ public class CourseController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> staff = staffMemberRepository.findByUserId(userDetails.getId());
+                Optional<StaffMember> staff = staffMemberRepository.findById(userDetails.getId());
                 if (staff.isPresent()) {
                     course.setCreatorName(staff.get().getFullName());
                     course.setCreatorPosition(staff.get().getPosition());
@@ -77,7 +77,7 @@ public class CourseController {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                     courseDetails.setCreatorName(staff.getFullName());
                     courseDetails.setCreatorPosition(staff.getPosition());
                     courseDetails.setCreatorPhotoUrl(staff.getFotoUrl());

@@ -245,10 +245,21 @@ INSERT INTO users (username, email, password, active)
 SELECT 'admin', 'admin@portalcursos.com.br', '$2a$10$8.UnVuG9UMJSuGPvstLmeuQC9s.nx.zGDzE7zC.4L8Cis0HAnqZ7G', true
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
--- VINCULAR ADMIN ÀS ROLES NECESSÁRIAS
+-- 11. USUÁRIO ROOT MASTER (TI/DESENVOLVIMENTO)
+-- SENHA: qzWX312#!@ (Sincronizada via DataLoader no boot)
+INSERT INTO users (username, email, password, active) 
+SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$10$fN4Y6pC2E.MvA9XjA1vG8.s5V4S8X8jA1vG8.s5V4S8X8jA1vG8', true
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'rootmaster');
+
+-- VINCULAR USUÁRIOS ÀS ROLES NECESSÁRIAS
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id FROM users u, roles r 
-WHERE u.username = 'admin' AND r.name IN ('ROLE_ADMIN', 'ROLE_ROOT_MASTER')
+WHERE u.username = 'admin' AND r.name IN ('ROLE_ADMIN')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u, roles r 
+WHERE u.username = 'rootmaster' AND r.name IN ('ROLE_ROOT_MASTER')
 ON CONFLICT DO NOTHING;
 
 -- VINCULAR STAFFMEMBER AO ADMIN (PARA AUDITORIA OMEGA)

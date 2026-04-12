@@ -156,7 +156,7 @@ public class FinancialController {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
             com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-            staffMemberRepository.findByUserId(userDetails.getId()).ifPresent(staff -> {
+            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                 if (p instanceof Payment.PaymentBuilder) {
                     ((Payment.PaymentBuilder<?, ?>) p).creatorName(staff.getFullName());
                     ((Payment.PaymentBuilder<?, ?>) p).creatorPosition(staff.getPosition());

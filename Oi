@@ -1,0 +1,3 @@
+#!/bin/bash
+# PortalCursos.NG - Atalho Oi para Git Bash / Linux
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "./Oi.ps1"
