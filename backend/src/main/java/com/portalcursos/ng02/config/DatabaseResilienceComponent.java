@@ -98,8 +98,8 @@ public class DatabaseResilienceComponent {
     }
 
     private void applySchemaFixes(Connection conn) {
-        logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção V35.0)...");
-        String[] tables = {"students", "postgrad_students", "payments", "staff_members"};
+        logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção V35.1)...");
+        String[] tables = {"students", "postgrad_students", "payments", "staff_members", "staff_member"};
         
         try (var stmt = conn.createStatement()) {
             for (String table : tables) {
@@ -124,6 +124,10 @@ public class DatabaseResilienceComponent {
                     executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS rg_cpf_file_path VARCHAR(255)");
                     executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS proof_of_address_file_path VARCHAR(255)");
                     executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS academic_transcript_file_path VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS phone VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS address TEXT");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS desired_course VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS graduation_institution VARCHAR(255)");
                 }
 
                 // --- [ESPECÍFICO: GRADUAÇÃO ROBUSTA] ---
@@ -148,7 +152,7 @@ public class DatabaseResilienceComponent {
                     executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255)");
                 }
             }
-            logger.info("[OMEGA-SUPREME] Auto-Correção V35.0 finalizada com sucesso!");
+            logger.info("[OMEGA-SUPREME] Auto-Correção V35.1 finalizada com sucesso!");
         } catch (SQLException e) {
             logger.error("[OMEGA-SUPREME] Erro ao aplicar correções de schema: {}", e.getMessage());
         }

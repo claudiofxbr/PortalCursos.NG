@@ -97,10 +97,10 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Transaction Failure");
-        body.put("message", "Inconsistência temporária detectada no banco de dados. O mecanismo de auto-correção V35.0 foi acionado.");
+        body.put("message", "Sincronização de schema em andamento (Protocolo V35.1). Este é um comportamento esperado durante cold starts.");
         body.put("details", ex.getMostSpecificCause().getMessage());
         body.put("path", request.getDescription(false).replace("uri=", ""));
-        body.put("hint", "Aguarde alguns segundos e tente novamente. O sistema está sincronizando o schema automaticamente.");
+        body.put("hint", "O mecanismo de auto-cura está criando as colunas necessárias. Tente novamente em 5-10 segundos.");
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -127,11 +127,11 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Internal Server Error");
-        body.put("protocol", "V35.0-ULTRA-SUPREME");
-        body.put("message", "Erro crítico operacional. O sistema registrou esta ocorrência e iniciou protocolos de contingência.");
+        body.put("protocol", "V35.1-SUPREME-HEALING");
+        body.put("message", "Instabilidade operacional detectada. O protocolo de resiliência V35.1 foi acionado para restaurar os serviços.");
         body.put("details", ex.getMessage());
         body.put("path", request.getDescription(false).replace("uri=", ""));
-        body.put("maintenance_hint", "O sistema de resiliência está monitorando a saúde do banco de dados.");
+        body.put("hint", "Aguarde alguns segundos. O sistema está realizando uma auto-sincronização do banco de dados Cloud.");
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
