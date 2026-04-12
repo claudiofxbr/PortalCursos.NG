@@ -52,7 +52,7 @@ public class GradStudentController {
     }
 
     @PostMapping("/enroll")
-    @Transactional
+    // @Transactional  <-- REMOVIDO PARA EVITAR ROLLBACK SILENCIOSO EM ERRO DE SCHEMA
     public ResponseEntity<?> enrollStudent(
             @RequestParam("fullName") String fullName,
             @RequestParam("email") String email,
@@ -174,6 +174,10 @@ public class GradStudentController {
             System.out.println("[LOG-SUPREME] MATRÍCULA FINALIZADA PARA: " + savedStudent.getFullName());
             return ResponseEntity.ok(savedStudent);
 
+        } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException e) {
+            System.err.println("[SUPREME-ERROR] Erro de Integridade/Transação (Provável Schema): " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new MessageResponse("ERRO DE SCHEMA: Por favor, execute o script SQL 'SUPREME-DATABASE-V32.0-ULTRA-FINAL.sql' no console do Neon para atualizar as colunas de auditoria e foto. Detalhes: " + e.getMessage()));
         } catch (Exception e) {
             System.err.println("[LOG-SUPREME] FALHA TOTAL NA MATRÍCULA: " + e.getMessage());
             e.printStackTrace();

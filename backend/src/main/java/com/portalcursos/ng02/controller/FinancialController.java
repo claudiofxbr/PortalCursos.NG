@@ -93,6 +93,10 @@ public class FinancialController {
 
             Payment saved = paymentRepository.save(paymentBuilder.build());
             return ResponseEntity.ok(saved);
+        } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException e) {
+            System.err.println("[SUPREME-ERROR] Erro de Integridade (Schema Financeiro): " + e.getMessage());
+            return ResponseEntity.status(409)
+                    .body(new MessageResponse("ERRO DE SCHEMA: Por favor, execute o script SQL 'SUPREME-DATABASE-V32.0-ULTRA-FINAL.sql' no console do Neon para atualizar as colunas de auditoria."));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao criar cobrança manual: " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao criar cobrança: " + e.getMessage()));
@@ -118,6 +122,10 @@ public class FinancialController {
             injectAuditStamps(payment);
 
             return ResponseEntity.ok(paymentRepository.save(payment));
+        } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException e) {
+            System.err.println("[SUPREME-ERROR] Erro de Integridade (Schema Financeiro Update): " + e.getMessage());
+            return ResponseEntity.status(409)
+                    .body(new MessageResponse("ERRO DE SCHEMA: Por favor, execute o script SQL 'SUPREME-DATABASE-V32.0-ULTRA-FINAL.sql'."));
         } catch (Exception e) {
             System.err.println("[SUPREME-ERROR] Erro ao atualizar cobrança ID " + id + ": " + e.getMessage());
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar cobrança."));
