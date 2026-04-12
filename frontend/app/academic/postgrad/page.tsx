@@ -98,16 +98,19 @@ export default function PostgradStudentsPage() {
         });
 
         try {
+            console.log("[SUPREME] Enviando formulário de matrícula...", Object.fromEntries(form.entries()));
             await api.post('v1/postgrad-students', form, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setSuccess('✅ Aluno cadastrado com sucesso!');
             setShowForm(false);
             setFormData({ fullName: '', email: '', cpf: '', phone: '', dateOfBirth: '', address: '', graduationInstitution: '', graduationYear: '', desiredCourse: '' });
-            setFiles({ diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null });
+            setFiles({ diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null, foto3x4File: null });
             loadStudents();
         } catch (e: any) {
-            setError(e?.response?.data?.message || 'Erro ao cadastrar aluno.');
+            console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data);
+            const serverMsg = e?.response?.data?.message || e?.response?.data?.details;
+            setError(serverMsg || 'Erro crítico ao cadastrar aluno. Verifique se todos os campos obrigatórios e a foto foram preenchidos.');
         } finally {
             setSubmitting(false);
         }

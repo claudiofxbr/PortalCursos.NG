@@ -39,12 +39,14 @@ public class PostgradStudentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> listAll() {
         try {
-            return ResponseEntity.ok(studentRepository.findAll());
+            log.info("[SUPREME] Carregando lista de alunos de pós-graduação...");
+            List<PostgradStudent> students = studentRepository.findAll();
+            log.info("[SUPREME] {} alunos carregados com sucesso.", students.size());
+            return ResponseEntity.ok(students);
         } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao listar alunos de pós-graduação: " + e.getMessage());
-            e.printStackTrace();
+            log.error("[CRITICAL-DATABASE] Erro fatal ao listar alunos de pós-graduação: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro interno ao recuperar lista de alunos de pós-graduação."));
+                    .body(new MessageResponse("Erro interno ao recuperar lista de alunos de pós-graduação. Possível inconsistência de schema no banco Neon."));
         }
     }
 
@@ -52,13 +54,15 @@ public class PostgradStudentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> findById(@PathVariable Long id) {
         try {
-            return studentRepository.findById(id)
-                    .map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
+            Optional<PostgradStudent> student = studentRepository.findById(id);
+            if (student.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(student.get());
         } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao buscar aluno de pós-graduação ID " + id + ": " + e.getMessage());
+            log.error("[CRITICAL] Erro ao buscar aluno de pósID {}: {}", id, e.getMessage());
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao recuperar dados do aluno."));
+                    .body(new MessageResponse("Erro ao recuperar dados do aluno: " + e.getMessage()));
         }
     }
 
@@ -151,10 +155,9 @@ public class PostgradStudentController {
             return ResponseEntity.ok(finalSaved);
 
         } catch (Exception e) {
-            System.err.println("[SUPREME-POSTGRAD] ERRO CRÍTICO NA MATRÍCULA: " + e.getMessage());
-            e.printStackTrace();
+            log.error("[SUPREME-POSTGRAD] ERRO CRÍTICO NA MATRÍCULA: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage()));
+                    .body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage() + ". Verifique se o banco de dados Neon possui as colunas do Protocolo V31.4-ULTRA."));
         }
     }
 

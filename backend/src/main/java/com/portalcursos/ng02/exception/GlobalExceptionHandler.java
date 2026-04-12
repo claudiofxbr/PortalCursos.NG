@@ -105,13 +105,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
-        logger.error("[SUPREME-ERROR] Exceção não tratada capturada: ", ex);
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", new Date());
+        logger.error("[SUPREME-ERROR-AUDIT] Exceção não tratada capturada em {}: {}", request.getDescription(false), ex.getMessage(), ex);
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Internal Server Error");
-        body.put("message", "Erro crítico operacional. Protocolo V30.9-SUPREME-FINAL registrou este evento para auditoria.");
-        body.put("path", request.getDescription(false));
+        body.put("protocol", "V31.4-ULTRA-SOLUCAO");
+        body.put("message", "Erro crítico operacional. O sistema registrou esta ocorrência para auditoria avançada.");
+        body.put("details", ex.getMessage());
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+        body.put("maintenance_hint", "Verifique a integridade do schema no banco Neon e a conectividade do backend.");
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
