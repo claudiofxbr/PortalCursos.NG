@@ -110,14 +110,18 @@ export default function PostgradStudentsPage() {
         } catch (e: any) {
             console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data || e);
             const data = e?.response?.data;
+            const status = e.response?.status;
             let errorMsg = data?.message || data?.details || 'Erro crítico ao cadastrar aluno.';
             
-            // Tratamento especial para objetos de erro do Spring Boot sem corpo formatado
-            if (typeof data === 'object' && Object.keys(data).length === 0 && e.response?.status === 400) {
-                errorMsg = "Erro de validação: Verifique se todos os campos obrigatórios (*) foram preenchidos.";
+            // Tratamento especial para conflitos (Soft Delete ou Duplicidade)
+            if (status === 409) {
+                errorMsg = "⚠️ Conflito de dados: Este CPF ou E-mail já está em uso, possivelmente em um registro inativo (Soft Delete).";
+            } else if (typeof data === 'object' && Object.keys(data).length === 0 && status === 400) {
+                // Tratamento especial para objetos de erro do Spring Boot sem corpo formatado
+                errorMsg = "⚠️ Erro de validação: Verifique se todos os campos obrigatórios (*) foram preenchidos corretamente.";
             }
 
-            const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : '';
+            const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : (status === 409 ? "\n\n💡 Dica: Se o banco estiver vazio, pode haver registros inativos bloqueando este CPF. Execute o script de cura V36.0." : "");
             setError(`${errorMsg}${hint}`);
         } finally {
             setSubmitting(false);

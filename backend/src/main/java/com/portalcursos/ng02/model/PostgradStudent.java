@@ -89,7 +89,7 @@ public class PostgradStudent extends BaseAuditEntity {
 
     @JsonProperty("registrationDate")
     public LocalDateTime getRegistrationDate() {
-        return this.createdAt;
+        return this.registrationDate != null ? this.registrationDate : this.createdAt;
     }
 
     @Override

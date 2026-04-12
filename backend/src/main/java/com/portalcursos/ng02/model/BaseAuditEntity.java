@@ -31,10 +31,14 @@ public abstract class BaseAuditEntity {
     @Column(name = "updated_at")
     protected LocalDateTime updatedAt;
 
+    @Column(name = "registration_date")
+    protected LocalDateTime registrationDate;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.registrationDate = LocalDateTime.now();
         if (this.active == false) {
             // Ensure default is true if not set
             this.active = true;
