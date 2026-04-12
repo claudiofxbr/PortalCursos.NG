@@ -89,6 +89,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(org.springframework.transaction.TransactionSystemException.class)
+    public ResponseEntity<?> handleTransactionException(org.springframework.transaction.TransactionSystemException ex, WebRequest request) {
+        logger.error("[SUPREME-TRANSACTION-ERROR] Falha de transação/rollback: {}", ex.getMessage());
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        body.put("error", "Transaction Failure");
+        body.put("message", "Falha na transação do banco de dados. Este erro geralmente ocorre quando o schema do banco (colunas) não condiz com o código do aplicativo.");
+        body.put("details", ex.getMostSpecificCause().getMessage());
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+        body.put("action_required", "Execute o script 'SUPREME-DATABASE-V31.4-FINAL.sql' no console do Neon.");
+
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(org.springframework.dao.DataAccessException.class)
     public ResponseEntity<?> handleDatabaseException(org.springframework.dao.DataAccessException ex, WebRequest request) {
         logger.error("[SUPREME-ERROR] Falha de persistência no banco: ", ex);
