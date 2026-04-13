@@ -25,16 +25,83 @@ while ($true) {
     
     switch ($choice) {
         "1" {
-            echo "`n[SUPREME] Verificando scripts de inicializacao..."
-            $startScript = Join-Path $PSScriptRoot "backend\start-portal.ps1"
-            if (-not (Test-Path $startScript)) {
-                $startScript = Join-Path $PSScriptRoot "start-portal.ps1"
-            }
-            if (Test-Path $startScript) {
-                powershell -ExecutionPolicy Bypass -File $startScript
+            Clear-Host
+            echo "==========================================================="
+            echo "   INICIANDO ECOSSISTEMA PORTALCURSOS V38.9               "
+            echo "   Backend (Spring Boot) + Frontend (Next.js)             "
+            echo "==========================================================="
+            echo ""
+
+            # --- DETECCAO JAVA ---
+            $javaEnvSet = $false
+            $jdkPaths = @(
+                "C:\Program Files\Amazon Corretto\jdk17.0.18_9\bin\java.exe",
+                "C:\Program Files\Amazon Corretto\jdk17.0.10_7\bin\java.exe",
+                "C:\Program Files\Java\jdk-17\bin\java.exe"
+            )
+            $whereJava = where.exe java 2>$null | Select-Object -First 1
+            if ($whereJava) {
+                $env:JAVA_HOME = [System.IO.Path]::GetDirectoryName([System.IO.Path]::GetDirectoryName($whereJava))
+                $javaEnvSet = $true
             } else {
-                echo "[ERRO] Arquivo 'start-portal.ps1' nao encontrado em: $startScript"
+                foreach ($jdkPath in $jdkPaths) {
+                    if (Test-Path $jdkPath) {
+                        $javaBinDir = [System.IO.Path]::GetDirectoryName($jdkPath)
+                        $env:JAVA_HOME = [System.IO.Path]::GetDirectoryName($javaBinDir)
+                        $env:Path = "$javaBinDir;" + $env:Path
+                        $javaEnvSet = $true
+                        break
+                    }
+                }
             }
+            if (-not $javaEnvSet) {
+                Write-Host "[ERRO] Java 17 nao encontrado. Instale o Amazon Corretto 17." -ForegroundColor Red
+                Pause
+                break
+            }
+            Write-Host "[OK] Java 17: $env:JAVA_HOME" -ForegroundColor Green
+
+            # --- LIBERAR PORTAS ---
+            Write-Host "[...] Liberando portas 8080 e 3000..." -ForegroundColor Yellow
+            foreach ($porta in @(8080, 3000)) {
+                $portPids = Get-NetTCPConnection -LocalPort $porta -State Listen -ErrorAction SilentlyContinue |
+                            Select-Object -ExpandProperty OwningProcess -Unique
+                foreach ($p in $portPids) {
+                    Stop-Process -Id $p -Force -ErrorAction SilentlyContinue
+                }
+            }
+            Start-Sleep -Seconds 2
+
+            # --- BACKEND: Spring Boot em janela separada ---
+            $backendDir  = Join-Path $PSScriptRoot "backend"
+            $backendLog  = Join-Path $backendDir "startup_log.txt"
+            $mvnwPath    = Join-Path $backendDir "mvnw.cmd"
+            $mvnCmd      = if (Test-Path $mvnwPath) { ".\mvnw.cmd" } else { "mvn" }
+
+            Write-Host "[1/2] Iniciando Backend (Spring Boot)..." -ForegroundColor Cyan
+            Start-Process powershell -ArgumentList @(
+                "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                "Set-Location '$backendDir'; $mvnCmd spring-boot:run '-DskipTests' 2>&1 | Tee-Object -FilePath '$backendLog'"
+            ) -WindowStyle Normal
+            Write-Host "      Backend iniciando... aguarde ~30s para estar pronto." -ForegroundColor Gray
+
+            # Aguarda um pouco antes de iniciar o frontend
+            Start-Sleep -Seconds 5
+
+            # --- FRONTEND: Next.js em janela separada ---
+            $frontendDir = Join-Path $PSScriptRoot "frontend"
+            Write-Host "[2/2] Iniciando Frontend (Next.js - npm run dev)..." -ForegroundColor Cyan
+            Start-Process powershell -ArgumentList @(
+                "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                "Set-Location '$frontendDir'; npm run dev"
+            ) -WindowStyle Normal
+            Write-Host "      Frontend iniciando em http://localhost:3000" -ForegroundColor Gray
+            echo ""
+            Write-Host "[OK] Ecossistema PortalCursos.NG iniciado com sucesso!" -ForegroundColor Green
+            Write-Host "     Backend:  http://localhost:8080" -ForegroundColor White
+            Write-Host "     Frontend: http://localhost:3000" -ForegroundColor White
+            echo ""
+            Write-Host "     AGUARDE ~60 segundos para o Backend estar totalmente pronto." -ForegroundColor Yellow
             Pause
         }
         "2" {
