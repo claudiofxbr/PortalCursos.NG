@@ -79,8 +79,16 @@ public class CourseController {
                 staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                     course.setCreatorName(staff.getFullName());
                     course.setCreatorPosition(staff.getPosition());
-                    course.setCreatorPhotoUrl(staff.getFotoUrl());
-                    System.out.println("[AUDITORIA MEC] Foto injetada: " + staff.getFotoUrl());
+                    
+                    // Lógica de Fallback V37.5-ULTRA: Se não houver foto, usa um padrão do sistema
+                    String photoUrl = staff.getFotoUrl();
+                    if (photoUrl == null || photoUrl.trim().isEmpty()) {
+                        photoUrl = "default-auditor.png";
+                        System.out.println("[AUDITORIA MEC] Aviso: Usuário sem foto. Aplicando fallback 'default-auditor.png'");
+                    }
+                    
+                    course.setCreatorPhotoUrl(photoUrl);
+                    System.out.println("[AUDITORIA MEC] Foto injetada com sucesso: " + photoUrl + " para o curso: " + course.getDenominacaoCurso());
                 });
             }
         }

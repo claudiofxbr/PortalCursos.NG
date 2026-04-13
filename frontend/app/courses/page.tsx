@@ -458,10 +458,9 @@ export default function CoursesPage() {
                                         <td style={{ padding: '1rem' }}>{c.cargaHorariaTotal}h</td>
                                         <td style={{ padding: '1rem' }}>
                                             {c.creatorName ? (
-                                                <AuditStamp
                                                     name={c.creatorName}
                                                     position={c.creatorPosition}
-                                                    photoUrl={c.creatorPhotoUrl ? (c.creatorPhotoUrl.startsWith('http') ? c.creatorPhotoUrl : `${BASE_URL}/uploads/${c.creatorPhotoUrl}`) : undefined}
+                                                    photoUrl={c.creatorPhotoUrl}
                                                     date={c.registrationDate}
                                                 />
                                             ) : (
