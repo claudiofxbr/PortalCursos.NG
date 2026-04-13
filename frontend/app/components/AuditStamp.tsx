@@ -10,37 +10,59 @@ interface AuditStampProps {
 export const AuditStamp: React.FC<AuditStampProps> = ({ name, position, photoUrl, date }) => {
     if (!name) return null;
 
-    // Resolução robusta de URL
+    // Resolução robusta de URL com Fallback V37.6-ULTRA
     const getResolvedPhotoUrl = (url?: string) => {
-        if (!url) return undefined;
-        if (url.startsWith('http')) return url;
-        if (url.startsWith('/')) return `${BASE_URL}${url}`;
-        return `${BASE_URL}/uploads/${url}`;
+        const finalUrl = url && url.trim() !== "" ? url : "default-auditor.png";
+        
+        if (finalUrl.startsWith('http')) return finalUrl;
+        if (finalUrl.startsWith('/')) return `${BASE_URL}${finalUrl}`;
+        // Se for apenas o nome do arquivo (ex: default-auditor.png), aponta para uploads
+        return `${BASE_URL}/uploads/${finalUrl}`;
     };
 
     const resolvedUrl = getResolvedPhotoUrl(photoUrl);
 
     return (
-        <div className="flex items-center gap-2 p-1 px-2 border rounded-full bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 w-fit">
-            <div className="relative w-6 h-6 overflow-hidden rounded-full ring-1 ring-white dark:ring-slate-700">
-                {resolvedUrl ? (
-                    <img
-                        src={resolvedUrl} 
-                        alt={name} 
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-indigo-500 text-[10px] text-white font-bold">
-                        {name.charAt(0)}
-                    </div>
-                )}
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            padding: '4px 10px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '20px',
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            width: 'fit-content'
+        }}>
+            <div style={{
+                position: 'relative',
+                width: '26px',
+                height: '26px',
+                overflow: 'hidden',
+                borderRadius: '50%',
+                border: '1px solid rgba(255,255,255,0.2)',
+                flexShrink: 0
+            }}>
+                <img
+                    src={resolvedUrl} 
+                    alt={name} 
+                    onError={(e) => {
+                        // Se a imagem falhar (ex: arquivo deletado), mostra iniciais ou fallback visual
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const parent = (e.target as HTMLImageElement).parentElement;
+                        if (parent) {
+                            parent.style.backgroundColor = '#3498db';
+                            parent.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:10px;font-weight:bold">${name.charAt(0)}</div>`;
+                        }
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
             </div>
-            <div className="flex flex-col">
-                <span className="text-[10px] font-semibold leading-tight text-slate-700 dark:text-slate-200">
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#fff' }}>
                     {name}
                 </span>
-                <span className="text-[8px] leading-tight text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
-                    {position || 'Operador'} • {date ? new Date(date).toLocaleDateString() : 'Agora'}
+                <span style={{ fontSize: '8px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {position || 'Operador'} • {date ? new Date(date).toLocaleDateString('pt-BR') : 'Agora'}
                 </span>
             </div>
         </div>

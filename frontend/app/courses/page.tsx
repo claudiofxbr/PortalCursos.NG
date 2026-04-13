@@ -395,17 +395,19 @@ export default function CoursesPage() {
                             overflow: 'hidden',
                             backgroundColor: '#000',
                             flexShrink: 0,
-                            boxShadow: '0 0 10px var(--secondary-color)'
+                            boxShadow: '0 0 10px var(--secondary-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            {user?.fotoUrl ? (
-                                <img 
-                                    src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`} 
-                                    alt="Emissor" 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                />
-                            ) : (
-                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', textAlign: 'center', opacity: 0.5 }}>3x4</div>
-                            )}
+                            <img 
+                                src={user?.fotoUrl ? (user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`) : `${BASE_URL}/uploads/default-auditor.png`} 
+                                alt="Emissor" 
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Audit&background=d4af37&color=000';
+                                }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            />
                         </div>
                         <div style={{ flex: 1 }}>
                             <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--secondary-color)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>
