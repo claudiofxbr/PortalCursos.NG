@@ -304,12 +304,10 @@ export default function RepairsPage() {
                             justifyContent: 'center'
                           }}>
                             <img 
-                              src={`${BASE_URL}${url}`} 
+                              src={resolvePhotoUrl(BASE_URL, url) || ''} 
                               alt={`Evidência ${idx + 1}`} 
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                (e.target as any).src = 'https://via.placeholder.com/80?text=Foto';
-                              }}
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             />
                           </div>
                         ))}
@@ -365,17 +363,7 @@ export default function RepairsPage() {
                           marginBottom: '6px'
                         }}>
                           {(() => {
-                            // StorageService retorna paths como "staff-photos/uuid.jpg"
-                            // Precisa construir a URL completa: BASE_URL + /v1/storage/ + path
-                            const rawUrl = ticket.creatorPhotoUrl;
-                            let photoSrc: string | null = null;
-                            if (rawUrl && rawUrl !== 'default-auditor.png' && rawUrl.trim() !== '') {
-                              if (rawUrl.startsWith('http') || rawUrl.startsWith('data:')) {
-                                photoSrc = rawUrl; // Já é URL absoluta
-                              } else {
-                                photoSrc = `${BASE_URL}/uploads/${rawUrl}`; // Path relativo → URL completa
-                              }
-                            }
+                            const photoSrc = resolvePhotoUrl(BASE_URL, ticket.creatorPhotoUrl);
                             return photoSrc ? (
                               <img
                                 src={photoSrc}
