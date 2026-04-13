@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import com.portalcursos.ng02.dto.MessageResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,7 @@ public class RepairController {
 
     @GetMapping({"", "/tickets"})
     @PreAuthorize(AUTHORIZED_ROLES)
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getAllTickets() {
         try {
             logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");

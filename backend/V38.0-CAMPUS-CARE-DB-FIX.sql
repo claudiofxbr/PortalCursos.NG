@@ -32,5 +32,12 @@ BEGIN
         CREATE INDEX idx_repair_audit ON repair_tickets(creator_name, creator_position);
     END IF;
 
+    -- 5. Tabela de evidências fotográficas (ElementCollection)
+    CREATE TABLE IF NOT EXISTS repair_photos (
+        repair_ticket_id BIGINT NOT NULL,
+        photo_url VARCHAR(255),
+        CONSTRAINT fk_repair_ticket FOREIGN KEY (repair_ticket_id) REFERENCES repair_tickets(id) ON DELETE CASCADE
+    );
+
     RAISE NOTICE 'Banco de dados sincronizado com Protocolo V38.0-ULTRA.';
 END $$;
