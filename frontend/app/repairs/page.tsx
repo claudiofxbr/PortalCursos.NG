@@ -19,11 +19,11 @@ export default function RepairsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Estados para o novo chamado
   const [newTitle, setNewTitle] = useState('');
   const [newLoc, setNewLoc] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [mainPhotoFile, setMainPhotoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false); // Proteção anti double-submit
 
   useEffect(() => {
     if (!authLoading) {
@@ -85,16 +85,20 @@ export default function RepairsPage() {
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newTitle || !newLoc || !newDesc) {
+    // Proteção anti double-submit: ignora se já está processando
+    if (submitting) return;
+
+    if (!newTitle.trim() || !newLoc.trim() || !newDesc.trim()) {
       alert("⚠️ Por favor, preencha todos os campos obrigatórios (Título, Local e Descrição).");
       return;
     }
 
+    setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('title', newTitle);
-      formData.append('location', newLoc);
-      formData.append('description', newDesc);
+      formData.append('title', newTitle.trim());
+      formData.append('location', newLoc.trim());
+      formData.append('description', newDesc.trim());
       
       if (mainPhotoFile) {
         formData.append('mainPhotoFile', mainPhotoFile);
@@ -113,6 +117,8 @@ export default function RepairsPage() {
     } catch (err: any) {
       const msg = err.response?.data?.message || "Falha técnica ao enviar chamado. Verifique sua conexão.";
       alert(`❌ Erro: ${msg}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -433,19 +439,25 @@ export default function RepairsPage() {
                 />
               </div>
 
-              <button type="submit" className="btn-primary" style={{ 
-                width: '100%', 
-                padding: '20px', 
-                borderRadius: '14px',
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                backgroundColor: '#1a237e',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 8px 20px rgba(26, 35, 126, 0.25)'
-              }}>
-                ENVIAR RELATÓRIO
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                disabled={submitting}
+                style={{ 
+                  width: '100%', 
+                  padding: '20px', 
+                  borderRadius: '14px',
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  backgroundColor: submitting ? '#9fa8da' : '#1a237e',
+                  color: 'white',
+                  border: 'none',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  boxShadow: submitting ? 'none' : '0 8px 20px rgba(26, 35, 126, 0.25)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {submitting ? '⏳ ENVIANDO...' : 'ENVIAR RELATÓRIO'}
               </button>
             </form>
           </div>

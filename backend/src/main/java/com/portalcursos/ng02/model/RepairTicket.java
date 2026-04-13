@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "repair_tickets")
@@ -18,6 +19,7 @@ import org.hibernate.annotations.SQLDelete;
 @AllArgsConstructor
 @Builder
 @SQLDelete(sql = "UPDATE repair_tickets SET active = false WHERE id = ?")
+@Where(clause = "active = true")
 public class RepairTicket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,10 +38,10 @@ public class RepairTicket {
     private ERepairStatus status;
 
     @Builder.Default
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "repair_photos", joinColumns = @JoinColumn(name = "repair_ticket_id"))
     @Column(name = "photo_url", columnDefinition = "TEXT")
-    private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Lista de URLs das evidências fotográficas
+    private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Evidências fotográficas (EAGER: carregado junto com o chamado)
 
     @Column(name = "main_photo_url")
     private String mainPhotoUrl;

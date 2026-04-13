@@ -75,20 +75,23 @@ public class RepairController {
     public ResponseEntity<?> getAllTickets() {
         try {
             logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");
+            // @Where(clause = "active = true") no entity filtra automaticamente via SQL
             List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
-                    .filter(t -> t.isActive()) // Substitui o @Where removido para evitar erro de coluna ausente
                     .map(this::convertToDTO)
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(tickets);
         } catch (Exception e) {
             String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            logger.error("[SUPREME-ERR] Falha crítica na listagem de reparos: {}. Causa: {}. StackTrace: ", e.getMessage(), rootCause, e);
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar infraestrutura de reparos. Diagnóstico: " + rootCause));
+            logger.error("[CAMPUS-CARE][ERR] Falha ao listar chamados: {}. Causa raiz: {}", e.getMessage(), rootCause, e);
+            return ResponseEntity.internalServerError().body(
+                new MessageResponse("Erro ao carregar chamados de infraestrutura. Verifique se o banco de dados foi atualizado com V39.0. Diagnóstico: " + rootCause)
+            );
         }
     }
 
     @PostMapping(value = {"", "/tickets"}, consumes = {"multipart/form-data"})
+    @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> createTicket(
             @RequestParam("title") String title,
