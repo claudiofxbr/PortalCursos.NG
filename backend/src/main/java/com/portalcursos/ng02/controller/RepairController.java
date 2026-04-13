@@ -61,7 +61,7 @@ public class RepairController {
                 .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
                 .creatorName(ticket.getReportedByName() != null ? ticket.getReportedByName() : "Auditor do Sistema")
                 .creatorPosition(ticket.getReportedByRole() != null ? ticket.getReportedByRole() : "EQUIPE TÉCNICA")
-                .creatorPhotoUrl(ticket.getReporterPhotoUrl() != null ? ticket.getReporterPhotoUrl() : "default-auditor.png")
+                .creatorPhotoUrl(ticket.getReporterPhotoUrl()) // null quando não há foto — o frontend exibe ícone padrão
                 .build();
     }
 
