@@ -94,7 +94,7 @@ export default function RepairsPage() {
       formData.append('title', newTitle);
       formData.append('location', newLoc);
       formData.append('description', newDesc);
-      formData.append('status', 'OPEN');
+      
       if (mainPhotoFile) {
         formData.append('mainPhotoFile', mainPhotoFile);
       }

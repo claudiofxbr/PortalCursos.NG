@@ -130,8 +130,15 @@ public class RepairController {
             RepairTicket savedTicket = repairRepository.save(ticket);
             return ResponseEntity.ok(convertToDTO(savedTicket));
         } catch (Exception e) {
-            logger.error("[SUPREME-ERR] Erro ao registrar chamado: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Falha sistêmica ao registrar incidente."));
+            String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            logger.error("[SUPREME-ERR] Falha crítica ao registrar chamado: {}. Causa: {}", e.getMessage(), rootCause);
+            
+            // Verificação proativa de colunas (Diagnostic)
+            if (rootCause != null && rootCause.contains("column")) {
+                logger.warn("[DIAGNOSTIC] Possível ausência de colunas de auditoria na tabela repair_tickets. Favor executar V38.0-CAMPUS-CARE-DB-FIX.sql");
+            }
+
+            return ResponseEntity.internalServerError().body(new MessageResponse("Falha sistêmica ao registrar incidente. Verifique se o banco de dados está atualizado com o protocolo V38.0."));
         }
     }
 

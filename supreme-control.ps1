@@ -4,8 +4,8 @@
 function Show-Menu {
     Clear-Host
     echo "==========================================================="
-    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V38.1-ROOT           "
-    echo "   Acesso: ROOTMASTER | Status: RESILIENTE                "
+    echo "   PORTAL CURSOS NG - PAINEL SUPREMO V38.2-ROOT           "
+    echo "   Acesso: ROOTMASTER | Status: RESILIENTE (FIX-ROLES)    "
     echo "==========================================================="
     echo "   1. [EXECUTAR] Iniciar Portal (Backend + Frontend)       "
     echo "   2. [GITHUB]   Sincronizar e Enviar para GitHub         "

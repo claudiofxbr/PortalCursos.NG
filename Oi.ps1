@@ -16,10 +16,11 @@ if (-not (Test-Path "backend") -or -not (Test-Path "frontend")) {
 }
 
 # 2. Carregar o Painel de Controle
-if (Test-Path ".\supreme-control.ps1") {
-    Write-Host "[OK] Orquestrador V38.1 localizado. Iniciando..." -ForegroundColor Green
+$controlScript = Join-Path $PSScriptRoot "supreme-control.ps1"
+if (Test-Path $controlScript) {
+    Write-Host "[OK] Orquestrador V38.2 localizado. Iniciando..." -ForegroundColor Green
     Start-Sleep -Milliseconds 500
-    powershell -NoProfile -ExecutionPolicy Bypass -File ".\supreme-control.ps1"
+    powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
 } else {
-    Write-Host "[ERRO] Script de controle supremo nao encontrado!" -ForegroundColor Red
+    Write-Host "[ERRO] Script de controle supremo nao encontrado em: $controlScript" -ForegroundColor Red
 }
