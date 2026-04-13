@@ -15,17 +15,14 @@ const statusMap: Record<string, { label: string, color: string }> = {
 
 /**
  * Resolve qualquer formato de URL de foto para uma URL absoluta exibível.
- * O StorageService retorna paths relativos como "staff-photos/uuid.jpg".
- * Fotos existentes que tenham "default-auditor.png" também são tratadas como sem foto.
+ * O StorageService salva como path relativo: "staff-photos/uuid.jpg".
+ * O WebMvcConfig serve os arquivos em: GET /uploads/**
+ * Padrão correto: ${BASE_URL}/uploads/${path}
  */
-const resolvePhotoUrl = (url: string | null | undefined): string | null => {
+const resolvePhotoUrl = (baseUrl: string, url: string | null | undefined): string | null => {
   if (!url || url === 'default-auditor.png' || url.trim() === '') return null;
-  // URL já absoluta (http, https, data URI)
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
-  // Path relativo retornado pelo StorageService — precisa do prefixo de storage
-  // O BASE_URL já aponta para o servidor (ex: http://localhost:8080)
-  // O endpoint de arquivos é /v1/storage/{path}
-  return null; // será substituído dinamicamente dentro do componente com BASE_URL
+  if (url.startsWith('http') || url.startsWith('data:')) return url; // URL absoluta — usa direto
+  return `${baseUrl}/uploads/${url}`; // Path relativo do StorageService → URL completa
 };
 
 export default function RepairsPage() {
@@ -375,7 +372,7 @@ export default function RepairsPage() {
                               if (rawUrl.startsWith('http') || rawUrl.startsWith('data:')) {
                                 photoSrc = rawUrl; // Já é URL absoluta
                               } else {
-                                photoSrc = `${BASE_URL}/v1/storage/${rawUrl}`; // Path relativo → URL completa
+                                photoSrc = `${BASE_URL}/uploads/${rawUrl}`; // Path relativo → URL completa
                               }
                             }
                             return photoSrc ? (
@@ -524,7 +521,7 @@ export default function RepairsPage() {
         if (rawCreatorPhoto && rawCreatorPhoto !== 'default-auditor.png' && rawCreatorPhoto.trim() !== '') {
           creatorPhotoSrc = rawCreatorPhoto.startsWith('http') || rawCreatorPhoto.startsWith('data:')
             ? rawCreatorPhoto
-            : `${BASE_URL}/v1/storage/${rawCreatorPhoto}`;
+            : `${BASE_URL}/uploads/${rawCreatorPhoto}`;
         }
         return (
           <div
@@ -582,7 +579,7 @@ export default function RepairsPage() {
                     <div style={{ marginBottom: '1.5rem' }}>
                       <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>EVIDÊNCIA PRINCIPAL</p>
                       <img
-                        src={`${BASE_URL}/v1/storage/${selectedTicket.mainPhotoUrl}`}
+                        src={`${BASE_URL}/uploads/${selectedTicket.mainPhotoUrl}`}
                         alt="Evidência principal"
                         style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }}
                       />
@@ -605,7 +602,7 @@ export default function RepairsPage() {
                         {selectedTicket.photoUrls.map((url: string, idx: number) => (
                           <img
                             key={idx}
-                            src={`${BASE_URL}${url}`}
+                            src={resolvePhotoUrl(BASE_URL, url) || ''}
                             alt={`Evidência ${idx + 1}`}
                             style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #eee' }}
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
