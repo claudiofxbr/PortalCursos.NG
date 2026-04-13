@@ -125,11 +125,11 @@ public class RepairController {
                 });
             }
 
-            // Fallback Crítico: Se não houver dados de staff, usa dados do User base
+            // Fallback Crítico: Se não houver StaffMember vinculado, usa dados básicos do User
             if (ticket.getReportedByName() == null && user.isPresent()) {
                 ticket.setReportedByName(user.get().getUsername());
                 ticket.setReportedByRole("USUÁRIO AUTORIZADO");
-                ticket.setReporterPhotoUrl("default-auditor.png");
+                ticket.setReporterPhotoUrl(null); // null = sem foto cadastrada; o frontend exibe ícone 👤
             }
 
             if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
