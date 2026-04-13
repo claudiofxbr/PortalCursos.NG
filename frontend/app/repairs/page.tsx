@@ -256,9 +256,10 @@ export default function RepairsPage() {
                   }}>
                     {ticket.mainPhotoUrl ? (
                       <img 
-                        src={`${BASE_URL}/v1/storage/${ticket.mainPhotoUrl}`} 
+                        src={resolvePhotoUrl(BASE_URL, ticket.mainPhotoUrl) || ''} 
                         alt="Foto principal" 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                       />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: 0.1 }}>🛠️</div>
@@ -579,9 +580,10 @@ export default function RepairsPage() {
                     <div style={{ marginBottom: '1.5rem' }}>
                       <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>EVIDÊNCIA PRINCIPAL</p>
                       <img
-                        src={`${BASE_URL}/uploads/${selectedTicket.mainPhotoUrl}`}
+                        src={resolvePhotoUrl(BASE_URL, selectedTicket.mainPhotoUrl) || ''}
                         alt="Evidência principal"
                         style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #eee' }}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                       />
                     </div>
                   )}

@@ -128,8 +128,14 @@ public class RepairController {
             // Fallback Crítico: Se não houver StaffMember vinculado, usa dados básicos do User
             if (ticket.getReportedByName() == null && user.isPresent()) {
                 ticket.setReportedByName(user.get().getUsername());
-                ticket.setReportedByRole("USUÁRIO AUTORIZADO");
-                ticket.setReporterPhotoUrl(null); // null = sem foto cadastrada; o frontend exibe ícone 👤
+                
+                String role = "USUÁRIO AUTORIZADO";
+                if(user.get().getRoles() != null && !user.get().getRoles().isEmpty()) {
+                     role = user.get().getRoles().iterator().next().getName().name().replace("ROLE_", "");
+                }
+                
+                ticket.setReportedByRole(role);
+                ticket.setReporterPhotoUrl(user.get().getFotoUrl()); // Usa foto do User caso exista
             }
 
             if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
@@ -187,11 +193,26 @@ public class RepairController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth.getPrincipal() instanceof UserDetailsImpl) {
                 UserDetailsImpl details = (UserDetailsImpl) auth.getPrincipal();
+                boolean[] staffFound = {false};
                 staffMemberRepository.findById(details.getId()).ifPresent(staff -> {
                     ticket.setReportedByName(staff.getFullName());
                     ticket.setReportedByRole(staff.getPosition());
                     ticket.setReporterPhotoUrl(staff.getFotoUrl());
+                    staffFound[0] = true;
                 });
+                
+                // Fallback se não tiver StaffMember
+                if (!staffFound[0]) {
+                    userRepository.findById(details.getId()).ifPresent(user -> {
+                        ticket.setReportedByName(user.getUsername());
+                        String role = "USUÁRIO AUTORIZADO";
+                        if(user.getRoles() != null && !user.getRoles().isEmpty()) {
+                             role = user.getRoles().iterator().next().getName().name().replace("ROLE_", "");
+                        }
+                        ticket.setReportedByRole(role);
+                        ticket.setReporterPhotoUrl(user.getFotoUrl());
+                    });
+                }
             }
 
             return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
