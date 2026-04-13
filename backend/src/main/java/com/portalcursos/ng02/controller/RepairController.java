@@ -57,9 +57,9 @@ public class RepairController {
                 .mainPhotoUrl(ticket.getMainPhotoUrl())
                 .createdAt(ticket.getCreatedAt())
                 .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
-                .creatorName(ticket.getCreatorName())
-                .creatorPosition(ticket.getCreatorPosition())
-                .creatorPhotoUrl(ticket.getCreatorPhotoUrl())
+                .creatorName(ticket.getReportedByName())
+                .creatorPosition(ticket.getReportedByRole())
+                .creatorPhotoUrl(ticket.getReporterPhotoUrl())
                 .photoUrls(ticket.getPhotoUrls() != null ? ticket.getPhotoUrls() : new java.util.ArrayList<>())
                 .build();
     }
@@ -113,17 +113,17 @@ public class RepairController {
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
                 staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    ticket.setCreatorName(staff.getFullName());
-                    ticket.setCreatorPosition(staff.getPosition());
-                    ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+                    ticket.setReportedByName(staff.getFullName());
+                    ticket.setReportedByRole(staff.getPosition());
+                    ticket.setReporterPhotoUrl(staff.getFotoUrl());
                 });
             }
 
             // Fallback Crítico: Se não houver dados de staff, usa dados do User base
-            if (ticket.getCreatorName() == null && user.isPresent()) {
-                ticket.setCreatorName(user.get().getUsername());
-                ticket.setCreatorPosition("USUÁRIO AUTORIZADO");
-                ticket.setCreatorPhotoUrl("default-auditor.png");
+            if (ticket.getReportedByName() == null && user.isPresent()) {
+                ticket.setReportedByName(user.get().getUsername());
+                ticket.setReportedByRole("USUÁRIO AUTORIZADO");
+                ticket.setReporterPhotoUrl("default-auditor.png");
             }
 
             if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
@@ -182,9 +182,9 @@ public class RepairController {
             if (auth.getPrincipal() instanceof UserDetailsImpl) {
                 UserDetailsImpl details = (UserDetailsImpl) auth.getPrincipal();
                 staffMemberRepository.findById(details.getId()).ifPresent(staff -> {
-                    ticket.setCreatorName(staff.getFullName());
-                    ticket.setCreatorPosition(staff.getPosition());
-                    ticket.setCreatorPhotoUrl(staff.getFotoUrl());
+                    ticket.setReportedByName(staff.getFullName());
+                    ticket.setReportedByRole(staff.getPosition());
+                    ticket.setReporterPhotoUrl(staff.getFotoUrl());
                 });
             }
 
