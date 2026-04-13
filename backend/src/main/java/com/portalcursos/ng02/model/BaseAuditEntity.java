@@ -19,10 +19,13 @@ public abstract class BaseAuditEntity {
     @Column(nullable = false)
     protected boolean active = true;
 
+    @Column(name = "creator_name")
     protected String creatorName;
+
+    @Column(name = "creator_position")
     protected String creatorPosition;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "creator_photo_url", columnDefinition = "TEXT")
     protected String creatorPhotoUrl;
 
     @Column(name = "created_at", updatable = false)

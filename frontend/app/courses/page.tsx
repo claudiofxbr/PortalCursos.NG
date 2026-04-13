@@ -334,7 +334,11 @@ export default function CoursesPage() {
                             boxShadow: '0 0 10px var(--secondary-color)'
                         }}>
                             {user?.fotoUrl ? (
-                                <img src={user.fotoUrl} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img 
+                                    src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`} 
+                                    alt="Emissor" 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                />
                             ) : (
                                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', textAlign: 'center', opacity: 0.5 }}>3x4</div>
                             )}
