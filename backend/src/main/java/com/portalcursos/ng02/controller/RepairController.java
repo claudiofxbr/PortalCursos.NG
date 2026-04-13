@@ -60,6 +60,7 @@ public class RepairController {
                 .creatorName(ticket.getCreatorName())
                 .creatorPosition(ticket.getCreatorPosition())
                 .creatorPhotoUrl(ticket.getCreatorPhotoUrl())
+                .photoUrls(ticket.getPhotoUrls() != null ? ticket.getPhotoUrls() : new java.util.ArrayList<>())
                 .build();
     }
 
@@ -78,8 +79,9 @@ public class RepairController {
                     .collect(Collectors.toList());
             return ResponseEntity.ok(tickets);
         } catch (Exception e) {
-            logger.error("[SUPREME-ERR] Falha crítica na listagem de reparos: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar infraestrutura de reparos."));
+            String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            logger.error("[SUPREME-ERR] Falha crítica na listagem de reparos: {}. Causa: {}", e.getMessage(), rootCause);
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar infraestrutura de reparos. Diagnóstico: " + rootCause));
         }
     }
 

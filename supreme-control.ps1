@@ -23,19 +23,21 @@ while ($true) {
     switch ($choice) {
         "1" {
             echo "`n[SUPREME] Verificando scripts de inicializacao..."
-            if (Test-Path "./start-portal.ps1") {
-                powershell -ExecutionPolicy Bypass -File "./start-portal.ps1"
+            $startScript = Join-Path $PSScriptRoot "start-portal.ps1"
+            if (Test-Path $startScript) {
+                powershell -ExecutionPolicy Bypass -File $startScript
             } else {
-                echo "[ERRO] Arquivo 'start-portal.ps1' nao encontrado!"
+                echo "[ERRO] Arquivo 'start-portal.ps1' nao encontrado em: $startScript"
             }
             Pause
         }
         "2" {
             echo "`n[SUPREME] Iniciando sincronizacao GitHub..."
-            if (Test-Path "./push-to-github.ps1") {
-                powershell -ExecutionPolicy Bypass -File "./push-to-github.ps1"
+            $pushScript = Join-Path $PSScriptRoot "push-to-github.ps1"
+            if (Test-Path $pushScript) {
+                powershell -ExecutionPolicy Bypass -File $pushScript
             } else {
-                echo "[ERRO] Arquivo 'push-to-github.ps1' nao encontrado!"
+                echo "[ERRO] Arquivo 'push-to-github.ps1' nao encontrado em: $pushScript"
             }
             Pause
         }
@@ -47,8 +49,8 @@ while ($true) {
         }
         "4" {
             echo "`n[INFO] Exibindo últimas entradas de telemetria..."
-            # Simulação de log se o banco estiver offline, ou leitura local se houver
-            Get-Content "backend/logs/telemetry.log" -ErrorAction SilentlyContinue | Select-Object -Last 10
+            $logPath = Join-Path $PSScriptRoot "backend/logs/telemetry.log"
+            Get-Content $logPath -ErrorAction SilentlyContinue | Select-Object -Last 10
             echo "Nota: Logs detalhados estão no arquivo 'connectivity_report.md'."
             Pause
         }

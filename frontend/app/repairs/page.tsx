@@ -49,7 +49,8 @@ export default function RepairsPage() {
       } else if (!err.response) {
         setError("SERVIDOR OFFLINE: Não foi possível conectar ao núcleo de serviços de reparo.");
       } else {
-        setError("FALHA TÉCNICA: Ocorreu um erro inesperado ao carregar os chamados.");
+        const diagnostics = err.response?.data?.message || err.message;
+        setError(`FALHA TÉCNICA: Ocorreu um erro inesperado ao carregar os chamados. [DETALHE: ${diagnostics}]`);
       }
     } finally {
       setLoading(false);

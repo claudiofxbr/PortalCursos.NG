@@ -1,43 +1,27 @@
--- V38.0-CAMPUS-CARE-DB-FIX.sql
--- PROTOCOLO V38.0 - ESTABILIZAÇÃO FINAL DO BANCO DE DADOS (CAMPUS CARE)
--- OBJETIVO: Corrigir a "Falha Sistêmica" de registro adicionando colunas faltantes.
+-- SCRIPT DE INFRAESTRUTURA V38.1-ULTRA (PROTOCOLO CAMPUS CARE)
+-- Este script deve ser COPIADO e COLADO no console SQL do Neon.
+-- Não tente rodar o comando "backend/V..." direto no console.
 
+-- 1. Garante que as colunas de auditoria e Soft Delete existam sem causar erros de interrupção
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reported_by_name VARCHAR(255);
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reported_by_role VARCHAR(255);
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reporter_photo_url TEXT;
+
+-- 2. Sincroniza registros legados para evitar o "Erro ao carregar chamados" (Soft Delete Filter)
+UPDATE repair_tickets SET active = TRUE WHERE active IS NULL;
+
+-- 3. Garante que a tabela repair_photos (ElementCollection) esteja vinculada
+-- Nota: Esta tabela é gerada automaticamente pelo JPA, mas garantimos os tipos aqui
 DO $$ 
-BEGIN 
-    -- 1. Garante colunas de Auditoria Biométrica na tabela repair_tickets
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tickets' AND column_name='creator_name') THEN 
-        ALTER TABLE repair_tickets ADD COLUMN creator_name VARCHAR(255); 
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'repair_photos') THEN
+        ALTER TABLE repair_photos ALTER COLUMN photos TYPE TEXT;
     END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tickets' AND column_name='creator_position') THEN 
-        ALTER TABLE repair_tickets ADD COLUMN creator_position VARCHAR(255); 
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tickets' AND column_name='creator_photo_url') THEN 
-        ALTER TABLE repair_tickets ADD COLUMN creator_photo_url TEXT; 
-    END IF;
-
-    -- 2. Garante suporte a Soft Delete
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tickets' AND column_name='active') THEN 
-        ALTER TABLE repair_tickets ADD COLUMN active BOOLEAN DEFAULT TRUE; 
-    END IF;
-
-    -- 3. Correção de integridade para fotos principais
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tickets' AND column_name='main_photo_url') THEN 
-        ALTER TABLE repair_tickets ADD COLUMN main_photo_url TEXT; 
-    END IF;
-
-    -- 4. Índice de performance para auditoria
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_repair_audit') THEN
-        CREATE INDEX idx_repair_audit ON repair_tickets(creator_name, creator_position);
-    END IF;
-
-    -- 5. Tabela de evidências fotográficas (ElementCollection)
-    CREATE TABLE IF NOT EXISTS repair_photos (
-        repair_ticket_id BIGINT NOT NULL,
-        photo_url VARCHAR(255),
-        CONSTRAINT fk_repair_ticket FOREIGN KEY (repair_ticket_id) REFERENCES repair_tickets(id) ON DELETE CASCADE
-    );
-
-    RAISE NOTICE 'Banco de dados sincronizado com Protocolo V38.0-ULTRA.';
 END $$;
+
+-- VERIFICAÇÃO FINAL:
+SELECT table_name, column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'repair_tickets' 
+AND column_name IN ('active', 'reported_by_name', 'reported_by_role', 'reporter_photo_url');
