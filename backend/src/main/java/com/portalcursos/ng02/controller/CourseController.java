@@ -80,6 +80,7 @@ public class CourseController {
                     course.setCreatorName(staff.getFullName());
                     course.setCreatorPosition(staff.getPosition());
                     course.setCreatorPhotoUrl(staff.getFotoUrl());
+                    System.out.println("[AUDITORIA MEC] Foto injetada: " + staff.getFotoUrl());
                 });
             }
         }

@@ -69,10 +69,12 @@ export default function CoursesPage() {
     const { user } = useAuth();
     const [courses, setCourses] = useState<Course[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [submitting, setSubmitting] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -143,15 +145,37 @@ export default function CoursesPage() {
         }
 
         try {
-            await api.post('v1/courses', {
-                ...formData,
-                cargaHorariaTotal: horas,
-                percentualDocentesStrictoSensu: parseFloat(formData.percentualDocentesStrictoSensu),
-                monthlyFee: parseFloat(formData.monthlyFee),
-                durationInSemesters: parseInt(formData.durationInSemesters),
-                totalVacancies: parseInt(formData.totalVacancies),
+            if (isEditing && editingId) {
+                await api.put(`v1/courses/${editingId}`, {
+                    ...formData,
+                    cargaHorariaTotal: horas,
+                    percentualDocentesStrictoSensu: parseFloat(formData.percentualDocentesStrictoSensu),
+                    monthlyFee: parseFloat(formData.monthlyFee),
+                    durationInSemesters: parseInt(formData.durationInSemesters),
+                    totalVacancies: parseInt(formData.totalVacancies)
+                });
+                setSuccess('✅ Curso atualizado com sucesso!');
+            } else {
+                await api.post('v1/courses', {
+                    ...formData,
+                    cargaHorariaTotal: horas,
+                    percentualDocentesStrictoSensu: parseFloat(formData.percentualDocentesStrictoSensu),
+                    monthlyFee: parseFloat(formData.monthlyFee),
+                    durationInSemesters: parseInt(formData.durationInSemesters),
+                    totalVacancies: parseInt(formData.totalVacancies),
+                });
+                setSuccess('🚀 Curso cadastrado com sucesso e registrado no sistema institucional!');
+            }
+            setFormData({
+                codigoIes: '', denominacaoCurso: '', nivelPosGraduacao: 'LATO_SENSU',
+                modalidade: 'PRESENCIAL', areaConhecimento: '', cargaHorariaTotal: '',
+                cursoGraduacaoVinculadoId: '', numeroDocumentoCriacao: '',
+                dataDocumentoCriacao: '', dataInicioOferta: '', cpfCoordenador: '',
+                titulacaoCoordenador: 'MESTRE', percentualDocentesStrictoSensu: '0',
+                description: '', monthlyFee: '0', durationInSemesters: '2', totalVacancies: '40'
             });
-            setSuccess('🚀 Curso cadastrado com sucesso e registrado no sistema institucional!');
+            setIsEditing(false);
+            setEditingId(null);
             setShowForm(false);
             loadCourses();
         } catch (e: any) {
@@ -162,11 +186,54 @@ export default function CoursesPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Deseja realmente remover este curso? Esta ação requer permissão de Administrador.')) return;
+        if (!confirm('Deseja realmente remover este curso? Esta ação requer auditoria.')) return;
         try {
             await api.delete(`v1/courses/${id}`);
+            setSuccess('🗑️ Curso removido com sucesso.');
             loadCourses();
-        } catch (e) { setError('Erro ao remover curso.'); }
+        } catch (e) {
+            setError('Falha ao remover curso.');
+        }
+    };
+
+    const handleEdit = (course: Course) => {
+        setFormData({
+            codigoIes: course.codigoIes || '',
+            denominacaoCurso: course.denominacaoCurso || course.name || '',
+            nivelPosGraduacao: course.nivelPosGraduacao || 'LATO_SENSU',
+            modalidade: course.modalidade || 'PRESENCIAL',
+            areaConhecimento: course.areaConhecimento || '',
+            cargaHorariaTotal: String(course.cargaHorariaTotal || 0),
+            cursoGraduacaoVinculadoId: course.cursoGraduacaoVinculadoId || '',
+            numeroDocumentoCriacao: course.numeroDocumentoCriacao || '',
+            dataDocumentoCriacao: course.dataDocumentoCriacao?.split('T')[0] || '',
+            dataInicioOferta: course.dataInicioOferta?.split('T')[0] || '',
+            cpfCoordenador: course.cpfCoordenador || '',
+            titulacaoCoordenador: course.titulacaoCoordenador || 'MESTRE',
+            percentualDocentesStrictoSensu: String(course.percentualDocentesStrictoSensu || 0),
+            description: course.description || '',
+            monthlyFee: String(course.monthlyFee || 0),
+            durationInSemesters: String(course.durationInSemesters || 2),
+            totalVacancies: String(course.totalVacancies || 40)
+        });
+        setEditingId(course.id);
+        setIsEditing(true);
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEditingId(null);
+        setShowForm(false);
+        setFormData({
+             codigoIes: '', denominacaoCurso: '', nivelPosGraduacao: 'LATO_SENSU',
+             modalidade: 'PRESENCIAL', areaConhecimento: '', cargaHorariaTotal: '',
+             cursoGraduacaoVinculadoId: '', numeroDocumentoCriacao: '',
+             dataDocumentoCriacao: '', dataInicioOferta: '', cpfCoordenador: '',
+             titulacaoCoordenador: 'MESTRE', percentualDocentesStrictoSensu: '0',
+             description: '', monthlyFee: '0', durationInSemesters: '2', totalVacancies: '40'
+        });
     };
 
     return (
@@ -179,26 +246,23 @@ export default function CoursesPage() {
                     </h1>
                     <p style={{ opacity: 0.5, fontSize: '0.9rem', marginTop: '0.5rem' }}>Conformidade Institucional & Diretrizes MEC</p>
                 </div>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    style={{
-                        padding: '0.8rem 1.8rem', borderRadius: '10px',
-                        backgroundColor: showForm ? '#444' : 'var(--secondary-color)', color: showForm ? '#fff' : '#000',
-                        border: 'none', cursor: 'pointer', fontWeight: 700,
-                        transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                    }}
+                <button 
+                    onClick={() => isEditing ? handleCancelEdit() : setShowForm(!showForm)} 
+                    style={{ padding: '0.8rem 1.5rem', borderRadius: '10px', backgroundColor: isEditing ? '#e74c3c' : 'rgba(212, 175, 55, 0.15)', color: isEditing ? '#fff' : 'var(--secondary-color)', border: isEditing ? 'none' : '1px solid var(--secondary-color)', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.3s' }}
                 >
-                    {showForm ? '✕ Cancelar' : '+ Registrar Novo Curso'}
+                    {isEditing ? '✖️ Cancelar Edição' : showForm ? '🔼 Fechar Formulário' : '➕ Registrar Novo Curso'}
                 </button>
             </div>
 
-            {/* Alerts */}
-            {error && <div style={{ backgroundColor: 'rgba(255, 60, 60, 0.1)', border: '1px solid #ff4444', color: '#ffaaaa', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>⚠️ {error}</div>}
-            {success && <div style={{ backgroundColor: 'rgba(60, 255, 60, 0.1)', border: '1px solid #44ff44', color: '#aaffaa', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>✅ {success}</div>}
+            {error && <div style={{ padding: '1rem', backgroundColor: 'rgba(231, 76, 60, 0.15)', border: '1px solid #e74c3c', borderRadius: '10px', color: '#e74c3c', marginBottom: '1.5rem', fontWeight: 600 }}>{error}</div>}
+            {success && <div style={{ padding: '1rem', backgroundColor: 'rgba(46, 204, 113, 0.15)', border: '1px solid #2ecc71', borderRadius: '10px', color: '#2ecc71', marginBottom: '1.5rem', fontWeight: 600 }}>{success}</div>}
 
             {/* Form */}
             {showForm && (
-                <form onSubmit={handleSubmit} style={{ animation: 'fadeIn 0.5s ease' }}>
+                <form onSubmit={handleSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '3rem', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--secondary-color)' }}>
+                        {isEditing ? '📝 Editando Registro MEC' : '🏛️ Dados Obrigatórios do Curso'}
+                    </h2>
 
                     {/* Seção 1: Dados Institucionais */}
                     <div style={SECTION_STYLE}>
@@ -353,8 +417,8 @@ export default function CoursesPage() {
                     </div>
 
                     <div style={{ textAlign: 'right', marginBottom: '3rem' }}>
-                        <button type="submit" disabled={submitting} style={{ padding: '1.1rem 3.5rem', borderRadius: '12px', backgroundColor: 'var(--secondary-color)', color: '#000', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1rem', boxShadow: '0 8px 15px rgba(0,0,0,0.3)' }}>
-                            {submitting ? '⏳ Processando Auditoria MEC...' : '💾 Finalizar e Auditar Curso'}
+                        <button type="submit" disabled={submitting} style={{ padding: '1.1rem 3.5rem', borderRadius: '12px', backgroundColor: isEditing ? '#f39c12' : 'var(--secondary-color)', color: '#000', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1rem', boxShadow: '0 8px 15px rgba(0,0,0,0.3)' }}>
+                            {submitting ? '⏳ Processando...' : isEditing ? '🔄 Atualizar e Auditar Registro' : '💾 Finalizar e Auditar Curso'}
                         </button>
                     </div>
                 </form>
@@ -405,9 +469,22 @@ export default function CoursesPage() {
                                             )}
                                         </td>
                                         <td style={{ padding: '1rem' }}>
-                                            <button onClick={() => handleDelete(c.id)} style={{ background: 'none', border: '1px solid #e74c3c', color: '#e74c3c', padding: '4px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>
-                                                Remover
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button 
+                                                    onClick={() => handleEdit(c)} 
+                                                    title="Editar Curso"
+                                                    style={{ background: 'rgba(243, 156, 18, 0.1)', border: '1px solid #f39c12', color: '#f39c12', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(c.id)} 
+                                                    title="Remover Registro"
+                                                    style={{ background: 'rgba(231, 76, 60, 0.1)', border: '1px solid #e74c3c', color: '#e74c3c', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
