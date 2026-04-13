@@ -47,20 +47,21 @@ public class RepairController {
     StorageService storageService;
 
     private RepairTicketDTO convertToDTO(RepairTicket ticket) {
+        if (ticket == null) return null;
+        
         return RepairTicketDTO.builder()
                 .id(ticket.getId())
                 .title(ticket.getTitle())
                 .description(ticket.getDescription())
                 .location(ticket.getLocation())
-                .status(ticket.getStatus())
-                .photoUrls(ticket.getPhotoUrls())
+                .status(ticket.getStatus() != null ? ticket.getStatus() : RepairTicket.ERepairStatus.OPEN)
+                .photoUrls(ticket.getPhotoUrls() != null ? ticket.getPhotoUrls() : new java.util.ArrayList<>())
                 .mainPhotoUrl(ticket.getMainPhotoUrl())
                 .createdAt(ticket.getCreatedAt())
                 .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
-                .creatorName(ticket.getReportedByName())
-                .creatorPosition(ticket.getReportedByRole())
-                .creatorPhotoUrl(ticket.getReporterPhotoUrl())
-                .photoUrls(ticket.getPhotoUrls() != null ? ticket.getPhotoUrls() : new java.util.ArrayList<>())
+                .creatorName(ticket.getReportedByName() != null ? ticket.getReportedByName() : "Auditor do Sistema")
+                .creatorPosition(ticket.getReportedByRole() != null ? ticket.getReportedByRole() : "EQUIPE TÉCNICA")
+                .creatorPhotoUrl(ticket.getReporterPhotoUrl() != null ? ticket.getReporterPhotoUrl() : "default-auditor.png")
                 .build();
     }
 

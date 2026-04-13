@@ -40,7 +40,7 @@ public class RepairTicket {
     @Builder.Default
     @ElementCollection
     @CollectionTable(name = "repair_photos", joinColumns = @JoinColumn(name = "repair_ticket_id"))
-    @Column(name = "photo_url")
+    @Column(name = "photo_url", columnDefinition = "TEXT")
     private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Lista de URLs das evidências fotográficas
 
     @Column(name = "main_photo_url")
