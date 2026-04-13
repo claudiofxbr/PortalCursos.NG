@@ -36,18 +36,50 @@ export default function RepairsPage() {
     
     try {
       setLoading(true);
-      // Rota unificada no backend: aceita /repairs ou /repairs/tickets
+      setError(null);
       const response = await api.get('/repairs'); 
       setTickets(response.data);
-      setError(null);
     } catch (err: any) {
-      if (err.silent) return; // Silenciar erros residuais de logout
-      console.error("Erro infraestrutura:", err);
-      setError("Não foi possível carregar os chamados. Verifique se o servidor está online.");
+      if (err.silent) return;
+      
+      console.error("[CAMPUS-CARE] Erro na infraestrutura:", err);
+      
+      if (err.response?.status === 403) {
+        setError("ACESSO NEGADO: Sua categoria de acesso não permite gerenciar chamados de infraestrutura.");
+      } else if (!err.response) {
+        setError("SERVIDOR OFFLINE: Não foi possível conectar ao núcleo de serviços de reparo.");
+      } else {
+        setError("FALHA TÉCNICA: Ocorreu um erro inesperado ao carregar os chamados.");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Barreira de Segurança Visual V37.7
+  const isAuthorized = user?.roles?.some((r: string) => 
+    ['ROLE_ROOT_MASTER', 'ROLE_ADMIN', 'ROLE_SECRETARIA', 'ROLE_FINANCEIRO', 'ROLE_ACADEMICO', 'ROLE_COORDENADOR', 'ROLE_PROFESSOR'].includes(r)
+  );
+
+  if (!authLoading && isAuthenticated && !isAuthorized && !loading) {
+    return (
+      <div style={{ padding: '5rem', textAlign: 'center' }}>
+        <div className="glass-panel" style={{ padding: '3rem', maxWidth: '600px', margin: '0 auto', border: '1px solid rgba(255, 82, 82, 0.2)' }}>
+          <h2 style={{ color: '#d32f2f' }}>🚫 Acesso Restrito</h2>
+          <p style={{ color: '#666', marginTop: '1rem' }}>
+            O módulo <b>Campus Care</b> é uma prerrogativa prioritária apenas para funcionários e corpo docente autorizado.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/'} 
+            className="btn-primary" 
+            style={{ marginTop: '2rem', padding: '12px 24px', backgroundColor: '#1a237e' }}
+          >
+            Voltar ao Início
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
