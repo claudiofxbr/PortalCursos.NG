@@ -50,18 +50,7 @@ public class CourseController {
     @PostMapping
     public ResponseEntity<?> createCourse(@RequestBody Course course) {
         try {
-            // Injeção de Auditoria Visual (Rastreabilidade de Emissor)
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> staff = staffMemberRepository.findById(userDetails.getId());
-                if (staff.isPresent()) {
-                    course.setCreatorName(staff.get().getFullName());
-                    course.setCreatorPosition(staff.get().getPosition());
-                    course.setCreatorPhotoUrl(staff.get().getFotoUrl());
-                }
-            }
-
+            injectAuditStamps(course);
             Course savedCourse = courseService.createCourse(course);
             return ResponseEntity.ok(savedCourse);
         } catch (Exception e) {
@@ -73,22 +62,26 @@ public class CourseController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
         try {
-            // Injeção de Auditoria Visual (Rastreabilidade de Emissor V30.9-SUPREME)
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    courseDetails.setCreatorName(staff.getFullName());
-                    courseDetails.setCreatorPosition(staff.getPosition());
-                    courseDetails.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
-
+            injectAuditStamps(courseDetails);
             Course updatedCourse = courseService.updateCourse(id, courseDetails);
             return ResponseEntity.ok(updatedCourse);
         } catch (Exception e) {
             System.err.println("[CRITICAL] Erro ao atualizar curso ID " + id + ": " + e.getMessage());
             return ResponseEntity.badRequest().body(new MessageResponse("Erro na atualização: " + e.getMessage()));
+        }
+    }
+
+    private void injectAuditStamps(Course course) {
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof UserDetailsImpl) {
+                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
+                    course.setCreatorName(staff.getFullName());
+                    course.setCreatorPosition(staff.getPosition());
+                    course.setCreatorPhotoUrl(staff.getFotoUrl());
+                });
+            }
         }
     }
 

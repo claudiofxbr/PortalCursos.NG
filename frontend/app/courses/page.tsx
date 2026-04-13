@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import api from '@/app/services/api';
+import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
+import { AuditStamp } from '@/app/components/AuditStamp';
 
 interface Course {
     id: string;
@@ -29,6 +30,7 @@ interface Course {
     creatorName?: string;
     creatorPosition?: string;
     creatorPhotoUrl?: string;
+    registrationDate?: string;
 }
 
 const SECTION_STYLE = {
@@ -388,34 +390,12 @@ export default function CoursesPage() {
                                         <td style={{ padding: '1rem' }}>{c.cargaHorariaTotal}h</td>
                                         <td style={{ padding: '1rem' }}>
                                             {c.creatorName ? (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '5px 10px',
-                                                    backgroundColor: 'rgba(212, 175, 55, 0.05)',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid rgba(212, 175, 55, 0.1)',
-                                                    width: 'fit-content'
-                                                }}>
-                                                    <div style={{
-                                                        width: '24px',
-                                                        height: '32px',
-                                                        border: '1.5px solid var(--secondary-color)',
-                                                        borderRadius: '2px',
-                                                        overflow: 'hidden'
-                                                    }}>
-                                                        <img
-                                                            src={c.creatorPhotoUrl ? c.creatorPhotoUrl : '/placeholder-user.png'}
-                                                            alt={c.creatorName}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ fontSize: '0.6rem', fontWeight: 800, margin: 0, color: 'var(--secondary-color)', textTransform: 'uppercase' }}>{c.creatorPosition}</p>
-                                                        <p style={{ fontSize: '0.65rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>{c.creatorName.split(' ')[0]}</p>
-                                                    </div>
-                                                </div>
+                                                <AuditStamp
+                                                    name={c.creatorName}
+                                                    position={c.creatorPosition}
+                                                    photoUrl={c.creatorPhotoUrl ? (c.creatorPhotoUrl.startsWith('http') ? c.creatorPhotoUrl : `${BASE_URL}/uploads/${c.creatorPhotoUrl}`) : undefined}
+                                                    date={c.registrationDate}
+                                                />
                                             ) : (
                                                 <span style={{ fontSize: '0.7rem', opacity: 0.3 }}>Automático</span>
                                             )}
