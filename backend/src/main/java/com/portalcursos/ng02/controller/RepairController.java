@@ -81,7 +81,7 @@ public class RepairController {
             return ResponseEntity.ok(tickets);
         } catch (Exception e) {
             String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            logger.error("[SUPREME-ERR] Falha crítica na listagem de reparos: {}. Causa: {}", e.getMessage(), rootCause);
+            logger.error("[SUPREME-ERR] Falha crítica na listagem de reparos: {}. Causa: {}. StackTrace: ", e.getMessage(), rootCause, e);
             return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar infraestrutura de reparos. Diagnóstico: " + rootCause));
         }
     }

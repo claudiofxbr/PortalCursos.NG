@@ -99,7 +99,7 @@ public class DatabaseResilienceComponent {
 
     private void applySchemaFixes(Connection conn) {
         logger.info("[OMEGA-SUPREME] Iniciando Verificação de Integridade de Schema (Auto-Correção V35.1)...");
-        String[] tables = {"students", "postgrad_students", "payments", "staff_members", "staff_member"};
+        String[] tables = {"students", "postgrad_students", "payments", "staff_members", "repair_tickets"};
         
         try (var stmt = conn.createStatement()) {
             for (String table : tables) {
@@ -150,6 +150,18 @@ public class DatabaseResilienceComponent {
                 // --- [ESPECÍFICO: STAFF] ---
                 if (table.equals("staff_members")) {
                     executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255)");
+                }
+
+                // --- [ESPECÍFICO: CAMPUS CARE / REPAROS] ---
+                if (table.equals("repair_tickets")) {
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS reported_by_name VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS reported_by_role VARCHAR(255)");
+                    executeAlter(stmt, table, "ADD COLUMN IF NOT EXISTS reporter_photo_url TEXT");
+                    
+                    // Garante que a tabela de votos/fotos exista
+                    try {
+                        stmt.execute("CREATE TABLE IF NOT EXISTS repair_photos (repair_ticket_id BIGINT NOT NULL, photo_url TEXT)");
+                    } catch (SQLException e) { /* Ignorar se já existir */ }
                 }
             }
             logger.info("[OMEGA-SUPREME] Auto-Correção V35.1 finalizada com sucesso!");
