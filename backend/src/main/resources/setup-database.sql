@@ -186,16 +186,22 @@ CREATE TABLE IF NOT EXISTS repair_tickets (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP,
     reported_by_id BIGINT REFERENCES users(id),
-    creator_name VARCHAR(255),
-    creator_position VARCHAR(255),
-    creator_photo_url TEXT
+    reported_by_name VARCHAR(255),
+    reported_by_role VARCHAR(255),
+    reporter_photo_url TEXT,
+    active BOOLEAN DEFAULT TRUE
 );
 
+-- Migração de Compatibilidade: garante colunas corretas mesmo em bancos antigos
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reported_by_name VARCHAR(255);
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reported_by_role VARCHAR(255);
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS reporter_photo_url TEXT;
+ALTER TABLE repair_tickets ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+UPDATE repair_tickets SET active = TRUE WHERE active IS NULL;
+
 CREATE TABLE IF NOT EXISTS repair_photos (
-    id BIGSERIAL PRIMARY KEY,
     repair_ticket_id BIGINT NOT NULL REFERENCES repair_tickets(id) ON DELETE CASCADE,
-    photo_url VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    photo_url TEXT
 );
 
 -- 7. TELEMETRIA E LOGS OMEGA-SUPREME

@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "repair_tickets")
@@ -19,7 +18,6 @@ import org.hibernate.annotations.Where;
 @AllArgsConstructor
 @Builder
 @SQLDelete(sql = "UPDATE repair_tickets SET active = false WHERE id = ?")
-@Where(clause = "active = true")
 public class RepairTicket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

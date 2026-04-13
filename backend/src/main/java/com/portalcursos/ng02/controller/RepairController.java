@@ -76,7 +76,9 @@ public class RepairController {
         try {
             logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");
             List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
+                    .filter(t -> t.isActive()) // Substitui o @Where removido para evitar erro de coluna ausente
                     .map(this::convertToDTO)
+                    .filter(dto -> dto != null)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(tickets);
         } catch (Exception e) {
