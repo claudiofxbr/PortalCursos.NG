@@ -99,7 +99,6 @@ api.interceptors.response.use(
 
         // Silent Auth & Logout Fix (V30.0)
         if (status === 401) {
-            // Se for chamada de logout, ignoramos o 401 e resolvemos como sucesso para o app
             if (config.url?.includes('auth/signout')) {
                 return Promise.resolve({ data: { message: "Logout forçado via Protocolo SUPREME" } });
             }
@@ -123,6 +122,12 @@ api.interceptors.response.use(
                     return Promise.reject(e);
                 }
             }
+        }
+
+        // Tratamento de Conflito de Versão (Optimistic Locking)
+        if (status === 409) {
+            console.error("Conflito de Sincronismo Detectado (Version Mismatch). Recarregando dados...");
+            window.dispatchEvent(new CustomEvent('SYNC_CONFLICT', { detail: { url: config.url } }));
         }
 
         return Promise.reject(error);

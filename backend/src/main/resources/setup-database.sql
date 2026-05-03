@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS students (
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id),
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_cpf_format CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS postgrad_students (
     creator_name VARCHAR(255),
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_postgrad_cpf CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$' OR cpf ~ '^\d{11}$')
@@ -134,6 +136,7 @@ CREATE TABLE IF NOT EXISTS courses (
     active BOOLEAN DEFAULT TRUE,
     code VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT DEFAULT 0,
     creator_name VARCHAR(255),
     creator_position VARCHAR(255),
     creator_photo_url TEXT
@@ -157,6 +160,7 @@ CREATE TABLE IF NOT EXISTS payments (
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     student_photo_url TEXT,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -172,6 +176,7 @@ CREATE TABLE IF NOT EXISTS staff_members (
     creator_position VARCHAR(255),
     creator_photo_url TEXT,
     user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

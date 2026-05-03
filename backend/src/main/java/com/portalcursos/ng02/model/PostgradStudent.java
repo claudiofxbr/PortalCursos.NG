@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -23,6 +24,7 @@ import org.hibernate.annotations.Where;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE postgrad_students SET active = false WHERE id = ?")
 @Where(clause = "active = true")
+@EqualsAndHashCode(callSuper=true)
 public class PostgradStudent extends BaseAuditEntity {
 
     @Id

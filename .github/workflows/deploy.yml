@@ -1,0 +1,52 @@
+name: CI/CD PortalCursos.NG
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    - name: Build with Maven
+      run: mvn -f backend/pom.xml clean package -DskipTests
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - name: Install dependencies
+      run: npm install --prefix frontend
+    - name: Build Next.js
+      run: npm run build --prefix frontend
+
+  # Deploy Job (Exemplo para Hostinger via SSH)
+  deploy:
+    needs: [build-backend, build-frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Deploy to Hostinger VPS
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        REMOTE_HOST: ${{ secrets.HOSTINGER_IP }}
+        REMOTE_USER: ${{ secrets.HOSTINGER_USER }}
+      run: |
+        echo "Iniciando deploy automatizado via rsync/ssh..."
+        # Adicionar lógica de rsync ou docker-compose up -d aqui

@@ -9,13 +9,19 @@ frontend/out/
 .idea/
 *.swp
 *.swo
+*.user
+*.suo
+*.sln.docstates
 
 # Logs e Temporários
 *.log
+backend/*.log
+backend/*.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+*.pid
 
 # Variáveis de Ambiente (Segurança)
 .env
@@ -27,13 +33,17 @@ yarn-error.log*
 # Java binários e builds
 backend/bin/
 *.class
+backend/src/main/java/**/*.class
 *.jar
 *.war
 *.ear
 
-# Maven Wrapper desnecessário no repo (opcional, mas comum manter script)
-# .mvn/
+# Maven
+.mvn/
+!backend/.mvn/wrapper/maven-wrapper.jar
 
 # Outros
 dist/
 build/
+uploads/
+backend/uploads/

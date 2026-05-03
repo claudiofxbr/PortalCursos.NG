@@ -3,6 +3,7 @@ package com.portalcursos.ng02.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -21,6 +22,7 @@ import org.hibernate.annotations.Where;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@EqualsAndHashCode(callSuper=true)
 @SQLDelete(sql = "UPDATE payments SET active = false WHERE id = ?")
 @Where(clause = "active = true")
 public class Payment extends BaseAuditEntity {

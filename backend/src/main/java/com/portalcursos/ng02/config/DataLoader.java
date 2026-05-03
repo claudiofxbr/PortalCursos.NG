@@ -49,20 +49,20 @@ public class DataLoader implements CommandLineRunner {
         // 2. Criar ou Atualizar Usuário Root Master (TI/Desenvolvedor)
         userRepository.findByUsername("rootmaster").ifPresentOrElse(
             root -> {
-                System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER localizado. Validando integridade da senha...");
-                if (!encoder.matches("qzWX312#!@", root.getPassword())) {
-                    System.out.println("[DataLoader] [AUTH] Senha divergente detectada. Sincronizando novo hash...");
-                    root.setPassword(encoder.encode("qzWX312#!@"));
-                }
-                Set<Role> roles = new HashSet<>();
+                System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER localizado.");
+                // Evitar redefinir senha hardcoded se já existir
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER).orElseGet(() -> 
                     roleRepository.save(Role.builder().name(Role.ERole.ROLE_ROOT_MASTER).build()));
-                roles.add(rootRole);
-                root.setRoles(roles);
-                userRepository.save(root);
+                if (!root.getRoles().contains(rootRole)) {
+                    root.getRoles().add(rootRole);
+                    userRepository.save(root);
+                }
             },
             () -> {
-                System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER: rootmaster / qzWX312#!@");
+                String rootPass = System.getenv("APP_ROOT_PASSWORD");
+                if (rootPass == null) rootPass = "admin123"; // Fallback apenas para dev local seguro
+                
+                System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER)
                         .orElseThrow(() -> new RuntimeException("Error: Role ROLE_ROOT_MASTER is not found."));
@@ -70,7 +70,7 @@ public class DataLoader implements CommandLineRunner {
                 User rootUser = User.builder()
                         .username("rootmaster")
                         .email("ti@portalcursos.com")
-                        .password(encoder.encode("qzWX312#!@"))
+                        .password(encoder.encode(rootPass))
                         .roles(roles)
                         .build();
                 userRepository.save(rootUser);
@@ -80,23 +80,20 @@ public class DataLoader implements CommandLineRunner {
         // 3. Criar ou Atualizar Usuário Admin Inicial (Diretoria)
         userRepository.findByUsername("admin").ifPresentOrElse(
             admin -> {
-                System.out.println("[DataLoader] [AUTH] Usuário ADMIN já existe no Neon. Sincronizando senha e Roles...");
-                admin.setPassword(encoder.encode("admin123"));
-                
-                Set<Role> roles = new HashSet<>();
+                System.out.println("[DataLoader] [AUTH] Usuário ADMIN já existe. Garantindo permissões...");
                 Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN).orElseGet(() -> {
                     return roleRepository.save(Role.builder().name(Role.ERole.ROLE_ADMIN).build());
                 });
-                roles.add(adminRole);
-                admin.setRoles(roles);
-                
-                User savedAdmin = userRepository.save(admin);
-                if (savedAdmin == null) throw new RuntimeException("Failed to update admin user");
-                System.out.println("[DataLoader] [AUTH] Senha redefinida para 'admin123' e Roles garantidas.");
+                if (!admin.getRoles().contains(adminRole)) {
+                    admin.getRoles().add(adminRole);
+                    userRepository.save(admin);
+                }
             },
             () -> {
-                System.out.println("[DataLoader] [AUTH] Criando novo administrador: admin / admin123");
+                String adminPass = System.getenv("APP_ADMIN_PASSWORD");
+                if (adminPass == null) adminPass = "admin123";
                 
+                System.out.println("[DataLoader] [AUTH] Criando novo administrador inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
                         .orElseThrow(() -> new RuntimeException("Error: Role ROLE_ADMIN is not found."));
@@ -105,13 +102,12 @@ public class DataLoader implements CommandLineRunner {
                 User adminUser = User.builder()
                         .username("admin")
                         .email("admin@portalcursos.com")
-                        .password(encoder.encode("admin123"))
+                        .password(encoder.encode(adminPass))
                         .roles(roles)
                         .build();
 
-                User savedNewAdmin = userRepository.save(adminUser);
-                if (savedNewAdmin == null) throw new RuntimeException("Failed to create admin user");
-                System.out.println("[DataLoader] [AUTH] Administrador 'admin' CRIADO com sucesso no Neon!");
+                userRepository.save(adminUser);
+                System.out.println("[DataLoader] [AUTH] Administrador 'admin' CRIADO com sucesso!");
             }
         );
 

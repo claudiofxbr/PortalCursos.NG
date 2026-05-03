@@ -1,28 +1,19 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
-import com.portalcursos.ng02.repository.StudentRepository;
-import com.portalcursos.ng02.repository.StaffMemberRepository;
-import com.portalcursos.ng02.service.StorageService;
-import com.portalcursos.ng02.service.UserDetailsImpl;
+import com.portalcursos.ng02.service.StudentService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import com.portalcursos.ng02.repository.StudentDocumentRepository;
-import com.portalcursos.ng02.repository.PaymentRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.extern.slf4j.Slf4j;
-import com.portalcursos.ng02.dto.MessageResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.time.LocalDateTime;
+import com.portalcursos.ng02.dto.MessageResponse;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/grad-students")
@@ -31,28 +22,24 @@ import java.util.UUID;
 @Slf4j
 public class GradStudentController {
 
-    private final StudentRepository studentRepository;
-    private final StaffMemberRepository staffMemberRepository;
-    private final StudentDocumentRepository documentRepository;
-    private final PaymentRepository paymentRepository;
-    private final StorageService storageService;
+    private final StudentService studentService;
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllGradStudents() {
         try {
-            List<Student> students = studentRepository.findAll();
+            log.info("[AUTH-GUARD] Listando alunos de graduação.");
+            List<Student> students = studentService.findAll();
             return ResponseEntity.ok(students);
         } catch (Exception e) {
-            System.err.println("CRITICAL ERROR in getAllGradStudents: " + e.getMessage());
-            e.printStackTrace();
+            log.error("[CRITICAL] Erro ao listar alunos: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new MessageResponse("Erro ao carregar lista de alunos: " + e.getMessage()));
+                    .body(new MessageResponse("Erro ao carregar lista de alunos."));
         }
     }
 
     @PostMapping("/enroll")
-    // @Transactional  <-- REMOVIDO PARA EVITAR ROLLBACK SILENCIOSO EM ERRO DE SCHEMA
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'MATRICULA', 'ROOT_MASTER')")
     public ResponseEntity<?> enrollStudent(
             @RequestParam("fullName") String fullName,
             @RequestParam("email") String email,
@@ -69,7 +56,6 @@ public class GradStudentController {
             @RequestParam("isEstrangeiro") boolean isEstrangeiro,
             @RequestParam("formaIngresso") EIngressMethod formaIngresso,
             @RequestParam("tipoCota") EQuotaType tipoCota,
-            // Arquivos
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4,
             @RequestParam(value = "rgCpf", required = false) MultipartFile rgCpf,
             @RequestParam(value = "comprovanteResidencia", required = false) MultipartFile comprovanteResidencia,
@@ -86,15 +72,14 @@ public class GradStudentController {
             @RequestParam(value = "autodeclaracaoRacialFile", required = false) MultipartFile autodeclaracaoRacialFile) {
 
         try {
-            if (studentRepository.findByEmail(email).isPresent()) {
+            if (studentService.findByEmail(email).isPresent()) {
                 return ResponseEntity.badRequest().body(new MessageResponse("Email já cadastrado."));
             }
-            if (studentRepository.findByCpf(cpf).isPresent()) {
+            if (studentService.findByCpf(cpf).isPresent()) {
                 return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado."));
             }
 
-            Student.StudentBuilder<?, ?> studentBuilder = Student.builder()
-                    .registrationNumber("GRAD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+            Student student = Student.builder()
                     .fullName(fullName)
                     .email(email)
                     .cpf(cpf)
@@ -102,7 +87,6 @@ public class GradStudentController {
                     .dateOfBirth(dateOfBirth)
                     .address(address)
                     .currentCourse(currentCourse)
-                    .enrollmentStatus("PENDENTE_VALIDACAO")
                     .nacionalidade(nacionalidade)
                     .estadoCivil(estadoCivil)
                     .sexo(sexo)
@@ -111,110 +95,42 @@ public class GradStudentController {
                     .isEstrangeiro(isEstrangeiro)
                     .formaIngresso(formaIngresso)
                     .tipoCota(tipoCota)
-                    .documents(new ArrayList<>());
-            Student student = studentBuilder.build();
-            student.setActive(true); // Reforço absoluto de visibilidade
-            injectAuditStamps(student);
-
-            System.out.println("[LOG-SUPREME] 1/4: Iniciando persistência básica do aluno: " + student.getFullName());
-            Student savedStudent;
-            try {
-                savedStudent = studentRepository.saveAndFlush(student);
-                System.out.println("[LOG-SUPREME] 2/4: Registro básico salvo com sucesso no Neon. ID: " + savedStudent.getId());
-            } catch (Exception e) {
-                System.err.println("[LOG-SUPREME] ERRO CRÍTICO NA GRAVAÇÃO BÁSICA: " + e.getMessage());
-                throw e; // Falha no cadastro base é fatal
-            }
-
-            // Processamento de Foto de Perfil (Prioritário)
-            if (foto3x4 != null && !foto3x4.isEmpty()) {
-                System.out.println("[LOG-SUPREME] 3/4: Processando upload de foto...");
-                try {
-                    String fotoPath = storageService.store(foto3x4, "fotos-perfil");
-                    if (fotoPath != null) {
-                        savedStudent.setFotoMatricula(fotoPath);
-                        StudentDocument photoDoc = StudentDocument.builder()
-                                .documentType(EDocumentType.RG) 
-                                .filePath(fotoPath)
-                                .status(EDocumentStatus.PENDING)
-                                .student(savedStudent)
-                                .build();
-                        savedStudent.getDocuments().add(photoDoc);
-                        studentRepository.saveAndFlush(savedStudent);
-                        System.out.println("[LOG-SUPREME] -> Foto de perfil salva e vinculada.");
-                    }
-                } catch (Exception e) {
-                    System.err.println("[LOG-SUPREME] ALERTA: Falha ao salvar foto, mas cadastro prosseguindo: " + e.getMessage());
-                }
-            }
-
-            // Processamento de Documentos de Apoio (Resiliente)
-            System.out.println("[LOG-SUPREME] 4/4: Processando lista de documentos secundários...");
-            try {
-                addDocument(savedStudent, rgCpf, EDocumentType.RG);
-                addDocument(savedStudent, comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA);
-                addDocument(savedStudent, certificadoEM, EDocumentType.CERTIFICADO_EM);
-                addDocument(savedStudent, historicoEM, EDocumentType.HISTORICO_EM);
-                addDocument(savedStudent, enemSisu, EDocumentType.ENEM_SISU);
-                addDocument(savedStudent, diplomaAnt, EDocumentType.DIPLOMA_ANT);
-                addDocument(savedStudent, historicoIesAnt, EDocumentType.HISTORICO_IES_ANT);
-                addDocument(savedStudent, laudoMedico, EDocumentType.LAUDO_MEDICO);
-                addDocument(savedStudent, rnmRne, EDocumentType.RNM_RNE);
-                addDocument(savedStudent, tituloEleitorFile, EDocumentType.TITULO_ELEITOR);
-                addDocument(savedStudent, reservistaFile, EDocumentType.CERTIFICADO_RESERVISTA);
-                addDocument(savedStudent, certidaoNascimentoFile, EDocumentType.CERTIDAO_NASCIMENTO);
-                addDocument(savedStudent, autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL);
-                
-                studentRepository.saveAndFlush(savedStudent);
-                System.out.println("[LOG-SUPREME] -> Documentos secundários processados.");
-            } catch (Exception e) {
-                System.err.println("[LOG-SUPREME] ALERTA: Erro em documentos secundários, mas aluno já existe: " + e.getMessage());
-            }
-
-            System.out.println("[LOG-SUPREME] MATRÍCULA FINALIZADA PARA: " + savedStudent.getFullName());
-            return ResponseEntity.ok(savedStudent);
-
-        } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException e) {
-            log.error("[SUPREME-ERROR] Erro de integridade/transação ao salvar aluno: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new MessageResponse("Erro de integridade nos dados. Verifique se o CPF ou Email já estão cadastrados ou se há campos obrigatórios faltando."));
-        } catch (Exception e) {
-            System.err.println("[LOG-SUPREME] FALHA TOTAL NA MATRÍCULA: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro crítico ao processar matrícula: " + e.getMessage()));
-        }
-    }
-
-    private String addDocumentAndReturnPath(Student student, MultipartFile file, EDocumentType type) throws IOException {
-        if (file != null && !file.isEmpty()) {
-            String fileName = storageService.store(file, "grad-students/" + type.name().toLowerCase());
-            StudentDocument doc = StudentDocument.builder()
-                    .documentType(type)
-                    .filePath(fileName)
-                    .status(EDocumentStatus.PENDING)
-                    .uploadDate(LocalDateTime.now())
-                    .student(student)
                     .build();
-            student.getDocuments().add(doc);
-            return fileName;
-        }
-        return null;
-    }
 
-    private void addDocument(Student student, MultipartFile file, EDocumentType type) throws IOException {
-        addDocumentAndReturnPath(student, file, type);
+            List<StudentService.DocEntry> otherDocs = new ArrayList<>();
+            otherDocs.add(new StudentService.DocEntry(rgCpf, EDocumentType.RG));
+            otherDocs.add(new StudentService.DocEntry(comprovanteResidencia, EDocumentType.COMPROVANTE_RESIDENCIA));
+            otherDocs.add(new StudentService.DocEntry(certificadoEM, EDocumentType.CERTIFICADO_EM));
+            otherDocs.add(new StudentService.DocEntry(historicoEM, EDocumentType.HISTORICO_EM));
+            otherDocs.add(new StudentService.DocEntry(enemSisu, EDocumentType.ENEM_SISU));
+            otherDocs.add(new StudentService.DocEntry(diplomaAnt, EDocumentType.DIPLOMA_ANT));
+            otherDocs.add(new StudentService.DocEntry(historicoIesAnt, EDocumentType.HISTORICO_IES_ANT));
+            otherDocs.add(new StudentService.DocEntry(laudoMedico, EDocumentType.LAUDO_MEDICO));
+            otherDocs.add(new StudentService.DocEntry(rnmRne, EDocumentType.RNM_RNE));
+            otherDocs.add(new StudentService.DocEntry(tituloEleitorFile, EDocumentType.TITULO_ELEITOR));
+            otherDocs.add(new StudentService.DocEntry(reservistaFile, EDocumentType.CERTIFICADO_RESERVISTA));
+            otherDocs.add(new StudentService.DocEntry(certidaoNascimentoFile, EDocumentType.CERTIDAO_NASCIMENTO));
+            otherDocs.add(new StudentService.DocEntry(autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL));
+
+            Student enrolled = studentService.enroll(student, foto3x4, otherDocs);
+            return ResponseEntity.ok(enrolled);
+
+        } catch (Exception e) {
+            log.error("[CRITICAL] Falha na matrícula: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar matrícula."));
+        }
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
-        if (id == null) return ResponseEntity.badRequest().build();
-        return studentRepository.findById(id)
+        return studentService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ROOT_MASTER')")
     public ResponseEntity<?> updateStudent(
             @PathVariable Long id,
             @RequestParam("fullName") String fullName,
@@ -225,152 +141,52 @@ public class GradStudentController {
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
     ) {
         try {
-            Optional<Student> studentOpt = studentRepository.findById(id);
-            if (studentOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
+            Student student = Student.builder()
+                    .fullName(fullName)
+                    .phone(phone)
+                    .address(address)
+                    .currentCourse(currentCourse)
+                    .enrollmentStatus(enrollmentStatus)
+                    .build();
 
-            Student student = studentOpt.get();
-            student.setFullName(fullName);
-            student.setPhone(phone);
-            student.setAddress(address);
-            student.setCurrentCourse(currentCourse);
-            student.setEnrollmentStatus(enrollmentStatus);
-
-            if (foto3x4 != null && !foto3x4.isEmpty()) {
-                try {
-                    storageService.delete(student.getFotoMatricula());
-                    String fileName = storageService.store(foto3x4, "fotos-perfil");
-                    student.setFotoMatricula(fileName);
-                } catch (IOException e) {
-                    System.err.println("[SUPREME-ERROR] Erro ao processar foto: " + e.getMessage());
-                }
-            }
-
-            injectAuditStamps(student);
-            return ResponseEntity.ok(studentRepository.save(student));
+            return ResponseEntity.ok(studentService.update(id, student, foto3x4));
         } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao atualizar estudante: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados do aluno."));
+            log.error("[ERROR] Erro ao atualizar estudante: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados."));
         }
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
         try {
-            Optional<Student> studentOpt = studentRepository.findById(id);
-            if (studentOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            Student student = studentOpt.get();
-            student.setEnrollmentStatus(status);
-            injectAuditStamps(student);
-            return ResponseEntity.ok(studentRepository.save(student));
+            return studentService.findById(id).map(student -> {
+                student.setEnrollmentStatus(status);
+                studentService.injectAuditStamps(student);
+                try {
+                    return ResponseEntity.ok(studentService.update(id, student, null));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao atualizar status: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status da matrícula."));
+            log.error("[ERROR] Erro ao atualizar status: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status."));
         }
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
         try {
-            if (id == null) return ResponseEntity.badRequest().build();
-            Optional<Student> studentOpt = studentRepository.findById(id);
-            if (studentOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            if (studentService.findById(id).isPresent()) {
+                studentService.delete(id);
+                return ResponseEntity.ok(new MessageResponse("Aluno desativado com sucesso."));
             }
-
-            Student student = studentOpt.get();
-            injectAuditStamps(student);
-            studentRepository.delete(student);
-            return ResponseEntity.ok(new MessageResponse("Aluno de graduação desativado com sucesso (Soft Delete)."));
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao excluir/desativar aluno: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar exclusão do aluno."));
-        }
-    }
-
-    // --- PROCEDIMENTOS CRUD EXPANDIDOS (V31.1-ULTRA) ---
-
-    @PatchMapping("/documents/{docId}/status")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
-    public ResponseEntity<?> updateDocumentStatus(
-            @PathVariable Long docId,
-            @RequestParam("status") EDocumentStatus status,
-            @RequestParam(value = "reason", required = false) String reason) {
-        
-        return documentRepository.findById(docId).map(doc -> {
-            doc.setStatus(status);
-            doc.setRejectionReason(reason);
-            documentRepository.save(doc);
-            
-            // Se for a foto de perfil, atualizar também a foto do aluno
-            if (doc.getFilePath().contains("fotos-perfil")) {
-                doc.getStudent().setFotoMatricula(doc.getFilePath());
-            }
-
-            return ResponseEntity.ok(new MessageResponse("Status do documento atualizado: " + status));
-        }).orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping("/{id}/generate-fee")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
-    public ResponseEntity<?> generateEnrollmentFee(@PathVariable Long id) {
-        return studentRepository.findById(id).map(student -> {
-            // Verificar se já existe taxa de matrícula ativa
-            boolean exists = student.getPayments().stream()
-                    .anyMatch(p -> p.getCategory() == EPaymentCategory.ENROLLMENT_FEE && p.isActive());
-            
-            if (exists) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Taxa de matrícula já gerada anteriormente."));
-            }
-
-            Payment fee = Payment.builder()
-                    .student(student)
-                    .amount(new java.math.BigDecimal("150.00")) // Valor padrão ou configure dinâmico
-                    .dueDate(java.time.LocalDate.now().plusDays(5))
-                    .status(EPaymentStatus.PENDING)
-                    .category(EPaymentCategory.ENROLLMENT_FEE)
-                    .academicLevel(EAcademicLevel.GRADUATION)
-                    .description("Taxa de Matrícula - Processo Acadêmico Robust")
-                    .active(true)
-                    .build();
-            
-            // Injetar auditoria SUPREME na geração da taxa
-            injectAuditStampsInPayment(fee);
-            paymentRepository.save(fee);
-
-            return ResponseEntity.ok(new MessageResponse("Taxa de matrícula gerada com sucesso para " + student.getFullName()));
-        }).orElse(ResponseEntity.notFound().build());
-    }
-
-    private void injectAuditStampsInPayment(Payment p) {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    p.setCreatorName(staff.getFullName());
-                    p.setCreatorPosition(staff.getPosition());
-                    p.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
-        }
-    }
-
-    private void injectAuditStamps(Student s) {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    s.setCreatorName(staff.getFullName());
-                    s.setCreatorPosition(staff.getPosition());
-                    s.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
+            log.error("[ERROR] Erro ao desativar aluno: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar exclusão."));
         }
     }
 }

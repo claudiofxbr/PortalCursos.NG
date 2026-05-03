@@ -6,6 +6,9 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.Builder;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @MappedSuperclass
@@ -13,6 +16,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
+@EntityListeners(AuditingEntityListener.class)
 public abstract class BaseAuditEntity {
 
     @Builder.Default
@@ -28,28 +32,25 @@ public abstract class BaseAuditEntity {
     @Column(name = "creator_photo_url", columnDefinition = "TEXT")
     protected String creatorPhotoUrl;
 
+    @CreatedDate
     @Column(name = "created_at", updatable = false)
     protected LocalDateTime createdAt;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
     protected LocalDateTime updatedAt;
 
     @Column(name = "registration_date")
     protected LocalDateTime registrationDate;
 
+    @Version
+    protected Long version;
+
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        this.registrationDate = LocalDateTime.now();
-        if (this.active == false) {
-            // Ensure default is true if not set
-            this.active = true;
+        if (this.registrationDate == null) {
+            this.registrationDate = LocalDateTime.now();
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        // active default is already set by Builder.Default or manually
     }
 }

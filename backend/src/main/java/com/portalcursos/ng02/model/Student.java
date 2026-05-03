@@ -3,6 +3,7 @@ package com.portalcursos.ng02.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @SuperBuilder
 @SQLDelete(sql = "UPDATE students SET active = false WHERE id = ?")
 @Where(clause = "active = true")
+@EqualsAndHashCode(callSuper=true)
 public class Student extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
