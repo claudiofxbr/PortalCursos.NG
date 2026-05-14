@@ -2,46 +2,40 @@ package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.dto.RepairTicketDTO;
 import com.portalcursos.ng02.model.RepairTicket;
-import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.RepairRepository;
-import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.StorageService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.portalcursos.ng02.service.UserDetailsImpl;
+import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.service.LoginAttemptService;
+
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.portalcursos.ng02.model.StaffMember;
-import com.portalcursos.ng02.repository.StaffMemberRepository;
-import com.portalcursos.ng02.service.UserDetailsImpl;
-import org.springframework.lang.NonNull;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import com.portalcursos.ng02.dto.MessageResponse;
-import org.springframework.transaction.annotation.Transactional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/repairs")
+@RequiredArgsConstructor
 public class RepairController {
 
     private static final Logger logger = LoggerFactory.getLogger(RepairController.class);
 
-    @Autowired
-    RepairRepository repairRepository;
-
-    @Autowired
-    StaffMemberRepository staffMemberRepository;
-
-    @Autowired
-    StorageService storageService;
+    private final RepairRepository repairRepository;
+    private final StaffMemberRepository staffMemberRepository;
+    private final StorageService storageService;
 
     private void injectAuditStamps(Object entity) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -84,7 +78,6 @@ public class RepairController {
     }
 
     // --- PROTOCOLO DE ACESSO V37.7-SUPREME ---
-    // Apenas funcionários de alto escalão e corpo docente podem gerenciar infraestrutura
     private static final String AUTHORIZED_ROLES = "hasAnyRole('ROOT_MASTER', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ACADEMICO', 'COORDENADOR', 'PROFESSOR')";
 
     @GetMapping({"", "/tickets"})
@@ -120,8 +113,13 @@ public class RepairController {
         injectAuditStamps(ticket);
 
         if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
-            String photoPath = storageService.store(mainPhotoFile, "repairs-main");
-            ticket.setMainPhotoUrl(photoPath);
+            try {
+                String photoPath = storageService.store(mainPhotoFile, "repairs-main");
+                ticket.setMainPhotoUrl(photoPath);
+            } catch (Exception e) {
+                logger.error("[STORAGE-ERROR] Falha ao salvar foto principal: {}", e.getMessage());
+                return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar imagem: " + e.getMessage()));
+            }
         }
 
         RepairTicket savedTicket = repairRepository.save(ticket);
@@ -129,6 +127,7 @@ public class RepairController {
     }
 
     @PostMapping("/{id}/photo")
+    @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
         RepairTicket t = repairRepository.findById(id)
@@ -138,32 +137,49 @@ public class RepairController {
             return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
         }
         
-        String photoPath = storageService.store(file, "repairs-gallery");
-        t.getPhotoUrls().add(photoPath);
-        return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
+        try {
+            String photoPath = storageService.store(file, "repairs-gallery");
+            t.getPhotoUrls().add(photoPath);
+            return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
+        } catch (Exception e) {
+            logger.error("[STORAGE-ERROR] Falha ao adicionar foto à galeria: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar evidência: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/status")
+    @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
         RepairTicket ticket = repairRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
 
-        ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-        
-        // Re-sincroniza auditor responsável pela alteração de status
-        injectAuditStamps(ticket);
-
-        return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
+        try {
+            ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
+            // Re-sincroniza auditor responsável pela alteração de status
+            injectAuditStamps(ticket);
+            return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Status inválido."));
+        }
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         RepairTicket ticket = repairRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
         
+        // Limpeza de arquivos relacionados antes de deletar o registro
+        if (ticket.getMainPhotoUrl() != null) {
+            storageService.delete(ticket.getMainPhotoUrl());
+        }
+        if (ticket.getPhotoUrls() != null) {
+            ticket.getPhotoUrls().forEach(storageService::delete);
+        }
+
         repairRepository.delete(ticket);
-        return ResponseEntity.ok(new MessageResponse("Chamado removido e arquivado para auditoria."));
+        return ResponseEntity.ok(new MessageResponse("Chamado removido e evidências deletadas. Protocolo OMEGA."));
     }
 }
