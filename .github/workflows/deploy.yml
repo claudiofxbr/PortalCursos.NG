@@ -2,7 +2,7 @@ name: CI/CD PortalCursos.NG - OMEGA DEPLOY
 
 on:
   push:
-    branches: [ "main", "production" ]
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -22,19 +22,20 @@ jobs:
         script: |
           echo "🚀 Conectado à VPS: ${{ secrets.HOSTINGER_IP }}"
           
-          # 1. Navegar para o diretório (ajuste conforme seu caminho na VPS)
-          cd /var/www/portalcursos || { echo "❌ Diretório não encontrado"; exit 1; }
+          # Navegar para o diretório de produção
+          cd /var/www/portalcursos || { echo "❌ Diretório /var/www/portalcursos não encontrado"; exit 1; }
           
-          # 2. Atualizar código via Git
+          # Sincronizar código com o GitHub
           echo "📥 Atualizando código..."
           git fetch origin main
           git reset --hard origin/main
           
-          # 3. Garantir permissões nos scripts
-          chmod +x devops/scripts/deploy_omega.sh
+          # Garantir permissões de execução
+          echo "🔐 Garantindo permissões nos scripts..."
+          chmod +x devops/scripts/*.sh
           
-          # 4. Executar o Script de Deploy Unificado OMEGA
-          echo "🏗️  Iniciando Build e Deploy..."
+          # Executar o deploy automatizado (Backend + Frontend + PM2)
+          echo "🏗️ Iniciando Ciclo de Deploy OMEGA..."
           ./devops/scripts/deploy_omega.sh
           
-          echo "✅ Deploy Finalizado com Sucesso!"
+          echo "✅ PortalCursos.NG atualizado com sucesso!"
