@@ -26,6 +26,31 @@ BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 ECOSYSTEM_CONFIG="$PROJECT_ROOT/devops/scripts/ecosystem.config.js"
 
+# --- FASE: SANITY CHECK & ESTRUTURA ---
+echo -e "${BLUE}🔍 Verificando integridade dos diretórios...${NC}"
+
+# Criar pasta de logs se não existir
+if [ ! -d "$PROJECT_ROOT/logs" ]; then
+    echo "📁 Criando diretório de logs..."
+    mkdir -p "$PROJECT_ROOT/logs"
+fi
+
+# Criar pasta de uploads para documentos (CRÍTICO para o backend)
+if [ ! -d "$BACKEND_DIR/uploads" ]; then
+    echo "📁 Criando diretório de uploads no backend..."
+    mkdir -p "$BACKEND_DIR/uploads"
+fi
+
+# Garantir que o .env exista (aviso apenas)
+if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    echo -e "${RED}⚠️  AVISO: Arquivo .env não encontrado na raiz!${NC}"
+    echo -e "${RED}Certifique-se de criá-lo com as credenciais do banco.${NC}"
+fi
+
+echo -e "${GREEN}✅ Estrutura de diretórios validada.${NC}"
+
+# --- FIM DA FASE DE SANITY CHECK ---
+
 # Carregar variáveis de ambiente se o .env existir
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo -e "${BLUE}📄 Carregando variáveis de ambiente do .env...${NC}"
