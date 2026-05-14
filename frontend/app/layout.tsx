@@ -6,6 +6,7 @@ import AuthModal from "../components/AuthModal";
 import AppShell from "../components/AppShell";
 import ServerWarmer from "../components/ServerWarmer";
 import ConnectivityGuard from "../components/ConnectivityGuard";
+import SecurityGate from "../components/SecurityGate";
 
 export const metadata: Metadata = {
   title: "PortalCursos OMEGA-SUPREME | Pós-Graduação",
@@ -23,12 +24,14 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <ServerWarmer />
-            <ConnectivityGuard>
-              <AuthModal />
-              <AppShell>
-                {children}
-              </AppShell>
-            </ConnectivityGuard>
+            <SecurityGate>
+              <ConnectivityGuard>
+                <AuthModal />
+                <AppShell>
+                  {children}
+                </AppShell>
+              </ConnectivityGuard>
+            </SecurityGate>
           </AuthProvider>
         </ThemeProvider>
       </body>

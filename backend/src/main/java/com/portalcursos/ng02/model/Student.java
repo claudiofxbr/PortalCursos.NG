@@ -45,8 +45,9 @@ public class Student extends BaseAuditEntity {
     private String dateOfBirth;
     private String address;
 
-    @NotBlank
-    private String currentCourse;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @Builder.Default
     private String enrollmentStatus = "PENDENTE";

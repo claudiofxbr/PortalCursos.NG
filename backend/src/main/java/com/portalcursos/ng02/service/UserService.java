@@ -6,7 +6,7 @@ import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,22 +19,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
-    private StaffMemberRepository staffMemberRepository;
-
-    @Autowired
-    private AuthorityHierarchyService authorityService;
-
-    @Autowired
-    private PasswordEncoder encoder;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final StaffMemberRepository staffMemberRepository;
+    private final AuthorityHierarchyService authorityService;
+    private final PasswordEncoder encoder;
 
     /**
      * Lista usuários filtrados pela hierarquia institucional.

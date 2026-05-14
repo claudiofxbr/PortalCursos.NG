@@ -33,12 +33,7 @@ public class StaffMemberController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('ROOT_MASTER')")
     public ResponseEntity<?> getAllStaff() {
-        try {
-            return ResponseEntity.ok(staffRepository.findAll());
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao listar staff: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar lista institucional."));
-        }
+        return ResponseEntity.ok(staffRepository.findAll());
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -49,49 +44,34 @@ public class StaffMemberController {
             @RequestParam("department") String department,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        try {
-            logger.info("[STAFF API] Criando novo membro institucional: {}", fullName);
+        logger.info("[STAFF API] Criando novo membro institucional: {}", fullName);
 
-            String fotoPath = null;
-            if (foto3x4File != null && !foto3x4File.isEmpty()) {
-                try {
-                    fotoPath = storageService.store(foto3x4File, "staff-photos");
-                } catch (Exception e) {
-                    System.err.println("[SUPREME-ERROR] Erro ao salvar foto institucional: " + e.getMessage());
-                }
+        String fotoPath = null;
+        if (foto3x4File != null && !foto3x4File.isEmpty()) {
+            try {
+                fotoPath = storageService.store(foto3x4File, "staff-photos");
+            } catch (Exception e) {
+                logger.error("[STAFF API] Erro ao salvar foto institucional: {}", e.getMessage());
             }
-
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            String creatorName = "Sistema";
-            String creatorPosition = "Automático";
-            String creatorPhotoUrl = null;
-
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                Optional<StaffMember> creatorStaff = staffRepository.findById(userDetails.getId());
-                if (creatorStaff.isPresent()) {
-                    creatorName = creatorStaff.get().getFullName();
-                    creatorPosition = creatorStaff.get().getPosition();
-                    creatorPhotoUrl = creatorStaff.get().getFotoUrl();
-                }
-            }
-
-            StaffMember staff = StaffMember.builder()
-                    .fullName(fullName)
-                    .position(position)
-                    .department(department)
-                    .fotoUrl(fotoPath)
-                    .creatorName(creatorName)
-                    .creatorPosition(creatorPosition)
-                    .creatorPhotoUrl(creatorPhotoUrl)
-                    .build();
-
-            StaffMember saved = staffRepository.save(staff);
-            return ResponseEntity.ok(saved);
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao criar membro staff: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao cadastrar membro institucional."));
         }
+
+        StaffMember creator = null;
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            creator = staffRepository.findById(userDetails.getId()).orElse(null);
+        }
+
+        StaffMember staff = StaffMember.builder()
+                .fullName(fullName)
+                .position(position)
+                .department(department)
+                .fotoUrl(fotoPath)
+                .creator(creator)
+                .build();
+
+        StaffMember saved = staffRepository.save(staff);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
@@ -103,65 +83,51 @@ public class StaffMemberController {
             @RequestParam("department") String department,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        try {
-            Optional<StaffMember> staffOpt = staffRepository.findById(id);
-            if (staffOpt.isEmpty()) {
-                return ResponseEntity.status(404).body(new MessageResponse("Membro não encontrado."));
-            }
-
-            StaffMember staff = staffOpt.get();
-            staff.setFullName(fullName);
-            staff.setPosition(position);
-            staff.setDepartment(department);
-
-            if (foto3x4File != null && !foto3x4File.isEmpty()) {
-                try {
-                    storageService.delete(staff.getFotoUrl());
-                    String fotoPath = storageService.store(foto3x4File, "staff-photos");
-                    staff.setFotoUrl(fotoPath);
-                } catch (Exception e) {
-                    System.err.println("[SUPREME-ERROR] Erro ao atualizar foto institucional: " + e.getMessage());
-                }
-            }
-
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffRepository.findById(userDetails.getId()).ifPresent(creator -> {
-                    staff.setCreatorName(creator.getFullName());
-                    staff.setCreatorPosition(creator.getPosition());
-                    staff.setCreatorPhotoUrl(creator.getFotoUrl());
-                });
-            }
-
-            StaffMember updated = staffRepository.save(staff);
-            return ResponseEntity.ok(updated);
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao atualizar staff ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados institucionais."));
+        Optional<StaffMember> staffOpt = staffRepository.findById(id);
+        if (staffOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(new MessageResponse("Membro não encontrado."));
         }
+
+        StaffMember staff = staffOpt.get();
+        staff.setFullName(fullName);
+        staff.setPosition(position);
+        staff.setDepartment(department);
+
+        if (foto3x4File != null && !foto3x4File.isEmpty()) {
+            try {
+                storageService.delete(staff.getFotoUrl());
+                String fotoPath = storageService.store(foto3x4File, "staff-photos");
+                staff.setFotoUrl(fotoPath);
+            } catch (Exception e) {
+                logger.error("[STAFF API] Erro ao atualizar foto institucional: {}", e.getMessage());
+            }
+        }
+
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            staffRepository.findById(userDetails.getId()).ifPresent(staff::setCreator);
+        }
+
+        StaffMember updated = staffRepository.save(staff);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ROOT_MASTER')")
     public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
-        try {
-            Optional<StaffMember> staffOpt = staffRepository.findById(id);
-            if (staffOpt.isEmpty()) {
-                return ResponseEntity.status(404).body(new MessageResponse("Membro não encontrado para remoção."));
-            }
-
-            StaffMember staff = staffOpt.get();
-            try {
-                storageService.delete(staff.getFotoUrl());
-            } catch (Exception e) {
-                System.err.println("[SUPREME-WARN] Erro ao deletar arquivo de foto: " + e.getMessage());
-            }
-            staffRepository.delete(staff);
-            return ResponseEntity.ok(new MessageResponse("Membro removido com sucesso."));
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao deletar staff ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao remover membro institucional."));
+        Optional<StaffMember> staffOpt = staffRepository.findById(id);
+        if (staffOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(new MessageResponse("Membro não encontrado para remoção."));
         }
+
+        StaffMember staff = staffOpt.get();
+        try {
+            storageService.delete(staff.getFotoUrl());
+        } catch (Exception e) {
+            logger.warn("[STAFF API] Erro ao deletar arquivo de foto: {}", e.getMessage());
+        }
+        staffRepository.delete(staff);
+        return ResponseEntity.ok(new MessageResponse("Membro removido com sucesso."));
     }
 }

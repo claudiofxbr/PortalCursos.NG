@@ -2,10 +2,12 @@ package com.portalcursos.ng02.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,6 +37,19 @@ public class GlobalExceptionHandler {
         body.put("path", request.getDescription(false));
 
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<?> handleLockedException(LockedException ex, WebRequest request) {
+        logger.warn("[AUTH WARN] Locked account attempt: {}", ex.getMessage());
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", new Date());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Locked");
+        body.put("message", "Sua conta ou IP foi temporariamente bloqueado devido a múltiplas tentativas falhas. Tente novamente em 24 horas.");
+        body.put("path", request.getDescription(false));
+
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -71,10 +86,9 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", "Conflict / Integrity Violation");
-        body.put("message", "Violação de integridade: Verifique se o CPF/E-mail já existe ou se há campos obrigatórios vazios.");
-        body.put("details", ex.getMostSpecificCause().getMessage());
+        body.put("message", "Violação de integridade: Verifique se o registro já existe ou se há campos obrigatórios vazios.");
         body.put("path", request.getDescription(false).replace("uri=", ""));
-        body.put("hint", "Se o banco parecer vazio, verifique registros desativados (Soft Delete) ou campos NOT NULL.");
+        body.put("hint", "Verifique duplicidade de CPF/E-mail ou campos não preenchidos.");
 
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }
@@ -130,10 +144,9 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         body.put("error", "Transaction Failure");
-        body.put("message", "Sincronização de schema em andamento (Protocolo V35.1). Este é um comportamento esperado durante cold starts.");
-        body.put("details", ex.getMostSpecificCause().getMessage());
+        body.put("message", "Instabilidade temporária na persistência de dados. Tente novamente em instantes.");
         body.put("path", request.getDescription(false).replace("uri=", ""));
-        body.put("hint", "O mecanismo de auto-cura está criando as colunas necessárias. Tente novamente em 5-10 segundos.");
+        body.put("hint", "O sistema de auto-cura está estabilizando a conexão com o banco Cloud.");
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -152,20 +165,34 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
-        logger.error("[SUPREME-ERROR-AUDIT] Exceção não tratada capturada em {}: {}", request.getDescription(false), ex.getMessage(), ex);
-        
+    private ResponseEntity<Map<String, Object>> createErrorResponse(HttpStatus status, String error, String message, WebRequest request, String hint) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Internal Server Error");
-        body.put("protocol", "V35.1-SUPREME-HEALING");
-        body.put("message", "Instabilidade operacional detectada. O protocolo de resiliência V35.1 foi acionado para restaurar os serviços.");
-        body.put("details", ex.getMessage());
+        body.put("status", status.value());
+        body.put("error", error);
+        body.put("message", message);
         body.put("path", request.getDescription(false).replace("uri=", ""));
-        body.put("hint", "Aguarde alguns segundos. O sistema está realizando uma auto-sincronização do banco de dados Cloud.");
+        if (hint != null) body.put("hint", hint);
+        
+        String correlationId = MDC.get("correlationId");
+        if (correlationId != null) {
+            body.put("correlationId", correlationId);
+        }
 
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(body, status);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
+        String correlationId = MDC.get("correlationId");
+        logger.error("[SUPREME-ERROR-AUDIT][ID:{}] Exceção não tratada: {}", correlationId, ex.getMessage(), ex);
+        
+        return createErrorResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR, 
+            "Internal Server Error", 
+            "Ocorreu um erro interno. Protocolo de rastreamento: " + correlationId, 
+            request, 
+            "Tente novamente em alguns segundos."
+        );
     }
 }

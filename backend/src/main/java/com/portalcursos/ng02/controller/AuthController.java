@@ -9,6 +9,7 @@ import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.security.JwtUtils;
 import com.portalcursos.ng02.service.UserDetailsImpl;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -31,40 +32,41 @@ import java.time.temporal.ChronoUnit;
 
 import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserSessionRepository;
+import org.springframework.security.authentication.LockedException;
+import lombok.RequiredArgsConstructor;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
-import com.portalcursos.ng02.model.StaffMember;
-import java.util.Optional;
 
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    AuthenticationManager authenticationManager;
-
-    @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    RoleRepository roleRepository;
-
-    @Autowired
-    PasswordEncoder encoder;
-
-    @Autowired
-    JwtUtils jwtUtils;
-
-    @Autowired
-    UserSessionRepository userSessionRepository;
-
-    @Autowired
-    StaffMemberRepository staffMemberRepository;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder encoder;
+    private final JwtUtils jwtUtils;
+    private final UserSessionRepository userSessionRepository;
+    private final StaffMemberRepository staffMemberRepository;
+    private final LoginAttemptService loginAttemptService;
 
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        logger.info("[AUTH API] [SIGNIN] Tentativa de login: {}", loginRequest.getUsername());
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty()) {
+            ipAddress = request.getRemoteAddr();
+        }
+
+        logger.info("[AUTH API] [SIGNIN] Tentativa de login: {} de {}", loginRequest.getUsername(), ipAddress);
+
+        if (loginAttemptService.isBlocked(ipAddress)) {
+            logger.warn("[SECURITY] Tentativa de login bloqueada para IP: {}", ipAddress);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.LOCKED)
+                    .body(new MessageResponse("Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
+        }
 
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -77,21 +79,22 @@ public class AuthController {
                     .orElseThrow(() -> new RuntimeException("Erro: Usuário não encontrado."));
 
             // --- [ROBUSTEZ: SESSÃO ÚNICA] ---
-            // Invalida todas as sessões anteriores do usuário para garantir estabilidade e evitar trancamento do banco
             userSessionRepository.deleteByUser(user);
-            logger.info("[AUTH API] [SESSION-CLEANUP] Sessões anteriores invalidadas para: {}", userDetails.getUsername());
+            
+            // Sucesso no login: Resetar tentativas
+            loginAttemptService.loginSucceeded(ipAddress);
 
             // 1. Gerar Tokens
             String jwt = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
             String refreshTokenStr = UUID.randomUUID().toString();
 
-            // 2. Persistir Sessão no Banco
+            // 2. Persistir Sessão
             UserSession session = UserSession.builder()
                     .user(user)
                     .refreshToken(refreshTokenStr)
-                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS)) // 7 dias
-                    .userAgent("Web Browser")
-                    .ipAddress("0.0.0.0")
+                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
+                    .userAgent(request.getHeader("User-Agent") != null ? request.getHeader("User-Agent") : "Unknown")
+                    .ipAddress(ipAddress)
                     .build();
             userSessionRepository.save(session);
 
@@ -99,17 +102,19 @@ public class AuthController {
                     .map(item -> item.getAuthority())
                     .collect(Collectors.toList());
 
-            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso. Sessão criada.", loginRequest.getUsername());
+            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso.", loginRequest.getUsername());
 
             return ResponseEntity.ok(new com.portalcursos.ng02.dto.JwtResponse(jwt, refreshTokenStr, userDetails.getId(),
                     userDetails.getUsername(), userDetails.getEmail(), roles));
+
         } catch (org.springframework.security.core.AuthenticationException e) {
+            loginAttemptService.loginFailed(ipAddress);
             logger.error("[AUTH API] [FAILURE] Falha na autenticação para {}: {}", loginRequest.getUsername(), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
-                    .body(new MessageResponse("Erro de Autenticação: Usuário ou senha inválidos."));
+                    .body(new MessageResponse("Erro de Autenticação: Usuário ou senha inválidos. Restam " + loginAttemptService.getRemainingAttempts(ipAddress) + " tentativas."));
         } catch (Exception e) {
-            logger.error("[AUTH API] [ERROR] Erro inesperado no login: ", e);
+            logger.error("[AUTH API] [ERROR] Erro inesperado no login para {}: {}", loginRequest.getUsername(), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Erro interno no servidor de autenticação."));

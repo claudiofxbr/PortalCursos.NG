@@ -3,11 +3,12 @@ package com.portalcursos.ng02.config;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
 /**
@@ -19,14 +20,8 @@ public class DatabaseResilienceComponent {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseResilienceComponent.class);
 
-    @Value("${spring.datasource.url}")
-    private String dbUrl;
-
-    @Value("${spring.datasource.username}")
-    private String dbUsername;
-
-    @Value("${spring.datasource.password}")
-    private String dbPassword;
+    @Autowired
+    private DataSource dataSource;
 
     private static final int INITIAL_SLEEP_TIME = 5000; // 5 segundos inicial
     private static final int MAX_SLEEP_TIME = 20000;    // Máximo de 20 segundos entre tentativas
@@ -50,10 +45,7 @@ public class DatabaseResilienceComponent {
         int attempt = 1;
 
         while (totalWaited < TOTAL_WAIT_TARGET_MS && !databaseReady) {
-            String maskedUrl = dbUrl.replaceAll(":[^/@]+@", ":****@");
-            logger.info("[OMEGA-SUPREME] Tentativa {} - Verificando conexão: {}", attempt, maskedUrl);
-            
-            try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword)) {
+            try (Connection connection = dataSource.getConnection()) {
                 if (connection.isValid(5)) {
                     // Deep Health Check: Verificar se pelo menos a tabela 'users' existe
                     try (var statement = connection.createStatement()) {

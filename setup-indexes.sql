@@ -22,14 +22,24 @@ CREATE INDEX IF NOT EXISTS idx_postgrad_students_status ON postgrad_students(enr
 CREATE INDEX IF NOT EXISTS idx_postgrad_registration ON postgrad_students(registration_number);
 
 -- 4. Cursos e e-MEC
-CREATE INDEX IF NOT EXISTS idx_courses_code_active ON courses(code, active);
+CREATE INDEX IF NOT EXISTS idx_courses_code_active ON courses(codigo_ies, active);
+CREATE INDEX IF NOT EXISTS idx_courses_creator ON courses(creator_id);
 
--- 5. Manutenção de Integridade (Protocolo de Desvincular Latência)
+-- 5. Chamados de Manutenção e Auditoria 3FN
+CREATE INDEX IF NOT EXISTS idx_repairs_creator ON repair_tickets(creator_id);
+CREATE INDEX IF NOT EXISTS idx_students_creator ON students(creator_id);
+CREATE INDEX IF NOT EXISTS idx_pg_students_creator ON postgrad_students(creator_id);
+
+-- 6. Telemetria e Monitoramento OMEGA
+CREATE INDEX IF NOT EXISTS idx_telemetry_component_status ON system_telemetry(component, status);
+CREATE INDEX IF NOT EXISTS idx_telemetry_timestamp ON system_telemetry(timestamp DESC);
+
+-- 7. Manutenção de Integridade (Protocolo de Desvincular Latência)
 -- REINDEX TABLE users;
 -- REINDEX TABLE user_roles;
 -- REINDEX TABLE user_sessions;
 
--- 6. Atualização de Estatísticas para o Query Planner do Neon
+-- 8. Atualização de Estatísticas para o Query Planner do Neon
 ANALYZE users;
 ANALYZE roles;
 ANALYZE students;
@@ -37,9 +47,10 @@ ANALYZE pg_students;
 ANALYZE courses;
 ANALYZE user_sessions;
 ANALYZE postgrad_students;
+ANALYZE system_telemetry;
 
--- 7. Limpeza e Compactação de Performance (Práticas Neon)
+-- 9. Limpeza e Compactação de Performance (Práticas Neon)
 -- VACUUM ANALYZE users;
 -- VACUUM ANALYZE postgrad_students;
 
--- SCRIPT CONCLUÍDO - PROTOCOLO V22-ULTRA (NEON POSTGRESQL)
+-- SCRIPT CONCLUÍDO - PROTOCOLO V39.5-ULTRA (NEON POSTGRESQL)

@@ -5,8 +5,8 @@ import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentDocumentRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,22 +20,13 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class StudentService {
 
-    @Autowired
-    private StudentRepository studentRepository;
-
-    @Autowired
-    private StaffMemberRepository staffMemberRepository;
-
-    @Autowired
-    private StudentDocumentRepository documentRepository;
-
-    @Autowired
-    private PaymentRepository paymentRepository;
-
-    @Autowired
-    private StorageService storageService;
+    private final StudentRepository studentRepository;
+    private final StudentDocumentRepository documentRepository;
+    private final PaymentRepository paymentRepository;
+    private final StorageService storageService;
 
     public List<Student> findAll() {
         return studentRepository.findAll();
@@ -61,20 +52,18 @@ public class StudentService {
         student.setEnrollmentStatus("PENDENTE_VALIDACAO");
         student.setActive(true);
         
-        injectAuditStamps(student);
-
-        Student saved = studentRepository.saveAndFlush(student);
+        Student saved = studentRepository.save(student);
 
         if (foto3x4 != null && !foto3x4.isEmpty()) {
             String path = storageService.store(foto3x4, "fotos-perfil");
             saved.setFotoMatricula(path);
-            addDocument(saved, path, EDocumentType.RG); // Usando RG como placeholder para foto se necessário
+            addDocument(saved, path, EDocumentType.RG); 
         }
 
         for (DocEntry entry : otherDocs) {
-            if (entry.getFile() != null && !entry.getFile().isEmpty()) {
-                String path = storageService.store(entry.getFile(), "grad-students/" + entry.getType().name().toLowerCase());
-                addDocument(saved, path, entry.getType());
+            if (entry.file() != null && !entry.file().isEmpty()) {
+                String path = storageService.store(entry.file(), "grad-students/" + entry.type().name().toLowerCase());
+                addDocument(saved, path, entry.type());
             }
         }
 
@@ -95,7 +84,7 @@ public class StudentService {
     @Transactional
     public Student update(Long id, Student updatedData, MultipartFile foto3x4) throws IOException {
         Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estudante não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Estudante não encontrado com ID: " + id));
 
         student.setFullName(updatedData.getFullName());
         student.setPhone(updatedData.getPhone());
@@ -111,36 +100,15 @@ public class StudentService {
             student.setFotoMatricula(fileName);
         }
 
-        injectAuditStamps(student);
         return studentRepository.save(student);
     }
 
+    @Transactional
     public void delete(Long id) {
-        studentRepository.findById(id).ifPresent(student -> {
-            injectAuditStamps(student);
-            studentRepository.delete(student);
-        });
+        studentRepository.findById(id).ifPresent(studentRepository::delete);
     }
 
-    public void injectAuditStamps(Student s) {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    s.setCreatorName(staff.getFullName());
-                    s.setCreatorPosition(staff.getPosition());
-                    s.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
-        }
-    }
 
-    public static class DocEntry {
-        private final MultipartFile file;
-        private final EDocumentType type;
-        public DocEntry(MultipartFile file, EDocumentType type) { this.file = file; this.type = type; }
-        public MultipartFile getFile() { return file; }
-        public EDocumentType getType() { return type; }
-    }
+    public record DocEntry(MultipartFile file, EDocumentType type) {}
 }
+

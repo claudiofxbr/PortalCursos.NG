@@ -4,8 +4,8 @@ import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.UserDetailsImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,16 +18,11 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class PostgradStudentService {
 
-    @Autowired
-    private PostgradStudentRepository studentRepository;
-
-    @Autowired
-    private StaffMemberRepository staffMemberRepository;
-
-    @Autowired
-    private StorageService storageService;
+    private final PostgradStudentRepository studentRepository;
+    private final StorageService storageService;
 
     public List<PostgradStudent> findAll() {
         return studentRepository.findAll();
@@ -51,8 +46,6 @@ public class PostgradStudentService {
         student.setEnrollmentStatus("PENDENTE");
         student.setActive(true);
         
-        injectAuditStamps(student);
-
         // Salva registro base
         PostgradStudent saved = studentRepository.saveAndFlush(student);
 
@@ -76,7 +69,7 @@ public class PostgradStudentService {
             }
         } catch (IOException e) {
             log.error("[SERVICE-POSTGRAD] Falha no processamento de arquivos: {}", e.getMessage());
-            // Em um cenário real, poderíamos lançar exceção para rollback se os documentos forem obrigatórios
+            throw new RuntimeException("Falha ao salvar documentos do estudante: " + e.getMessage());
         }
 
         return studentRepository.save(saved);
@@ -101,7 +94,6 @@ public class PostgradStudentService {
             student.setFotoMatricula(fileName);
         }
 
-        injectAuditStamps(student);
         return studentRepository.save(student);
     }
 
@@ -117,17 +109,4 @@ public class PostgradStudentService {
         return studentRepository.existsByCpfGlobal(cpf);
     }
 
-    public void injectAuditStamps(PostgradStudent s) {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    s.setCreatorName(staff.getFullName());
-                    s.setCreatorPosition(staff.getPosition());
-                    s.setCreatorPhotoUrl(staff.getFotoUrl());
-                });
-            }
-        }
-    }
 }

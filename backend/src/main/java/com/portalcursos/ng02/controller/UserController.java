@@ -27,12 +27,7 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> getAllUsers() {
-        try {
-            return ResponseEntity.ok(userService.getAllUsers());
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao listar usuários: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao listar usuários: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
@@ -47,52 +42,32 @@ public class UserController {
             @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        try {
-            String fotoPath = null;
-            if (foto3x4File != null && !foto3x4File.isEmpty()) {
-                try {
-                    fotoPath = storageService.store(foto3x4File, "staff-photos");
-                } catch (Exception e) {
-                    System.err.println("[SUPREME-ERROR] Erro no upload de foto: " + e.getMessage());
-                    return ResponseEntity.badRequest().body(new MessageResponse("Erro no upload da foto: " + e.getMessage()));
-                }
-            }
-
-            User user = User.builder()
-                    .username(username)
-                    .email(email)
-                    .password(password)
-                    .fotoUrl(fotoPath)
-                    .build();
-                     
-            return ResponseEntity.ok(userService.createUser(user, roles, fullName, position, department));
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao criar usuário: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao criar usuário: " + e.getMessage()));
+        String fotoPath = null;
+        if (foto3x4File != null && !foto3x4File.isEmpty()) {
+            fotoPath = storageService.store(foto3x4File, "staff-photos");
         }
+
+        User user = User.builder()
+                .username(username)
+                .email(email)
+                .password(password)
+                .fotoUrl(fotoPath)
+                .build();
+                    
+        return ResponseEntity.ok(userService.createUser(user, roles, fullName, position, department));
     }
 
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> updateUserRoles(@PathVariable Long id, @RequestBody Set<String> roles) {
-        try {
-            return ResponseEntity.ok(userService.updateUserRoles(id, roles));
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao atualizar roles: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar permissões: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(userService.updateUserRoles(id, roles));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROOT_MASTER') or hasRole('ADMIN') or hasRole('COORDENADOR') or hasRole('SECRETARIA')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            return ResponseEntity.ok(new MessageResponse("Usuário removido com sucesso"));
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao remover usuário ID " + id + ": " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao remover usuário: " + e.getMessage()));
-        }
+        userService.deleteUser(id);
+        return ResponseEntity.ok(new MessageResponse("Usuário removido com sucesso"));
     }
 
     @lombok.Data

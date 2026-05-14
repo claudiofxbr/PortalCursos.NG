@@ -10,15 +10,19 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
+import lombok.experimental.SuperBuilder;
+import lombok.EqualsAndHashCode;
+
 @Entity
 @Table(name = "staff_members")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @SQLDelete(sql = "UPDATE staff_members SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class StaffMember {
+@EqualsAndHashCode(callSuper=true)
+public class StaffMember extends BaseAuditEntity {
     @Id
     private Long id;
 
@@ -33,15 +37,6 @@ public class StaffMember {
 
     @Column(name = "foto_url")
     private String fotoUrl;
-
-    private String creatorName;
-    private String creatorPosition;
-    
-    @Column(columnDefinition = "TEXT")
-    private String creatorPhotoUrl;
-
-    @Builder.Default
-    private boolean active = true;
 
     @OneToOne
     @MapsId

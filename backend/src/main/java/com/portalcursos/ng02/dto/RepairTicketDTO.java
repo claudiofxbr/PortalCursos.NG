@@ -21,7 +21,6 @@ public class RepairTicketDTO {
     private java.util.List<String> photoUrls;
     private String mainPhotoUrl;
     private LocalDateTime createdAt;
-    private String reportedByFullName;
     
     // --- Metadados de Auditoria V30.9-SUPREME ---
     private String creatorName;

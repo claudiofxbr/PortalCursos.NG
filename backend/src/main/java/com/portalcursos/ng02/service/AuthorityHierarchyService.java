@@ -3,7 +3,7 @@ package com.portalcursos.ng02.service;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -16,10 +16,10 @@ import java.util.Set;
  * Centraliza a inteligência de hierarquia e autoridade do sistema.
  */
 @Service
+@RequiredArgsConstructor
 public class AuthorityHierarchyService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     /**
      * Níveis Institucionais:

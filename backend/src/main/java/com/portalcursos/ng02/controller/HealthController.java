@@ -13,14 +13,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api")
 @org.springframework.web.bind.annotation.CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequiredArgsConstructor
+@Slf4j
 public class HealthController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     private static final String VERSION = "V30.9-SUPREME-FINAL";
 

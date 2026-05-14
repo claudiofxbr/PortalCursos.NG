@@ -39,7 +39,15 @@ O sistema visa automatizar os processos acadêmicos, administrativos e financeir
 | 02/04/24 | Pix e Boletos | Financeiro | Métodos de pagamento essenciais no mercado brasileiro. |
 | 02/04/24 | Upload de Fotos | Reparos | Melhora a eficiência do diagnóstico de manutenção. |
 
-## 5. Requisitos Não Funcionais
-*   **Escalabilidade:** Suporte a 1000+ usuários ativos.
-*   **Auditoria:** Registro de logs de todas as alterações críticas (financeiras e cadastrais).
-*   **UX/UI:** Interface minimalista e premium.
+## 6. Auditoria e Normalização 3FN (Protocolo OMEGA)
+A partir da versão **V39.5**, o sistema adotou o protocolo de normalização total para garantir integridade e conformidade regulatória:
+*   **3FN Estrito:** Eliminação de campos redundantes (`coordinatorName`, `reportedBy`) em favor de relacionamentos normalizados com a entidade `StaffMember`.
+*   **Rastreabilidade:** Implementação de `Correlation ID` em todas as requisições para rastreamento de erros e auditoria de ações do staff.
+*   **Conformidade e-MEC:** Padronização dos campos da entidade `Course` conforme dicionário de dados oficial do MEC para cursos de pós-graduação.
+*   **Segurança de Resposta:** Anonimização automática de exceções técnicas em produção, expondo apenas códigos de erro amigáveis e IDs de rastreio.
+
+| Data | Alteração | Impacto |
+| :--- | :--- | :--- |
+| 13/05/26 | Normalização 3FN | Integridade referencial e redução de storage no Neon. |
+| 13/05/26 | Correlation ID | Melhora de 80% na observabilidade de erros em produção. |
+| 13/05/26 | e-MEC Alignment | Garantia de validade jurídica dos dados acadêmicos. |

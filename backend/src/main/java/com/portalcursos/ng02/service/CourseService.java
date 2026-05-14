@@ -4,7 +4,7 @@ import com.portalcursos.ng02.model.Course;
 import com.portalcursos.ng02.model.EModalidade;
 import com.portalcursos.ng02.model.ENivelPosGraduacao;
 import com.portalcursos.ng02.repository.CourseRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,27 +12,23 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CourseService {
 
-    @Autowired
-    private CourseRepository courseRepository;
+    private final CourseRepository courseRepository;
 
     public List<Course> getAllCourses() {
-        return courseRepository.findAll();
+        return courseRepository.findAllActiveWithCreator();
     }
 
     public Course getCourseById(UUID id) {
-        return courseRepository.findById(id)
+        return courseRepository.findByIdActiveWithCreator(id)
                 .orElseThrow(() -> new RuntimeException("Curso não encontrado com id: " + id));
     }
 
     @Transactional
     public Course createCourse(Course course) {
         validateMECRules(course);
-        
-        // Garantir que novos campos sejam sincronizados com os legados se necessário
-        if (course.getName() == null) course.setName(course.getDenominacaoCurso());
-        if (course.getCoordinatorName() == null) course.setCoordinatorName("Coordenador: " + course.getCpfCoordenador());
         
         // Após a criação, o curso é bloqueado para edição de campos críticos conforme solicitado
         course.setLocked(true);
@@ -45,15 +41,11 @@ public class CourseService {
         Course course = getCourseById(id);
 
         if (course.isLocked()) {
-            // Se bloqueado, apenas alguns campos não críticos podem ser alterados
-            course.setDescription(details.getDescription());
-            course.setTotalVacancies(details.getTotalVacancies());
-            course.setMonthlyFee(details.getMonthlyFee());
+            // Se bloqueado, apenas campos de suporte administrativo podem ser alterados
+            // Denominação e outros campos e-MEC exigem processo formal
             course.setTitulacaoCoordenador(details.getTitulacaoCoordenador());
             course.setPercentualDocentesStrictoSensu(details.getPercentualDocentesStrictoSensu());
         } else {
-            // Se por algum motivo não estiver bloqueado, permite edição completa
-            // (Isso seria raro no novo fluxo)
             updateFullCourse(course, details);
         }
 
@@ -63,7 +55,6 @@ public class CourseService {
     private void updateFullCourse(Course course, Course details) {
         course.setCodigoIes(details.getCodigoIes());
         course.setDenominacaoCurso(details.getDenominacaoCurso());
-        course.setName(details.getDenominacaoCurso());
         course.setNivelPosGraduacao(details.getNivelPosGraduacao());
         course.setModalidade(details.getModalidade());
         course.setAreaConhecimento(details.getAreaConhecimento());

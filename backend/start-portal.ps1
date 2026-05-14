@@ -42,6 +42,20 @@ if (-not $javaFound) {
 
 Write-Host "[OK] Java 17 Detectado: $env:JAVA_HOME" -ForegroundColor Green
 
+# 1.5 Carregar Variáveis de Ambiente (.env)
+if (Test-Path ".env") {
+    Write-Host "--- Carregando Variáveis do .env ---" -ForegroundColor Yellow
+    Get-Content .env | ForEach-Object {
+        if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
+            $name = $matches.name
+            $value = $matches.value.Trim("'").Trim('"')
+            [System.Environment]::SetEnvironmentVariable($name, $value)
+            Write-Host "Set $name" -ForegroundColor DarkGray
+        }
+    }
+    Write-Host "[OK] Variáveis carregadas." -ForegroundColor Green
+}
+
 # 2. Gerenciamento de Portas (Cleanup da 8080)
 Write-Host "--- Verificando Porta 8080 ---" -ForegroundColor Yellow
 $pids = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique

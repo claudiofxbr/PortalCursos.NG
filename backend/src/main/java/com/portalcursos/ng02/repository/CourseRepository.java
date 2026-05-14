@@ -1,14 +1,19 @@
 package com.portalcursos.ng02.repository;
 
-import com.portalcursos.ng02.model.Course;
-import com.portalcursos.ng02.model.ECourseType;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, UUID> {
-    List<Course> findByType(ECourseType type);
+    
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.creator WHERE c.active = true")
+    List<Course> findAllActiveWithCreator();
+
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.creator WHERE c.id = :id AND c.active = true")
+    Optional<Course> findByIdActiveWithCreator(@Param("id") UUID id);
 }
+

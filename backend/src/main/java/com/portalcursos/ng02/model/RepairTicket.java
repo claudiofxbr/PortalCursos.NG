@@ -5,7 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -17,10 +19,11 @@ import org.hibernate.annotations.Where;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @SQLDelete(sql = "UPDATE repair_tickets SET active = false WHERE id = ?")
 @Where(clause = "active = true")
-public class RepairTicket {
+@EqualsAndHashCode(callSuper=true)
+public class RepairTicket extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -46,35 +49,20 @@ public class RepairTicket {
     @Column(name = "main_photo_url")
     private String mainPhotoUrl;
 
-    private LocalDateTime createdAt;
-
     private LocalDateTime resolvedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reported_by_id", referencedColumnName = "id")
-    private User reportedBy;
 
-    @Column(name = "reported_by_name")
-    private String reportedByName;
-
-    @Column(name = "reported_by_role")
-    private String reportedByRole;
-    
-    @Column(name = "reporter_photo_url", columnDefinition = "TEXT")
-    private String reporterPhotoUrl;
 
     public enum ERepairStatus {
         OPEN, IN_PROGRESS, RESOLVED, CANCELLED
     }
 
     @PrePersist
+    @Override
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        super.onCreate();
         if (status == null) {
             status = ERepairStatus.OPEN;
         }
     }
-
-    @Builder.Default
-    private boolean active = true;
 }

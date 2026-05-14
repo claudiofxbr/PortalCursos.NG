@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.portalcursos.ng02.dto.MessageResponse;
+import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,90 +23,67 @@ import java.util.Map;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/academic")
+@RequiredArgsConstructor
 public class AcademicController {
 
-    @Autowired
-    StudentRepository studentRepository;
-
-    @Autowired
-    TeacherRepository teacherRepository;
-
-    @Autowired
-    StaffMemberRepository staffMemberRepository;
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final StaffMemberRepository staffMemberRepository;
 
     @GetMapping("/students")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> getAllStudents() {
-        try {
-            return ResponseEntity.ok(studentRepository.findAll());
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao listar estudantes: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar estudantes."));
-        }
+        return ResponseEntity.ok(studentRepository.findAll());
     }
 
     @GetMapping("/teachers")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> getAllTeachers() {
-        try {
-            return ResponseEntity.ok(teacherRepository.findAll());
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao listar professores: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar professores."));
-        }
+        return ResponseEntity.ok(teacherRepository.findAll());
     }
 
     @GetMapping("/staff")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllStaff() {
-        try {
-            return ResponseEntity.ok(staffMemberRepository.findAll());
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro ao listar staff: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao carregar membros da equipe."));
-        }
+        return ResponseEntity.ok(staffMemberRepository.findAll());
     }
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllAcademicUsers() {
-        try {
-            List<Map<String, Object>> allUsers = new ArrayList<>();
+        List<Map<String, Object>> allUsers = new ArrayList<>();
 
-            studentRepository.findAll().forEach(s -> {
-                Map<String, Object> u = new HashMap<>();
-                u.put("id", "S_" + s.getId());
-                u.put("name", s.getFullName());
-                u.put("doc", s.getRegistrationNumber());
-                u.put("course", s.getCurrentCourse());
-                u.put("role", "ALUNO");
-                allUsers.add(u);
-            });
+        studentRepository.findAll().forEach(s -> {
+            Map<String, Object> u = new HashMap<>();
+            u.put("id", "S_" + s.getId());
+            u.put("name", s.getFullName());
+            u.put("doc", s.getRegistrationNumber());
+            u.put("course", s.getCourse() != null ? s.getCourse().getDenominacaoCurso() : "N/A");
+            u.put("role", "ALUNO");
+            allUsers.add(u);
+        });
 
-            teacherRepository.findAll().forEach(t -> {
-                Map<String, Object> u = new HashMap<>();
-                u.put("id", "T_" + t.getId());
-                u.put("name", t.getFullName());
-                u.put("doc", t.getDepartment());
-                u.put("course", t.getSpecialization());
-                u.put("role", "PROFESSOR");
-                allUsers.add(u);
-            });
+        teacherRepository.findAll().forEach(t -> {
+            Map<String, Object> u = new HashMap<>();
+            u.put("id", "T_" + t.getId());
+            u.put("name", t.getFullName());
+            u.put("doc", t.getDepartment());
+            u.put("course", t.getSpecialization());
+            u.put("role", "PROFESSOR");
+            allUsers.add(u);
+        });
 
-            staffMemberRepository.findAll().forEach(sm -> {
-                Map<String, Object> u = new HashMap<>();
-                u.put("id", "M_" + sm.getId());
-                u.put("name", sm.getFullName());
-                u.put("doc", sm.getPosition());
-                u.put("course", sm.getDepartment());
-                u.put("role", "STAFF");
-                allUsers.add(u);
-            });
+        staffMemberRepository.findAll().forEach(sm -> {
+            Map<String, Object> u = new HashMap<>();
+            u.put("id", "M_" + sm.getId());
+            u.put("name", sm.getFullName());
+            u.put("doc", sm.getPosition());
+            u.put("course", sm.getDepartment());
+            u.put("role", "STAFF");
+            allUsers.add(u);
+        });
 
-            return ResponseEntity.ok(allUsers);
-        } catch (Exception e) {
-            System.err.println("[SUPREME-ERROR] Erro na lista unificada acadêmica: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar lista acadêmica."));
-        }
+        return ResponseEntity.ok(allUsers);
     }
 }
+

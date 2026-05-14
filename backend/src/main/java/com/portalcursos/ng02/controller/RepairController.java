@@ -38,18 +38,27 @@ public class RepairController {
     RepairRepository repairRepository;
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
     StaffMemberRepository staffMemberRepository;
 
     @Autowired
     StorageService storageService;
 
+    private void injectAuditStamps(Object entity) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
+            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
+                if (entity instanceof com.portalcursos.ng02.model.BaseAuditEntity) {
+                    ((com.portalcursos.ng02.model.BaseAuditEntity) entity).setCreator(staff);
+                }
+            });
+        }
+    }
+
     private RepairTicketDTO convertToDTO(RepairTicket ticket) {
         if (ticket == null) return null;
         
-        return RepairTicketDTO.builder()
+        RepairTicketDTO dto = RepairTicketDTO.builder()
                 .id(ticket.getId())
                 .title(ticket.getTitle())
                 .description(ticket.getDescription())
@@ -58,11 +67,20 @@ public class RepairController {
                 .photoUrls(ticket.getPhotoUrls() != null ? ticket.getPhotoUrls() : new java.util.ArrayList<>())
                 .mainPhotoUrl(ticket.getMainPhotoUrl())
                 .createdAt(ticket.getCreatedAt())
-                .reportedByFullName(ticket.getReportedBy() != null ? ticket.getReportedBy().getUsername() : "Anônimo")
-                .creatorName(ticket.getReportedByName() != null ? ticket.getReportedByName() : "Auditor do Sistema")
-                .creatorPosition(ticket.getReportedByRole() != null ? ticket.getReportedByRole() : "EQUIPE TÉCNICA")
-                .creatorPhotoUrl(ticket.getReporterPhotoUrl()) // null quando não há foto — o frontend exibe ícone padrão
                 .build();
+
+        // Popula metadados de auditoria a partir do objeto StaffMember normalizado (3FN)
+        StaffMember auditor = ticket.getCreator();
+        if (auditor != null) {
+            dto.setCreatorName(auditor.getFullName());
+            dto.setCreatorPosition(auditor.getPosition());
+            dto.setCreatorPhotoUrl(auditor.getFotoUrl());
+        } else {
+            dto.setCreatorName("Auditor do Sistema");
+            dto.setCreatorPosition("EQUIPE TÉCNICA");
+        }
+
+        return dto;
     }
 
     // --- PROTOCOLO DE ACESSO V37.7-SUPREME ---
@@ -73,21 +91,12 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     @Transactional(readOnly = true)
     public ResponseEntity<?> getAllTickets() {
-        try {
-            logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");
-            // @Where(clause = "active = true") no entity filtra automaticamente via SQL
-            List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
-                    .map(this::convertToDTO)
-                    .filter(dto -> dto != null)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(tickets);
-        } catch (Exception e) {
-            String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            logger.error("[CAMPUS-CARE][ERR] Falha ao listar chamados: {}. Causa raiz: {}", e.getMessage(), rootCause, e);
-            return ResponseEntity.internalServerError().body(
-                new MessageResponse("Erro ao carregar chamados de infraestrutura. Verifique se o banco de dados foi atualizado com V39.0. Diagnóstico: " + rootCause)
-            );
-        }
+        logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");
+        List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(tickets);
     }
 
     @PostMapping(value = {"", "/tickets"}, consumes = {"multipart/form-data"})
@@ -99,139 +108,62 @@ public class RepairController {
             @RequestParam("location") String location,
             @RequestParam(value = "mainPhotoFile", required = false) MultipartFile mainPhotoFile
     ) {
-        try {
-            logger.info("[CAMPUS-CARE] Registrando novo incidente: {}", title);
-            
-            RepairTicket ticket = new RepairTicket();
-            ticket.setTitle(title);
-            ticket.setDescription(description);
-            ticket.setLocation(location);
-            ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
+        logger.info("[CAMPUS-CARE] Registrando novo incidente: {}", title);
+        
+        RepairTicket ticket = new RepairTicket();
+        ticket.setTitle(title);
+        ticket.setDescription(description);
+        ticket.setLocation(location);
+        ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
 
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            Optional<User> user = userRepository.findByUsername(username);
-            user.ifPresent(ticket::setReportedBy);
+        // Sincronização Biométrica do Auditor normalizada
+        injectAuditStamps(ticket);
 
-            // Sincronização Biométrica do Auditor baseada no StaffMember
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof UserDetailsImpl) {
-                UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-                staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    ticket.setReportedByName(staff.getFullName());
-                    ticket.setReportedByRole(staff.getPosition());
-                    ticket.setReporterPhotoUrl(staff.getFotoUrl());
-                });
-            }
-
-            // Fallback Crítico: Se não houver StaffMember vinculado, usa dados básicos do User
-            if (ticket.getReportedByName() == null && user.isPresent()) {
-                ticket.setReportedByName(user.get().getUsername());
-                
-                String role = "USUÁRIO AUTORIZADO";
-                if(user.get().getRoles() != null && !user.get().getRoles().isEmpty()) {
-                     role = user.get().getRoles().iterator().next().getName().name().replace("ROLE_", "");
-                }
-                
-                ticket.setReportedByRole(role);
-                ticket.setReporterPhotoUrl(user.get().getFotoUrl()); // Usa foto do User caso exista
-            }
-
-            if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
-                String photoPath = storageService.store(mainPhotoFile, "repairs-main");
-                ticket.setMainPhotoUrl(photoPath);
-            }
-
-            RepairTicket savedTicket = repairRepository.save(ticket);
-            return ResponseEntity.ok(convertToDTO(savedTicket));
-        } catch (Exception e) {
-            String rootCause = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            logger.error("[SUPREME-ERR] Falha crítica ao registrar chamado: {}. Causa: {}", e.getMessage(), rootCause);
-            
-            // Verificação proativa de colunas (Diagnostic)
-            if (rootCause != null && rootCause.contains("column")) {
-                logger.warn("[DIAGNOSTIC] Possível ausência de colunas de auditoria na tabela repair_tickets. Favor executar V38.0-CAMPUS-CARE-DB-FIX.sql");
-            }
-
-            return ResponseEntity.internalServerError().body(new MessageResponse("Falha sistêmica ao registrar incidente. Verifique se o banco de dados está atualizado com o protocolo V38.0."));
+        if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
+            String photoPath = storageService.store(mainPhotoFile, "repairs-main");
+            ticket.setMainPhotoUrl(photoPath);
         }
+
+        RepairTicket savedTicket = repairRepository.save(ticket);
+        return ResponseEntity.ok(convertToDTO(savedTicket));
     }
 
     @PostMapping("/{id}/photo")
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
-        try {
-            Optional<RepairTicket> ticketOptional = repairRepository.findById(id);
-            if (ticketOptional.isPresent()) {
-                RepairTicket t = ticketOptional.get();
-                if (t.getPhotoUrls().size() >= 4) {
-                    return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
-                }
-                
-                String photoPath = storageService.store(file, "repairs-gallery");
-                t.getPhotoUrls().add(photoPath);
-                return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
-            }
-            return ResponseEntity.status(404).body(new MessageResponse("Chamado não localizado."));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro no processamento da imagem."));
+        RepairTicket t = repairRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
+        
+        if (t.getPhotoUrls().size() >= 4) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
         }
+        
+        String photoPath = storageService.store(file, "repairs-gallery");
+        t.getPhotoUrls().add(photoPath);
+        return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
-        try {
-            Optional<RepairTicket> ticketOpt = repairRepository.findById(id);
-            if (ticketOpt.isEmpty()) return ResponseEntity.notFound().build();
+        RepairTicket ticket = repairRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
 
-            RepairTicket ticket = ticketOpt.get();
-            ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-            
-            // Re-sincroniza auditor responsável pela alteração de status
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth.getPrincipal() instanceof UserDetailsImpl) {
-                UserDetailsImpl details = (UserDetailsImpl) auth.getPrincipal();
-                boolean[] staffFound = {false};
-                staffMemberRepository.findById(details.getId()).ifPresent(staff -> {
-                    ticket.setReportedByName(staff.getFullName());
-                    ticket.setReportedByRole(staff.getPosition());
-                    ticket.setReporterPhotoUrl(staff.getFotoUrl());
-                    staffFound[0] = true;
-                });
-                
-                // Fallback se não tiver StaffMember
-                if (!staffFound[0]) {
-                    userRepository.findById(details.getId()).ifPresent(user -> {
-                        ticket.setReportedByName(user.getUsername());
-                        String role = "USUÁRIO AUTORIZADO";
-                        if(user.getRoles() != null && !user.getRoles().isEmpty()) {
-                             role = user.getRoles().iterator().next().getName().name().replace("ROLE_", "");
-                        }
-                        ticket.setReportedByRole(role);
-                        ticket.setReporterPhotoUrl(user.getFotoUrl());
-                    });
-                }
-            }
+        ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
+        
+        // Re-sincroniza auditor responsável pela alteração de status
+        injectAuditStamps(ticket);
 
-            return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar progresso do chamado."));
-        }
+        return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
-        try {
-            Optional<RepairTicket> ticketOpt = repairRepository.findById(id);
-            if (ticketOpt.isEmpty()) return ResponseEntity.notFound().build();
-            
-            repairRepository.delete(ticketOpt.get());
-            return ResponseEntity.ok(new MessageResponse("Chamado removido e arquivado para auditoria."));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao processar remoção."));
-        }
+        RepairTicket ticket = repairRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
+        
+        repairRepository.delete(ticket);
+        return ResponseEntity.ok(new MessageResponse("Chamado removido e arquivado para auditoria."));
     }
 }

@@ -2,6 +2,7 @@ package com.portalcursos.ng02.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -60,16 +61,6 @@ public class Course extends BaseAuditEntity {
     private Double percentualDocentesStrictoSensu;
 
     // Controle de Sistema
+    @Builder.Default
     private boolean isLocked = false;
-
-    // Campos legados (mantidos para compatibilidade inicial se necessário)
-    private String name;
-    @Column(columnDefinition = "TEXT")
-    private String description;
-    @Enumerated(EnumType.STRING)
-    private ECourseType type;
-    private Integer durationInSemesters;
-    private Integer totalVacancies;
-    private String coordinatorName;
-    private Double monthlyFee;
 }

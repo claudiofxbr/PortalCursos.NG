@@ -1,52 +1,40 @@
-name: CI/CD PortalCursos.NG
+name: CI/CD PortalCursos.NG - OMEGA DEPLOY
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "production" ]
 
 jobs:
-  build-backend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build with Maven
-      run: mvn -f backend/pom.xml clean package -DskipTests
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    - name: Install dependencies
-      run: npm install --prefix frontend
-    - name: Build Next.js
-      run: npm run build --prefix frontend
-
-  # Deploy Job (Exemplo para Hostinger via SSH)
   deploy:
-    needs: [build-backend, build-frontend]
-    if: github.event_name == 'push'
+    name: Production Deploy (Hostinger)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Deploy to Hostinger VPS
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
-        REMOTE_HOST: ${{ secrets.HOSTINGER_IP }}
-        REMOTE_USER: ${{ secrets.HOSTINGER_USER }}
-      run: |
-        echo "Iniciando deploy automatizado via rsync/ssh..."
-        # Adicionar lógica de rsync ou docker-compose up -d aqui
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Execute Remote Deploy via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOSTINGER_IP }}
+        username: ${{ secrets.HOSTINGER_USER }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        port: 22
+        script: |
+          echo "🚀 Conectado à VPS: ${{ secrets.HOSTINGER_IP }}"
+          
+          # 1. Navegar para o diretório (ajuste conforme seu caminho na VPS)
+          cd /var/www/portalcursos || { echo "❌ Diretório não encontrado"; exit 1; }
+          
+          # 2. Atualizar código via Git
+          echo "📥 Atualizando código..."
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # 3. Garantir permissões nos scripts
+          chmod +x devops/scripts/deploy_omega.sh
+          
+          # 4. Executar o Script de Deploy Unificado OMEGA
+          echo "🏗️  Iniciando Build e Deploy..."
+          ./devops/scripts/deploy_omega.sh
+          
+          echo "✅ Deploy Finalizado com Sucesso!"

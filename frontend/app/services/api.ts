@@ -39,7 +39,7 @@ if (typeof window !== 'undefined') {
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: isLocalhost ? 60000 : 300000, 
+    timeout: isLocalhost ? 60000 : 30000, // 30s para produção Hostinger (foi 300s)
     headers: {
         'X-Build-ID': V_BUILD_ID,
         'X-Protocol': 'ULTRA-RESILIENT-31.2'

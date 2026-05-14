@@ -29,6 +29,12 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     PasswordEncoder encoder;
 
+    @org.springframework.beans.factory.annotation.Value("${APP_ROOT_PASSWORD:admin123}")
+    private String rootPass;
+
+    @org.springframework.beans.factory.annotation.Value("${APP_ADMIN_PASSWORD:admin123}")
+    private String adminPass;
+
     @Override
     public void run(String... args) throws Exception {
         System.out.println("[DataLoader] Iniciando inicialização de dados base no Neon...");
@@ -59,9 +65,6 @@ public class DataLoader implements CommandLineRunner {
                 }
             },
             () -> {
-                String rootPass = System.getenv("APP_ROOT_PASSWORD");
-                if (rootPass == null) rootPass = "admin123"; // Fallback apenas para dev local seguro
-                
                 System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER)
@@ -90,9 +93,6 @@ public class DataLoader implements CommandLineRunner {
                 }
             },
             () -> {
-                String adminPass = System.getenv("APP_ADMIN_PASSWORD");
-                if (adminPass == null) adminPass = "admin123";
-                
                 System.out.println("[DataLoader] [AUTH] Criando novo administrador inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)

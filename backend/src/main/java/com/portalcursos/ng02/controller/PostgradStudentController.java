@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
  
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
@@ -17,41 +18,42 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/postgrad-students")
 @Slf4j
+@RequiredArgsConstructor
 public class PostgradStudentController {
  
-    @Autowired
-    private PostgradStudentService studentService;
+    private final PostgradStudentService studentService;
+    private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
+
+    private void injectAuditStamps(Object entity) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
+            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
+                if (entity instanceof PostgradStudent.PostgradStudentBuilder) {
+                    ((PostgradStudent.PostgradStudentBuilder<?, ?>) entity).creator(staff);
+                } else if (entity instanceof com.portalcursos.ng02.model.BaseAuditEntity) {
+                    ((com.portalcursos.ng02.model.BaseAuditEntity) entity).setCreator(staff);
+                }
+            });
+        }
+    }
  
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> listAll() {
-        try {
-            log.info("[AUTH-GUARD] Usuário autorizado carregando lista de alunos de pós-graduação.");
-            List<PostgradStudent> students = studentService.findAll();
-            return ResponseEntity.ok(students);
-        } catch (Exception e) {
-            log.error("[CRITICAL] Erro ao listar alunos: {}", e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao recuperar lista de alunos."));
-        }
+        log.info("[AUTH-GUARD] Usuário autorizado carregando lista de alunos de pós-graduação.");
+        List<PostgradStudent> students = studentService.findAll();
+        return ResponseEntity.ok(students);
     }
- 
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> findById(@PathVariable Long id) {
-        try {
-            Optional<PostgradStudent> student = studentService.findById(id);
-            if (student.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.ok(student.get());
-        } catch (Exception e) {
-            log.error("[CRITICAL] Erro ao buscar aluno ID {}: {}", id, e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao recuperar dados do aluno."));
-        }
+        return studentService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
- 
+
     @PostMapping(consumes = "multipart/form-data")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'MATRICULA', 'ROOT_MASTER')")
     public ResponseEntity<?> create(
@@ -76,8 +78,8 @@ public class PostgradStudentController {
         if (studentService.existsByCpf(cpf)) {
             return ResponseEntity.badRequest().body(new MessageResponse("Erro: Este CPF já possui um registro."));
         }
- 
-        PostgradStudent student = PostgradStudent.builder()
+
+        PostgradStudent.PostgradStudentBuilder<?, ?> studentBuilder = PostgradStudent.builder()
                 .fullName(fullName)
                 .email(email)
                 .cpf(cpf)
@@ -86,13 +88,15 @@ public class PostgradStudentController {
                 .address(address)
                 .graduationInstitution(graduationInstitution)
                 .graduationYear(graduationYear)
-                .desiredCourse(desiredCourse)
-                .build();
- 
+                .desiredCourse(desiredCourse);
+
+        injectAuditStamps(studentBuilder);
+        PostgradStudent student = studentBuilder.build();
+
         PostgradStudent finalSaved = studentService.create(student, diplomaFile, rgCpfFile, proofOfAddressFile, academicTranscriptFile, foto3x4File);
         return ResponseEntity.ok(finalSaved);
     }
- 
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ROOT_MASTER')")
     public ResponseEntity<?> update(
@@ -104,53 +108,40 @@ public class PostgradStudentController {
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
     ) {
-        try {
-            PostgradStudent student = PostgradStudent.builder()
-                    .fullName(fullName)
-                    .phone(phone)
-                    .address(address)
-                    .desiredCourse(desiredCourse)
-                    .enrollmentStatus(enrollmentStatus)
-                    .build();
- 
-            return ResponseEntity.ok(studentService.update(id, student, foto3x4File));
-        } catch (Exception e) {
-            log.error("[ERROR] Erro ao atualizar pós-graduando: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar dados."));
-        }
+        PostgradStudent student = PostgradStudent.builder()
+                .fullName(fullName)
+                .phone(phone)
+                .address(address)
+                .desiredCourse(desiredCourse)
+                .enrollmentStatus(enrollmentStatus)
+                .build();
+
+        injectAuditStamps(student);
+
+        return ResponseEntity.ok(studentService.update(id, student, foto3x4File));
     }
- 
+
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
-        try {
-            Optional<PostgradStudent> studentOpt = studentService.findById(id);
-            if (studentOpt.isPresent()) {
-                PostgradStudent student = studentOpt.get();
+        return studentService.findById(id).map(student -> {
+            try {
                 student.setEnrollmentStatus(status);
-                studentService.injectAuditStamps(student);
+                injectAuditStamps(student);
                 return ResponseEntity.ok(studentService.update(id, student, null));
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Erro ao atualizar status: falha de I/O", e);
             }
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("[ERROR] Erro ao atualizar status: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body(new MessageResponse("Erro ao atualizar status."));
-        }
+        }).orElse(ResponseEntity.notFound().build());
     }
- 
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        try {
-            if (studentService.findById(id).isPresent()) {
-                studentService.delete(id);
-                return ResponseEntity.ok(new MessageResponse("Aluno desativado com sucesso."));
-            }
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("[CRITICAL] Erro ao deletar aluno ID {}: {}", id, e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Falha ao processar exclusão."));
+        if (studentService.findById(id).isPresent()) {
+            studentService.delete(id);
+            return ResponseEntity.ok(new MessageResponse("Aluno desativado com sucesso."));
         }
+        return ResponseEntity.notFound().build();
     }
 }

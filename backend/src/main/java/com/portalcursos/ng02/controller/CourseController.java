@@ -10,6 +10,9 @@ import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import com.portalcursos.ng02.dto.MessageResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,58 +20,38 @@ import java.util.UUID;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/courses")
+@RequiredArgsConstructor
 public class CourseController {
 
-    @Autowired
-    private CourseService courseService;
+    private static final Logger logger = LoggerFactory.getLogger(CourseController.class);
 
-    @Autowired
-    private StaffMemberRepository staffMemberRepository;
+    private final CourseService courseService;
+    private final StaffMemberRepository staffMemberRepository;
 
     @GetMapping
     public ResponseEntity<?> getAllCourses() {
-        try {
-            return ResponseEntity.ok(courseService.getAllCourses());
-        } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao listar cursos: " + e.getMessage());
-            return ResponseEntity.internalServerError()
-                    .body(new MessageResponse("Erro ao carregar lista de cursos."));
-        }
+        return ResponseEntity.ok(courseService.getAllCourses());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getCourseById(@PathVariable UUID id) {
-        try {
-            return ResponseEntity.ok(courseService.getCourseById(id));
-        } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao buscar curso ID " + id + ": " + e.getMessage());
-            return ResponseEntity.status(404)
-                    .body(new MessageResponse("Curso não encontrado ou erro na recuperação."));
-        }
+        return ResponseEntity.ok(courseService.getCourseById(id));
     }
 
     @PostMapping
     public ResponseEntity<?> createCourse(@RequestBody Course course) {
-        try {
-            injectAuditStamps(course);
-            Course savedCourse = courseService.createCourse(course);
-            return ResponseEntity.ok(savedCourse);
-        } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao criar curso: " + e.getMessage());
-            return ResponseEntity.badRequest().body(new MessageResponse("Falha ao criar curso: " + e.getMessage()));
-        }
+        injectAuditStamps(course);
+        Course savedCourse = courseService.createCourse(course);
+        logger.info("[ACADEMIC-API] [COURSE-CREATE] Curso criado com sucesso: {}", savedCourse.getDenominacaoCurso());
+        return ResponseEntity.ok(savedCourse);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateCourse(@PathVariable UUID id, @RequestBody Course courseDetails) {
-        try {
-            injectAuditStamps(courseDetails);
-            Course updatedCourse = courseService.updateCourse(id, courseDetails);
-            return ResponseEntity.ok(updatedCourse);
-        } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao atualizar curso ID " + id + ": " + e.getMessage());
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro na atualização: " + e.getMessage()));
-        }
+        injectAuditStamps(courseDetails);
+        Course updatedCourse = courseService.updateCourse(id, courseDetails);
+        logger.info("[ACADEMIC-API] [COURSE-UPDATE] Curso ID {} atualizado.", id);
+        return ResponseEntity.ok(updatedCourse);
     }
 
     private void injectAuditStamps(Course course) {
@@ -77,18 +60,8 @@ public class CourseController {
             if (principal instanceof UserDetailsImpl) {
                 UserDetailsImpl userDetails = (UserDetailsImpl) principal;
                 staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                    course.setCreatorName(staff.getFullName());
-                    course.setCreatorPosition(staff.getPosition());
-                    
-                    // Lógica de Fallback V37.5-ULTRA: Se não houver foto, usa um padrão do sistema
-                    String photoUrl = staff.getFotoUrl();
-                    if (photoUrl == null || photoUrl.trim().isEmpty()) {
-                        photoUrl = "default-auditor.png";
-                        System.out.println("[AUDITORIA MEC] Aviso: Usuário sem foto. Aplicando fallback 'default-auditor.png'");
-                    }
-                    
-                    course.setCreatorPhotoUrl(photoUrl);
-                    System.out.println("[AUDITORIA MEC] Foto injetada com sucesso: " + photoUrl + " para o curso: " + course.getDenominacaoCurso());
+                    course.setCreator(staff);
+                    logger.debug("[AUDIT] Auditor normalizado injetado: {} para o curso: {}", staff.getFullName(), course.getDenominacaoCurso());
                 });
             }
         }
@@ -96,12 +69,9 @@ public class CourseController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCourse(@PathVariable UUID id) {
-        try {
-            courseService.deleteCourse(id);
-            return ResponseEntity.ok(new MessageResponse("Curso removido com sucesso."));
-        } catch (Exception e) {
-            System.err.println("[CRITICAL] Erro ao remover curso ID " + id + ": " + e.getMessage());
-            return ResponseEntity.badRequest().body(new MessageResponse("Falha ao remover curso: " + e.getMessage()));
-        }
+        courseService.deleteCourse(id);
+        logger.warn("[ACADEMIC-API] [COURSE-DELETE] Curso ID {} removido.", id);
+        return ResponseEntity.ok(new MessageResponse("Curso removido com sucesso."));
     }
 }
+
