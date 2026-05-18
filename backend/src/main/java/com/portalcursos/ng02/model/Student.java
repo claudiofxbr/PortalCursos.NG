@@ -16,6 +16,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "students")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "student_type", discriminatorType = DiscriminatorType.STRING)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,7 +54,7 @@ public class Student extends BaseAuditEntity {
     @Builder.Default
     private String enrollmentStatus = "PENDENTE";
 
-    // Novos Campos para Matrícula Robusta
+    // Campos de Matrícula
     private String nacionalidade;
     private String estadoCivil;
     private String sexo;
@@ -66,7 +68,7 @@ public class Student extends BaseAuditEntity {
     @Enumerated(EnumType.STRING)
     private EQuotaType tipoCota;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private java.util.List<StudentDocument> documents = new java.util.ArrayList<>();
 
@@ -78,7 +80,7 @@ public class Student extends BaseAuditEntity {
     @JsonIgnore
     private User user;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private java.util.List<Payment> payments = new java.util.ArrayList<>();
 
@@ -95,3 +97,4 @@ public class Student extends BaseAuditEntity {
         this.fotoMatricula = fotoUrl;
     }
 }
+

@@ -44,9 +44,20 @@ public class StudentService {
         return studentRepository.findByCpf(cpf);
     }
 
+    public boolean existsByEmailGlobal(String email) {
+        return studentRepository.existsByEmailGlobal(email);
+    }
+
+    public boolean existsByCpfGlobal(String cpf) {
+        return studentRepository.existsByCpfGlobal(cpf);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public Student enroll(Student student, MultipartFile foto3x4, List<DocEntry> otherDocs) throws IOException {
         log.info("[SERVICE-GRAD] Iniciando matrícula para: {}", student.getFullName());
+        
+        student.setCpf(sanitizeNumber(student.getCpf()));
+        student.setPhone(sanitizeNumber(student.getPhone()));
         
         student.setRegistrationNumber("GRAD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         student.setEnrollmentStatus("PENDENTE_VALIDACAO");
@@ -87,9 +98,9 @@ public class StudentService {
                 .orElseThrow(() -> new RuntimeException("Estudante não encontrado com ID: " + id));
 
         student.setFullName(updatedData.getFullName());
-        student.setPhone(updatedData.getPhone());
+        student.setPhone(sanitizeNumber(updatedData.getPhone()));
         student.setAddress(updatedData.getAddress());
-        student.setCurrentCourse(updatedData.getCurrentCourse());
+        student.setCourse(updatedData.getCourse());
         student.setEnrollmentStatus(updatedData.getEnrollmentStatus());
 
         if (foto3x4 != null && !foto3x4.isEmpty()) {
@@ -108,6 +119,10 @@ public class StudentService {
         studentRepository.findById(id).ifPresent(studentRepository::delete);
     }
 
+    private String sanitizeNumber(String value) {
+        if (value == null) return null;
+        return value.replaceAll("[^0-9]", "");
+    }
 
     public record DocEntry(MultipartFile file, EDocumentType type) {}
 }

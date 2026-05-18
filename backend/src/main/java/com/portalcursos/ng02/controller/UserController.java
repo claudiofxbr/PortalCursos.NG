@@ -41,7 +41,7 @@ public class UserController {
             @RequestParam(value = "position", required = false) String position,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
-    ) {
+    ) throws java.io.IOException {
         String fotoPath = null;
         if (foto3x4File != null && !foto3x4File.isEmpty()) {
             fotoPath = storageService.store(foto3x4File, "staff-photos");

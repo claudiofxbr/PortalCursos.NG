@@ -35,6 +35,9 @@ import com.portalcursos.ng02.repository.UserSessionRepository;
 import org.springframework.security.authentication.LockedException;
 import lombok.RequiredArgsConstructor;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.LoginAttemptService;
+import com.portalcursos.ng02.model.StaffMember;
+import java.util.Optional;
 
 
 @RestController

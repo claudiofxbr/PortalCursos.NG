@@ -47,3 +47,8 @@ dist/
 build/
 uploads/
 backend/uploads/
+
+# Protecao de Chaves SSH
+*_key*
+*id_rsa*
+*ed25519*

@@ -1,16 +1,24 @@
 package com.portalcursos.ng02.controller;
- 
+
+import com.portalcursos.ng02.model.*;
+import com.portalcursos.ng02.service.*;
+import com.portalcursos.ng02.repository.*;
+import com.portalcursos.ng02.dto.MessageResponse;
 import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.service.PostgradStudentService;
+import com.portalcursos.ng02.repository.CourseRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
- 
-import com.portalcursos.ng02.dto.MessageResponse;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
  
@@ -22,17 +30,18 @@ import java.util.Optional;
 public class PostgradStudentController {
  
     private final PostgradStudentService studentService;
-    private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
+    private final StaffMemberRepository staffMemberRepository;
+    private final CourseRepository courseRepository;
 
     private void injectAuditStamps(Object entity) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
-            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
             staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
                 if (entity instanceof PostgradStudent.PostgradStudentBuilder) {
                     ((PostgradStudent.PostgradStudentBuilder<?, ?>) entity).creator(staff);
-                } else if (entity instanceof com.portalcursos.ng02.model.BaseAuditEntity) {
-                    ((com.portalcursos.ng02.model.BaseAuditEntity) entity).setCreator(staff);
+                } else if (entity instanceof BaseAuditEntity) {
+                    ((BaseAuditEntity) entity).setCreator(staff);
                 }
             });
         }
@@ -71,12 +80,12 @@ public class PostgradStudentController {
             @RequestParam(value = "proofOfAddressFile", required = false) MultipartFile proofOfAddressFile,
             @RequestParam(value = "academicTranscriptFile", required = false) MultipartFile academicTranscriptFile,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
-    ) {
+    ) throws java.io.IOException {
         if (studentService.existsByEmail(email)) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro: Este E-mail já possui um registro."));
+            return ResponseEntity.badRequest().body(new MessageResponse("Email já cadastrado em nossa base de dados."));
         }
         if (studentService.existsByCpf(cpf)) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro: Este CPF já possui um registro."));
+            return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
         PostgradStudent.PostgradStudentBuilder<?, ?> studentBuilder = PostgradStudent.builder()
@@ -89,6 +98,8 @@ public class PostgradStudentController {
                 .graduationInstitution(graduationInstitution)
                 .graduationYear(graduationYear)
                 .desiredCourse(desiredCourse);
+
+        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(studentBuilder::course);
 
         injectAuditStamps(studentBuilder);
         PostgradStudent student = studentBuilder.build();
@@ -107,7 +118,7 @@ public class PostgradStudentController {
             @RequestParam("desiredCourse") String desiredCourse,
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4File", required = false) MultipartFile foto3x4File
-    ) {
+    ) throws java.io.IOException {
         PostgradStudent student = PostgradStudent.builder()
                 .fullName(fullName)
                 .phone(phone)
@@ -115,6 +126,8 @@ public class PostgradStudentController {
                 .desiredCourse(desiredCourse)
                 .enrollmentStatus(enrollmentStatus)
                 .build();
+
+        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(student::setCourse);
 
         injectAuditStamps(student);
 

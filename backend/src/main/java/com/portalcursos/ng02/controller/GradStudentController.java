@@ -24,6 +24,7 @@ public class GradStudentController {
 
     private final StudentService studentService;
     private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
+    private final com.portalcursos.ng02.repository.CourseRepository courseRepository;
 
     private void injectAuditStamps(Object entity) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -78,13 +79,13 @@ public class GradStudentController {
             @RequestParam(value = "tituloEleitorFile", required = false) MultipartFile tituloEleitorFile,
             @RequestParam(value = "reservistaFile", required = false) MultipartFile reservistaFile,
             @RequestParam(value = "certidaoNascimentoFile", required = false) MultipartFile certidaoNascimentoFile,
-            @RequestParam(value = "autodeclaracaoRacialFile", required = false) MultipartFile autodeclaracaoRacialFile) {
+            @RequestParam(value = "autodeclaracaoRacialFile", required = false) MultipartFile autodeclaracaoRacialFile) throws java.io.IOException {
 
-        if (studentService.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Email já cadastrado."));
+        if (studentService.existsByEmailGlobal(email)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Email já cadastrado em nossa base de dados."));
         }
-        if (studentService.findByCpf(cpf).isPresent()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado."));
+        if (studentService.existsByCpfGlobal(cpf)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
         Student.StudentBuilder<?, ?> studentBuilder = Student.builder()
@@ -94,7 +95,7 @@ public class GradStudentController {
                 .phone(phone)
                 .dateOfBirth(dateOfBirth)
                 .address(address)
-                .currentCourse(currentCourse)
+                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
                 .nacionalidade(nacionalidade)
                 .estadoCivil(estadoCivil)
                 .sexo(sexo)
@@ -144,12 +145,12 @@ public class GradStudentController {
             @RequestParam("currentCourse") String currentCourse,
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
-    ) {
+    ) throws java.io.IOException {
         Student student = Student.builder()
                 .fullName(fullName)
                 .phone(phone)
                 .address(address)
-                .currentCourse(currentCourse)
+                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
                 .enrollmentStatus(enrollmentStatus)
                 .build();
 
@@ -160,7 +161,7 @@ public class GradStudentController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) throws java.io.IOException {
         Student student = studentService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Aluno não encontrado."));
         
