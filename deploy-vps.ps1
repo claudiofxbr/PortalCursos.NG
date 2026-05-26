@@ -385,7 +385,7 @@ function Invoke-SupremeDeploy {
                        'sudo chown -R ' + $global:VpsUser + ' ' + $global:vpsPath + ' && ' +
                        'if [ -d ' + "'" + $global:vpsPath + '/.git' + "'" + ' ]; then ' +
                            'cd ' + $global:vpsPath + ' && git fetch --all && git reset --hard origin/main && git pull origin main; ' +
-                       'elif [ -d ' + "'" + $global:vpsPath + "'" + ' ] && [ -n "$(ls -A ' + $global:vpsPath + ' 2>/dev/null)" ]; then ' +
+                       'elif [ -d ' + "'" + $global:vpsPath + "'" + ' ] && [ $(ls -A ' + $global:vpsPath + ' 2>/dev/null | wc -l) -gt 0 ]; then ' +
                            'cd ' + $global:vpsPath + ' && git init && git remote add origin ' + $gitRemote + ' 2>/dev/null || git remote set-url origin ' + $gitRemote + ' && git fetch --all && git reset --hard origin/main && git branch --set-upstream-to=origin/main main 2>/dev/null || true && git pull origin main; ' +
                        'else ' +
                            'git clone ' + $gitRemote + ' ' + $global:vpsPath + '; ' +
