@@ -63,11 +63,12 @@ sudo ufw default allow outgoing
 sudo ufw allow 22/tcp comment 'SSH'
 sudo ufw allow 80/tcp comment 'HTTP'
 sudo ufw allow 443/tcp comment 'HTTPS'
-# Garantir que a porta do Postgres (5432) e do Backend (8080) estejam fechadas externamente
+# Permitir conexões externas nas portas do ecossistema PortalCursos.NG expostas
+sudo ufw allow 3010/tcp comment 'Permitir Frontend NextJS'
+sudo ufw allow 8090/tcp comment 'Permitir Backend SpringBoot'
 sudo ufw deny 5432 comment 'Bloqueio Externo Postgres'
-sudo ufw deny 8080 comment 'Bloqueio Externo Backend'
 sudo ufw --force enable
-echo -e "${GREEN}✅ Firewall robusto configurado e ativo.${NC}"
+echo -e "${GREEN}✅ Firewall robusto configurado e ativo com portas PortalCursos abertas.${NC}"
 
 # 6. Build e Inicialização coordenada com Docker Compose
 echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Frontend)...${NC}"
