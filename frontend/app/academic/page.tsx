@@ -594,7 +594,7 @@ export default function GraduationPage() {
                 )}
             </div>
 
-            <style jsx global>{`
+            <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     body * { visibility: hidden; }
                     #print-area, #print-area * { visibility: visible; }
@@ -607,7 +607,7 @@ export default function GraduationPage() {
                     }
                     .no-print { display: none !important; }
                 }
-            `}</style>
+            `}} />
 
             {/* MODAL: Visualização Detalhada (Procedimento R) */}
             {viewingStudent && (

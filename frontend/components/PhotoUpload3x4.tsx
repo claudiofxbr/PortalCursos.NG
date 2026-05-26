@@ -83,7 +83,7 @@ export default function PhotoUpload3x4({ onPhotoSelected, label = "Foto 3x4" }: 
         )}
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .photo-upload-container {
           display: flex;
           flex-direction: column;
@@ -229,7 +229,7 @@ export default function PhotoUpload3x4({ onPhotoSelected, label = "Foto 3x4" }: 
           from { opacity: 0; }
           to { opacity: 1; }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }

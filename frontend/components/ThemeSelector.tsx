@@ -42,7 +42,7 @@ const ThemeSelector: React.FC = () => {
         ))}
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .theme-curtain-container {
           position: relative;
           z-index: 1000;
@@ -121,7 +121,7 @@ const ThemeSelector: React.FC = () => {
           border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.3);
         }
-      `}</style>
+      `}} />
     </div>
   );
 };
