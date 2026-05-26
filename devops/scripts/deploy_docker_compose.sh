@@ -75,7 +75,8 @@ echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Fron
 cd "$DEVOPS_DIR"
 # Remove imagens órfãs e recria a pilha
 docker compose -f docker-compose.prod.yml down --remove-orphans || true
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.prod.yml up -d
 
 echo -e "${GREEN}✅ Pilha de containers inicializada com sucesso.${NC}"
 docker compose -f docker-compose.prod.yml ps
