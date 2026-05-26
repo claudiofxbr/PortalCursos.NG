@@ -7,7 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
+// @Component
 public class DatabaseSeeder implements CommandLineRunner {
 
     @Autowired
@@ -16,17 +16,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        if (roleRepository.count() == 0) {
-            System.out.println("--- [DatabaseSeeder] Populando tabelas de permissoes (Roles) ---");
-            
-            for (Role.ERole erole : Role.ERole.values()) {
-                if (!roleRepository.findByName(erole).isPresent()) {
-                    roleRepository.save(Role.builder().name(erole).build());
-                    System.out.println("[DatabaseSeeder] Criada Role: " + erole);
-                }
-            }
-            
-            System.out.println("--- [DatabaseSeeder] Todas as permissoes foram garantidas! ---");
-        }
+        // Desativado para evitar concorrencia com o DataLoader.java
+        // O seeding de Roles e contas iniciais e tratado exclusivamente pelo DataLoader.
     }
 }

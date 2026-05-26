@@ -54,7 +54,21 @@ echo -e "${GREEN}✅ Estrutura de diretórios validada.${NC}"
 # Carregar variáveis de ambiente se o .env existir
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo -e "${BLUE}📄 Carregando variáveis de ambiente do .env...${NC}"
-    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+    while IFS= read -r line || [ -n "$line" ]; do
+        line=$(echo "$line" | xargs)
+        if [[ -z "$line" || "$line" =~ ^# ]]; then
+            continue
+        fi
+        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            value="${value#\"}"
+            value="${value%\"}"
+            value="${value#\'}"
+            value="${value%\'}"
+            export "$key=$value"
+        fi
+    done < "$PROJECT_ROOT/.env"
 fi
 
 # 2. Build do Backend (Java/Spring Boot)

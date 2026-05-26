@@ -26,11 +26,11 @@ public class PostgradStudentService {
     private final StorageService storageService;
 
     public List<PostgradStudent> findAll() {
-        return studentRepository.findAll();
+        return studentRepository.findAllActive();
     }
 
     public Optional<PostgradStudent> findById(Long id) {
-        return studentRepository.findById(id);
+        return studentRepository.findByIdAndActiveTrue(id);
     }
 
     @Transactional(rollbackFor = Exception.class)

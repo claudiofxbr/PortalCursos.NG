@@ -61,9 +61,25 @@ Write-Host "      Java detectado em: $env:JAVA_HOME" -ForegroundColor Green
 
 # 4. Compilar e iniciar com novo código (sem @Where - corrigido para Campus Care)
 Write-Host "[4/4] Compilando e iniciando Backend V38.9..." -ForegroundColor Yellow
+
+# Carregar Variaveis de Ambiente do .env para heranca/uso local
+$envFile = Join-Path $PSScriptRoot ".env"
+if (Test-Path $envFile) {
+    Write-Host "      Carregando variaveis do .env local..." -ForegroundColor Gray
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
+            $name = $matches.name
+            $value = $matches.value.Trim("'").Trim('"')
+            [System.Environment]::SetEnvironmentVariable($name, $value)
+            Set-Item -Path "env:\$name" -Value $value
+        }
+    }
+}
+
 Write-Host "      Aguarde - isto pode levar alguns minutos..." -ForegroundColor Gray
 Write-Host ""
 Set-Location -Path "$PSScriptRoot"
+
 
 if (Test-Path ".\mvnw.cmd") {
     .\mvnw.cmd spring-boot:run "-DskipTests" 2>&1 | Tee-Object -FilePath "$PSScriptRoot\startup_v389.log"

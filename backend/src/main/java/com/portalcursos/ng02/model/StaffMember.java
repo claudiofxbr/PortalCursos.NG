@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 
 import lombok.experimental.SuperBuilder;
 import lombok.EqualsAndHashCode;
@@ -20,7 +19,6 @@ import lombok.EqualsAndHashCode;
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE staff_members SET active = false WHERE id = ?")
-@Where(clause = "active = true")
 @EqualsAndHashCode(callSuper=true)
 public class StaffMember extends BaseAuditEntity {
     @Id

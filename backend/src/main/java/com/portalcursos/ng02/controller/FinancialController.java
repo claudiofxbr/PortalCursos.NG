@@ -155,6 +155,27 @@ public class FinancialController {
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     public ResponseEntity<?> getStudentPayments(@PathVariable Long studentId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
+            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
+            
+            boolean hasElevatedPrivileges = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") 
+                            || a.getAuthority().equals("ROLE_ROOT_MASTER") 
+                            || a.getAuthority().equals("ROLE_FINANCEIRO") 
+                            || a.getAuthority().equals("ROLE_SECRETARIA"));
+            
+            if (!hasElevatedPrivileges) {
+                java.util.Optional<com.portalcursos.ng02.model.Student> studentOpt = studentRepository.findByUserId(userDetails.getId());
+                if (studentOpt.isEmpty() || !studentOpt.get().getId().equals(studentId)) {
+                    return ResponseEntity.status(403)
+                        .body(new MessageResponse("Acesso negado: Você só pode visualizar seus próprios dados financeiros."));
+                }
+            }
+        } else {
+            return ResponseEntity.status(401)
+                .body(new MessageResponse("Acesso negado: Usuário não autenticado."));
+        }
         return ResponseEntity.ok(paymentRepository.findByStudentId(studentId));
     }
 

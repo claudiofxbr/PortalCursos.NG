@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -18,12 +17,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @Table(name = "students")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "student_type", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue("GRADUATION")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE students SET active = false WHERE id = ?")
-@Where(clause = "active = true")
 @EqualsAndHashCode(callSuper=true)
 public class Student extends BaseAuditEntity {
     @Id

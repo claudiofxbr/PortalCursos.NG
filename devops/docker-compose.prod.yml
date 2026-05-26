@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: portalcursos_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: portalcursos_db
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-portal_password}
+    # Sem mapeamento de porta externa para garantir privacidade total
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - portal_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME:-portal_admin} -d portalcursos_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: portalcursos_backend
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portalcursos_db
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-portal_password}
+      PORT: 8080
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_JWT_EXPIRATION: ${APP_JWT_EXPIRATION:-900000}
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - portal_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: portalcursos_frontend
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/}
+      NEXT_PUBLIC_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - portal_net
+    depends_on:
+      - backend
+
+networks:
+  portal_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  uploads_data:
+    driver: local

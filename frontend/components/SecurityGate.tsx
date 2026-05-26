@@ -16,7 +16,8 @@ export default function SecurityGate({ children }: { children: React.ReactNode }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "7512") {
+    const accessCode = process.env.NEXT_PUBLIC_PORTAL_ACCESS_CODE ?? "7512";
+    if (password === accessCode) {
       sessionStorage.setItem("portal_authorized", "true");
       setIsAuthorized(true);
       setError(false);

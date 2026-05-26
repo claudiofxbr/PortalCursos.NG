@@ -19,6 +19,20 @@ function Write-Log {
 try {
     Write-Log "Iniciando Protocolo de Setup Limpo - PortalCursos.NG" "INFO"
 
+    # Carregar Variaveis de Ambiente do backend/.env para heranca no Start-Process
+    $envFile = Join-Path $PSScriptRoot "backend\.env"
+    if (Test-Path $envFile) {
+        Write-Log "Carregando variaveis do .env do backend..." "INFO"
+        Get-Content $envFile | ForEach-Object {
+            if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
+                $name = $matches.name
+                $value = $matches.value.Trim("'").Trim('"')
+                [System.Environment]::SetEnvironmentVariable($name, $value)
+                Set-Item -Path "env:\$name" -Value $value
+            }
+        }
+    }
+
     # 1. Limpeza de Cache
     Write-Log "Etapa 1/5: Limpando Caches e Dependências antigas..." "INFO"
     
@@ -60,8 +74,8 @@ try {
 
     # 3. Inicialização de Backend
     Write-Log "Etapa 3/5: Iniciando Servidor Backend (Spring Boot)..." "INFO"
-    # Inicia em uma nova janela para manter os logs visíveis e o processo em background
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $backendPath; if (Test-Path 'mvnw.cmd') { .\mvnw.cmd spring-boot:run } else { mvn spring-boot:run }" -WindowStyle Normal
+    # Inicia em uma nova janela usando o inicializador robusto do backend para garantir as variáveis de ambiente do .env
+    Start-Process powershell -ArgumentList "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$backendPath'; .\start-portal.ps1" -WindowStyle Normal
     
     Write-Log "Aguardando 15 segundos para o backend inicializar..." "INFO"
     Start-Sleep -Seconds 15

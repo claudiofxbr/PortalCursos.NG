@@ -55,7 +55,7 @@ cat <<EOF > $APP_ROOT/.env
 SPRING_DATASOURCE_URL=jdbc:postgresql://ep-example-123456.us-east-2.aws.neon.tech/portal_db?sslmode=require
 SPRING_DATASOURCE_USERNAME=seu_usuario_neon
 SPRING_DATASOURCE_PASSWORD=sua_senha_neon
-JWT_SECRET=gere_uma_chave_segura_aqui
+APP_JWT_SECRET=gere_uma_chave_segura_aqui
 
 # --- FRONTEND (Next.js) ---
 NEXT_PUBLIC_API_URL=http://localhost:8080/api

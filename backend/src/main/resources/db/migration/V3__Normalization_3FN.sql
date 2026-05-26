@@ -32,8 +32,8 @@ FROM staff_members s
 WHERE c.creator_name = s.full_name AND c.creator_id IS NULL;
 
 UPDATE repair_tickets rt
-SET creator_id = reported_by_staff_id
-WHERE creator_id IS NULL AND reported_by_staff_id IS NOT NULL;
+SET creator_id = reported_by_id
+WHERE creator_id IS NULL AND reported_by_id IS NOT NULL;
 
 -- 3. LIMPEZA: Remoção física das colunas redundantes (Atingindo a 3FN)
 ALTER TABLE courses 
@@ -46,7 +46,7 @@ ALTER TABLE students
     DROP COLUMN IF EXISTS created_by_position;
 
 ALTER TABLE repair_tickets 
-    DROP COLUMN IF EXISTS reported_by_staff_id;
+    DROP COLUMN IF EXISTS reported_by_id;
 
 -- 4. ÍNDICES DE PERFORMANCE: Otimiza a junção para auditoria no Frontend
 CREATE INDEX IF NOT EXISTS idx_courses_creator ON courses(creator_id);

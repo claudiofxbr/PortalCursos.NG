@@ -1,5 +1,6 @@
 package com.portalcursos.ng02.security;
 
+import com.portalcursos.ng02.service.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -32,6 +33,43 @@ public class JwtUtils {
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String generateTokenFromUserDetails(UserDetailsImpl userDetails) {
+        java.util.List<String> roles = userDetails.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toList());
+
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .claim("id", userDetails.getId())
+                .claim("email", userDetails.getEmail())
+                .claim("roles", roles)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String generateTokenFromUser(com.portalcursos.ng02.model.User user) {
+        java.util.List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(java.util.stream.Collectors.toList());
+
+        return Jwts.builder()
+                .setSubject(user.getUsername())
+                .claim("id", user.getId())
+                .claim("email", user.getEmail())
+                .claim("roles", roles)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public Claims getClaimsFromJwtToken(String token) {
+        return Jwts.parserBuilder().setSigningKey(key()).build()
+                .parseClaimsJws(token).getBody();
     }
 
     private Key key() {

@@ -12,6 +12,20 @@ if (-not (Test-Path "backend") -or -not (Test-Path "frontend")) {
     exit
 }
 
+# Carregar Variaveis de Ambiente do backend/.env para heranca no Start-Process
+$envFile = Join-Path $PSScriptRoot "backend\.env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
+            $name = $matches.name
+            $value = $matches.value.Trim("'").Trim('"')
+            [System.Environment]::SetEnvironmentVariable($name, $value)
+            Set-Item -Path "env:\$name" -Value $value
+        }
+    }
+}
+
+
 # 1. Pre-Flight Check: Infraestrutura Neon
 echo "[V30.0] Verificando conectividade com Neon Cloud..."
 $neonHost = "ep-small-shadow-acm4l09l-pooler.sa-east-1.aws.neon.tech"
@@ -48,7 +62,7 @@ foreach ($port in $ports) {
 echo "[V30.0] Despertando Backend e Banco Neon..."
 $backendPath = Join-Path $PSScriptRoot "backend"
 if (Test-Path $backendPath) {
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$backendPath'; .\mvnw.cmd spring-boot:run" -WindowStyle Normal
+    Start-Process powershell -ArgumentList "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "cd '$backendPath'; .\start-portal.ps1" -WindowStyle Normal
 } else {
     echo "ERRO: Pasta 'backend' não encontrada em $backendPath"
 }

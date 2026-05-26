@@ -11,6 +11,7 @@ import { V_BUILD_ID } from '../app/services/api';
 export default function ConnectivityGuard({ children }: { children: React.ReactNode }) {
     const [status, setStatus] = useState<any>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [timedOut, setTimedOut] = useState(false); // Timeout de segurança
 
     useEffect(() => {
         setIsMounted(true);
@@ -23,9 +24,17 @@ export default function ConnectivityGuard({ children }: { children: React.ReactN
         window.addEventListener('OMEGA_BOOTING' as any, updateStatus);
         window.addEventListener('OMEGA_HEALTH' as any, updateStatus);
 
+        // Timeout de segurança: se após 8s o backend não responder, libera o app
+        // Evita travamento eterno quando o backend está lento ou offline
+        const safetyTimer = setTimeout(() => {
+            setTimedOut(true);
+            console.warn('[ConnectivityGuard] Timeout de segurança ativado. Liberando app.');
+        }, 8000);
+
         return () => {
             window.removeEventListener('OMEGA_BOOTING' as any, updateStatus);
             window.removeEventListener('OMEGA_HEALTH' as any, updateStatus);
+            clearTimeout(safetyTimer);
         };
     }, []);
 
@@ -33,9 +42,9 @@ export default function ConnectivityGuard({ children }: { children: React.ReactN
 
     // Se o sistema estiver saudável e NÃO estiver no boot inicial, renderiza o app normalmente
     const isBooting = status?.isBooting || (!status && typeof window !== 'undefined' && (window as any).PC_OMEGA_STATUS?.isBooting);
-    
-    // Se não houver status ainda, assumimos que está checando (ServerWarmer fará o trabalho)
-    if (!isBooting && status?.isHealthy) {
+
+    // Libera o app se: backend respondeu com sucesso OU timeout de segurança ativado
+    if (timedOut || (!isBooting && status?.isHealthy)) {
         return <>{children}</>;
     }
 

@@ -29,19 +29,19 @@ public class StudentService {
     private final StorageService storageService;
 
     public List<Student> findAll() {
-        return studentRepository.findAll();
+        return studentRepository.findAllWithCourseAndCreator();
     }
 
     public Optional<Student> findById(Long id) {
-        return studentRepository.findById(id);
+        return studentRepository.findByIdAndActiveTrue(id);
     }
 
     public Optional<Student> findByEmail(String email) {
-        return studentRepository.findByEmail(email);
+        return studentRepository.findByEmail(email).filter(Student::isActive);
     }
 
     public Optional<Student> findByCpf(String cpf) {
-        return studentRepository.findByCpf(cpf);
+        return studentRepository.findByCpf(cpf).filter(Student::isActive);
     }
 
     public boolean existsByEmailGlobal(String email) {

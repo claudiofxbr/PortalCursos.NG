@@ -1,6 +1,19 @@
 # PortalCursos.NG: Painel de Controle Supremo V38.9-CAMPUS-CARE
 # Orquestrador Universal - Protocolo de Robustez
 
+# Carregar Variaveis de Ambiente do backend/.env para heranca no Start-Process
+$envFile = Join-Path $PSScriptRoot "backend\.env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
+            $name = $matches.name
+            $value = $matches.value.Trim("'").Trim('"')
+            [System.Environment]::SetEnvironmentVariable($name, $value)
+            Set-Item -Path "env:\$name" -Value $value
+        }
+    }
+}
+
 function Show-Menu {
     Clear-Host
     echo "==========================================================="
@@ -80,8 +93,8 @@ while ($true) {
 
             Write-Host "[1/2] Iniciando Backend (Spring Boot)..." -ForegroundColor Cyan
             Start-Process powershell -ArgumentList @(
-                "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-                "Set-Location '$backendDir'; $mvnCmd spring-boot:run '-DskipTests' 2>&1 | Tee-Object -FilePath '$backendLog'"
+                "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                "Set-Location '$backendDir'; .\start-portal.ps1 2>&1 | Tee-Object -FilePath '$backendLog'"
             ) -WindowStyle Normal
             Write-Host "      Backend iniciando... aguarde ~30s para estar pronto." -ForegroundColor Gray
 
@@ -202,11 +215,7 @@ while ($true) {
                 
                 $logFile = Join-Path $backendPath "startup_v389.log"
                 
-                if (Test-Path ".\mvnw.cmd") {
-                    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Set-Location '$backendPath'; .\mvnw.cmd spring-boot:run '-DskipTests' 2>&1 | Tee-Object -FilePath '$logFile'`"" -WindowStyle Normal
-                } else {
-                    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Set-Location '$backendPath'; mvn spring-boot:run '-DskipTests' 2>&1 | Tee-Object -FilePath '$logFile'`"" -WindowStyle Normal
-                }
+                Start-Process powershell -ArgumentList "-NoExit -NoProfile -ExecutionPolicy Bypass -Command `"Set-Location '$backendPath'; .\start-portal.ps1 2>&1 | Tee-Object -FilePath '$logFile'`"" -WindowStyle Normal
                 
                 Set-Location -Path $PSScriptRoot
                 echo ""

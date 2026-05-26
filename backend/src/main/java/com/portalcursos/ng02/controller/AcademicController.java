@@ -33,7 +33,7 @@ public class AcademicController {
     @GetMapping("/students")
     @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<?> getAllStudents() {
-        return ResponseEntity.ok(studentRepository.findAll());
+        return ResponseEntity.ok(studentRepository.findAllWithCourseAndCreator());
     }
 
     @GetMapping("/teachers")
@@ -53,7 +53,7 @@ public class AcademicController {
     public ResponseEntity<?> getAllAcademicUsers() {
         List<Map<String, Object>> allUsers = new ArrayList<>();
 
-        studentRepository.findAll().forEach(s -> {
+        studentRepository.findAllWithCourse().forEach(s -> {
             Map<String, Object> u = new HashMap<>();
             u.put("id", "S_" + s.getId());
             u.put("name", s.getFullName());

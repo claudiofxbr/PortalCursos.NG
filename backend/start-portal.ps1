@@ -2,6 +2,8 @@
 # Autor: Antigravity AI
 # Objetivo: Garantir que o Backend inicie independente da configuração global do PATH.
 
+Set-Location -Path "$PSScriptRoot"
+
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "   INICIALIZADOR ROBUSTO PORTALCURSOS    " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
@@ -49,7 +51,8 @@ if (Test-Path ".env") {
         if ($_ -match "^(?<name>[^#\s=]+)=(?<value>.*)$") {
             $name = $matches.name
             $value = $matches.value.Trim("'").Trim('"')
-            [System.Environment]::SetEnvironmentVariable($name, $value)
+            Set-Item -Path "env:\$name" -Value $value
+            [System.Environment]::SetEnvironmentVariable($name, $value, [System.EnvironmentVariableTarget]::Process)
             Write-Host "Set $name" -ForegroundColor DarkGray
         }
     }
@@ -69,14 +72,13 @@ if ($pids) {
 
 # 3. Execução via Maven Wrapper (ARMOR-MAVEN)
 Write-Host "--- Iniciando Compilação e Execução ---" -ForegroundColor Yellow
-Set-Location -Path "$PSScriptRoot"
 
 if (Test-Path ".\mvnw.cmd") {
     Write-Host "Usando Maven Wrapper (Recomendado)..." -ForegroundColor Green
-    .\mvnw.cmd clean spring-boot:run "-DskipTests"
+    .\mvnw.cmd clean spring-boot:run "-DskipTests" "-Dspring.datasource.url=$env:SPRING_DATASOURCE_URL" "-Dspring.datasource.username=$env:SPRING_DATASOURCE_USERNAME" "-Dspring.datasource.password=$env:SPRING_DATASOURCE_PASSWORD" "-Dportalcursos.jwt.secret=$env:APP_JWT_SECRET" "-Dportalcursos.jwt.expiration=$env:APP_JWT_EXPIRATION"
 } else {
     Write-Host "⚠️ Maven Wrapper não encontrado. Tentando comando global..." -ForegroundColor Yellow
-    mvn clean spring-boot:run "-DskipTests"
+    mvn clean spring-boot:run "-DskipTests" "-Dspring.datasource.url=$env:SPRING_DATASOURCE_URL" "-Dspring.datasource.username=$env:SPRING_DATASOURCE_USERNAME" "-Dspring.datasource.password=$env:SPRING_DATASOURCE_PASSWORD" "-Dportalcursos.jwt.secret=$env:APP_JWT_SECRET" "-Dportalcursos.jwt.expiration=$env:APP_JWT_EXPIRATION"
 }
 
 if ($LASTEXITCODE -ne 0) {

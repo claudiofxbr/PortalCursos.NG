@@ -88,7 +88,7 @@ public class AuthController {
             loginAttemptService.loginSucceeded(ipAddress);
 
             // 1. Gerar Tokens
-            String jwt = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
+            String jwt = jwtUtils.generateTokenFromUserDetails(userDetails);
             String refreshTokenStr = UUID.randomUUID().toString();
 
             // 2. Persistir Sessão
@@ -143,7 +143,7 @@ public class AuthController {
                             }
 
                             User user = session.getUser();
-                            String token = jwtUtils.generateTokenFromUsername(user.getUsername());
+                            String token = jwtUtils.generateTokenFromUser(user);
                             
                             logger.info("[SUPREME-AUTH] Token renovado com sucesso para o usuário: {}", user.getUsername());
                             return ResponseEntity.ok(new com.portalcursos.ng02.dto.TokenRefreshResponse(token, refreshToken));
@@ -210,6 +210,27 @@ public class AuthController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         logger.info("[OMEGA-AUTH] [SIGNUP] Tentativa de registro: {} ({})", 
             signUpRequest.getUsername(), signUpRequest.getEmail());
+
+        Set<String> requestedRoles = signUpRequest.getRole();
+        boolean isRequestingPrivilegedRoles = requestedRoles != null && requestedRoles.stream()
+            .anyMatch(role -> role.equalsIgnoreCase("admin") 
+                           || role.equalsIgnoreCase("staff") 
+                           || role.equalsIgnoreCase("teacher"));
+
+        if (isRequestingPrivilegedRoles) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean hasElevatedPrivileges = false;
+            if (auth != null && auth.isAuthenticated() && !(auth.getPrincipal() instanceof String && auth.getPrincipal().equals("anonymousUser"))) {
+                hasElevatedPrivileges = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_ROOT_MASTER"));
+            }
+            
+            if (!hasElevatedPrivileges) {
+                logger.warn("[SECURITY-BREACH-ATTEMPT] Tentativa de registro de usuário com papéis privilegiados bloqueada para: {}", signUpRequest.getUsername());
+                return ResponseEntity.status(403)
+                        .body(new MessageResponse("Erro: Apenas administradores do sistema podem registrar contas privilegiadas (admin, staff, teacher)."));
+            }
+        }
 
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             logger.warn("[OMEGA-AUTH] [SIGNUP-FAILURE] Username já em uso: {}", signUpRequest.getUsername());

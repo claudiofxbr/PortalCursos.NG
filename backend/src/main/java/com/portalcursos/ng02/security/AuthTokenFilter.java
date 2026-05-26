@@ -43,8 +43,21 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null) {
                 if (jwtUtils.validateJwtToken(jwt)) {
-                    String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    io.jsonwebtoken.Claims claims = jwtUtils.getClaimsFromJwtToken(jwt);
+                    String username = claims.getSubject();
+                    
+                    // Converte os tipos primitivos e genéricos obtidos das claims do JWT
+                    Long id = claims.get("id", Long.class);
+                    String email = claims.get("email", String.class);
+                    @SuppressWarnings("unchecked")
+                    java.util.List<String> roles = (java.util.List<String>) claims.get("roles");
+                    
+                    java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = 
+                            roles.stream()
+                                 .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                                 .collect(java.util.stream.Collectors.toList());
+                    
+                    UserDetails userDetails = new com.portalcursos.ng02.service.UserDetailsImpl(id, username, email, "", authorities);
                     
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());

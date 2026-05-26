@@ -85,7 +85,7 @@ public class RepairController {
     @Transactional(readOnly = true)
     public ResponseEntity<?> getAllTickets() {
         logger.info("[CAMPUS-CARE] Sincronizando chamados para auditoria autorizada.");
-        List<RepairTicketDTO> tickets = repairRepository.findAll().stream()
+        List<RepairTicketDTO> tickets = repairRepository.findAllWithCreator().stream()
                 .map(this::convertToDTO)
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
@@ -96,10 +96,10 @@ public class RepairController {
     @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> createTicket(
-            @RequestParam("title") String title,
-            @RequestParam("description") String description,
-            @RequestParam("location") String location,
-            @RequestParam(value = "mainPhotoFile", required = false) MultipartFile mainPhotoFile
+             @RequestParam("title") String title,
+             @RequestParam("description") String description,
+             @RequestParam("location") String location,
+             @RequestParam(value = "mainPhotoFile", required = false) MultipartFile mainPhotoFile
     ) {
         logger.info("[CAMPUS-CARE] Registrando novo incidente: {}", title);
         
@@ -130,8 +130,8 @@ public class RepairController {
     @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
-        RepairTicket t = repairRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
+        RepairTicket t = repairRepository.findByIdAndActiveTrue(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
         
         if (t.getPhotoUrls().size() >= 4) {
             return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
@@ -151,8 +151,8 @@ public class RepairController {
     @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
-        RepairTicket ticket = repairRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
+        RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
 
         try {
             ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
@@ -168,8 +168,8 @@ public class RepairController {
     @Transactional
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
-        RepairTicket ticket = repairRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado."));
+        RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
+                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
         
         // Limpeza de arquivos relacionados antes de deletar o registro
         if (ticket.getMainPhotoUrl() != null) {
