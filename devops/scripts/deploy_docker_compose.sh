@@ -92,10 +92,16 @@ if [ -f "$SCRIPTS_DIR/nginx.conf" ]; then
     sudo ln -sf /etc/nginx/sites-available/portalcursos /etc/nginx/sites-enabled/
     sudo rm -f /etc/nginx/sites-enabled/default || true
     
-    # Validar as diretivas
-    sudo nginx -t
-    sudo systemctl reload nginx
-    echo -e "${GREEN}✅ Proxy Reverso Nginx ativo e direcionado para os containers.${NC}"
+    # Validar as diretivas de forma protegida contra falhas (resiliência contra colisões de porta/EasyPanel)
+    if sudo nginx -t &>/dev/null; then
+        if sudo systemctl reload nginx &>/dev/null; then
+            echo -e "${GREEN}✅ Proxy Reverso Nginx ativo e direcionado para os containers.${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Aviso: Falha ao recarregar o Nginx. Verifique se o EasyPanel ou outro serviço ocupa as portas 80/443.${NC}"
+        fi
+    else
+        echo -e "${RED}⚠️  Aviso: Configuração do Nginx possui erros de sintaxe ou as portas estão em conflito. A aplicação continuará acessível diretamente na porta 3010.${NC}"
+    fi
 else
     echo -e "${RED}⚠️  Aviso: nginx.conf não encontrado em $SCRIPTS_DIR/nginx.conf. Nginx não configurado.${NC}"
 fi
