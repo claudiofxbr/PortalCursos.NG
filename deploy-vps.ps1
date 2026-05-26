@@ -381,7 +381,15 @@ function Invoke-SupremeDeploy {
         Write-Log "Step 2: Sincronizando fontes na VPS..." "INFO" "Yellow"
         Write-Progress -Activity "Deploy Supremo" -Status "Atualizando fontes Git na VPS..." -PercentComplete 60
 
-        $sshCloneCmd = "sudo mkdir -p " + $global:vpsPath + " && sudo chown -R " + $global:VpsUser + " " + $global:vpsPath + " && if [ -d '" + $global:vpsPath + "/.git' ]; then cd " + $global:vpsPath + " && git fetch --all && git reset --hard origin/main && git pull origin main; else git clone " + $gitRemote + " " + $global:vpsPath + "; fi"
+        $sshCloneCmd = "sudo mkdir -p " + $global:vpsPath + " && " +
+                       "sudo chown -R " + $global:VpsUser + " " + $global:vpsPath + " && " +
+                       "if [ -d '" + $global:vpsPath + "/.git' ]; then " +
+                           "cd " + $global:vpsPath + " && git fetch --all && git reset --hard origin/main && git pull origin main; " +
+                       "elif [ -d '" + $global:vpsPath + "' ] && [ -n `"$(ls -A " + $global:vpsPath + " 2>/dev/null)`" ]; then " +
+                           "cd " + $global:vpsPath + " && git init && git remote add origin " + $gitRemote + " 2>/dev/null || git remote set-url origin " + $gitRemote + " && git fetch --all && git reset --hard origin/main && git branch --set-upstream-to=origin/main main 2>/dev/null || true && git pull origin main; " +
+                       "else " +
+                           "git clone " + $gitRemote + " " + $global:vpsPath + "; " +
+                       "fi"
         
         Write-Log "Conectando a VPS e puxando os arquivos Git..." "INFO" "Cyan"
         $cloneRes = Invoke-SshCommand -Command $sshCloneCmd
