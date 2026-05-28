@@ -99,6 +99,16 @@ echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Fron
 cd "$DEVOPS_DIR"
 # Remove imagens órfãs e recria a pilha
 docker compose -f docker-compose.prod.yml down --remove-orphans || true
+
+echo -e "${YELLOW}🧹 Removendo conflitos de containers com nomes duplicados...${NC}"
+for container in portalcursos_postgres portalcursos_backend portalcursos_frontend; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
+        echo -e "${YELLOW}⚠️  Removendo container conflitante antigo: ${container}...${NC}"
+        docker stop "$container" || true
+        docker rm "$container" || true
+    fi
+done
+
 docker compose -f docker-compose.prod.yml build --no-cache
 docker compose -f docker-compose.prod.yml up -d
 
