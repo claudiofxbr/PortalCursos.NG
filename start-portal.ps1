@@ -96,7 +96,9 @@ if (-not $ready) {
 echo "[V30.0] Lancando Interface de Usuario (Next.js)..."
 $frontendPath = Join-Path $PSScriptRoot "frontend"
 if (Test-Path $frontendPath) {
-    Start-Process "npm.cmd" -ArgumentList "run dev" -WorkingDirectory $frontendPath -WindowStyle Normal
+    # Evitar que o Next.js herde a variável PORT=8080 carregada do .env do backend
+    $env:PORT = "3000"
+    Start-Process "npm.cmd" -ArgumentList "run dev -- -p 3000" -WorkingDirectory $frontendPath -WindowStyle Normal
 }
 
 echo "`n[V30.0] AMBIENTE PRONTO E ESTABILIZADO!"

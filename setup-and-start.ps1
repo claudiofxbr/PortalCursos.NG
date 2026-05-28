@@ -84,7 +84,7 @@ try {
     Write-Log "Etapa 4/5: Iniciando Servidor Frontend (Next.js)..." "INFO"
     Set-Location $frontendPath
     # Inicia o frontend em uma nova janela
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $frontendPath; npm run dev" -WindowStyle Normal
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $frontendPath; `$env:PORT='3000'; npm run dev -- -p 3000" -WindowStyle Normal
 
     # 5. Abertura do Navegador
     Write-Log "Etapa 5/5: Abrindo o portal no navegador..." "SUCCESS"

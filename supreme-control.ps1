@@ -106,7 +106,7 @@ while ($true) {
             Write-Host "[2/2] Iniciando Frontend (Next.js - npm run dev)..." -ForegroundColor Cyan
             Start-Process powershell -ArgumentList @(
                 "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-                "Set-Location '$frontendDir'; npm run dev"
+                "Set-Location '$frontendDir'; `$env:PORT='3000'; npm run dev -- -p 3000"
             ) -WindowStyle Normal
             Write-Host "      Frontend iniciando em http://localhost:3000" -ForegroundColor Gray
             echo ""
