@@ -117,6 +117,25 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate
 echo -e "${GREEN}✅ Pilha de containers inicializada com sucesso.${NC}"
 docker compose -f docker-compose.prod.yml ps
 
+# Liberação de Portas (Estratégia 2 - OMEGA HARDENING)
+echo -e "${YELLOW}🛑 Estratégia 2: Verificando e liberando portas 80/443 na VPS...${NC}"
+sudo systemctl stop apache2 2>/dev/null || true
+sudo systemctl disable apache2 2>/dev/null || true
+
+# Identifica contêineres conflitantes nas portas 80/443
+conflicting_ids=$(docker ps -q --filter "publish=80" --filter "publish=443" || true)
+if [ -n "$conflicting_ids" ]; then
+    echo -e "${RED}⚠️  Detectados contêineres ocupando portas 80/443. Removendo conflitos...${NC}"
+    for c_id in $conflicting_ids; do
+        c_name=$(docker inspect --format '{{.Name}}' "$c_id" | tr -d '/')
+        if [[ "$c_name" != "portalcursos"* ]]; then
+            echo -e "${YELLOW}🛑 Parando e removendo contêiner conflitante: $c_name ($c_id)...${NC}"
+            docker stop "$c_id" || true
+            docker rm "$c_id" || true
+        fi
+    done
+fi
+
 # 7. Configuração do Proxy Reverso Nginx no Host
 echo -e "${YELLOW}🌐 Configurando Proxy Reverso Nginx...${NC}"
 if [ -f "$SCRIPTS_DIR/nginx.conf" ]; then
