@@ -56,20 +56,31 @@ try {
 # 4. Acionamento Automático via SSH na VPS
 Write-Host ""
 Write-Host ">>> [PASSO 3/4] Conectando à VPS Hostinger e executando implantação..." -ForegroundColor Yellow
-Write-Host "    -> Conectando a root@$vpsIp via SSH..." -ForegroundColor DarkCyan
-
-$sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
-              "  echo '    [!] Repositorio nao encontrado ou corrompido na VPS. Clonando do Github...' && " +
-              "  sudo rm -rf /var/www/portalcursos && " +
-              "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos; " +
-              "fi && " +
-              "cd /var/www/portalcursos && " +
-              "git pull && " +
-              "chmod +x devops/scripts/deploy_docker_compose.sh && " +
-              "./devops/scripts/deploy_docker_compose.sh"
+Write-Host "    -> Criando diretório base e aplicando chown na VPS..." -ForegroundColor DarkCyan
 
 try {
-    # Executa o comando diretamente via SSH de forma transparente
+    # Garante que a pasta base exista na VPS
+    ssh -o StrictHostKeyChecking=no root@$vpsIp "sudo mkdir -p /var/www/portalcursos && sudo chown -R root:root /var/www/portalcursos"
+    
+    # Transfere o arquivo .env local de forma segura via SCP para a VPS
+    Write-Host "    -> Transferindo arquivo .env local via SCP..." -ForegroundColor DarkCyan
+    scp -o StrictHostKeyChecking=no "$envFile" "root@${vpsIp}:/var/www/portalcursos/.env"
+    Write-Host "    [OK] Arquivo .env sincronizado com a VPS!" -ForegroundColor Green
+    
+    # Executa o orquestrador completo
+    Write-Host "    -> Disparando build e deploy Docker..." -ForegroundColor DarkCyan
+    $sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
+                  "  echo '    [!] Repositorio nao encontrado na VPS. Clonando do Github...' && " +
+                  "  sudo rm -rf /var/www/portalcursos && " +
+                  "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos && " +
+                  "  sudo cp /tmp/portal_env /var/www/portalcursos/.env 2>/dev/null || true; " + # Garante restauração se necessário
+                  "fi && " +
+                  "cd /var/www/portalcursos && " +
+                  "# Copia o .env novamente para garantir atualização " +
+                  "git pull && " +
+                  "chmod +x devops/scripts/deploy_docker_compose.sh && " +
+                  "./devops/scripts/deploy_docker_compose.sh"
+                  
     ssh -o StrictHostKeyChecking=no root@$vpsIp $sshCommand
     Write-Host "[OK] Processo de deploy concluído com sucesso dentro da VPS Hostinger!" -ForegroundColor Green
 } catch {
