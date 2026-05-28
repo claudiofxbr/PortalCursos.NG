@@ -135,9 +135,14 @@ fi
 echo -e "${YELLOW}🔐 Configurando segurança SSL/HTTPS automatizada...${NC}"
 sudo apt install -y certbot python3-certbot-nginx
 
-# Obter o domínio definido no .env ou usar o padrão se ausente
-DOMAIN_NAME=$(grep -v '^#' "$PROJECT_ROOT/.env" | grep 'DOMAIN_NAME' | cut -d= -f2 || echo "portalcursos.ng")
-EMAIL_ADDRESS=$(grep -v '^#' "$PROJECT_ROOT/.env" | grep 'EMAIL_ADDRESS' | cut -d= -f2 || echo "ti@portalcursos.com")
+# Obter o dominio definido no .env ou usar o padrao se ausente
+DOMAIN_NAME=$(grep 'DOMAIN_NAME' "$PROJECT_ROOT/.env" | cut -d= -f2 || true)
+DOMAIN_NAME=$(echo "$DOMAIN_NAME" | tr -d '\r ' )
+if [ -z "$DOMAIN_NAME" ]; then DOMAIN_NAME="portalcursos.ng"; fi
+
+EMAIL_ADDRESS=$(grep 'EMAIL_ADDRESS' "$PROJECT_ROOT/.env" | cut -d= -f2 || true)
+EMAIL_ADDRESS=$(echo "$EMAIL_ADDRESS" | tr -d '\r ' )
+if [ -z "$EMAIL_ADDRESS" ]; then EMAIL_ADDRESS="ti@portalcursos.com"; fi
 
 if [[ -n "$DOMAIN_NAME" && "$DOMAIN_NAME" != "localhost" ]]; then
     echo -e "${BLUE}📜 Solicitando certificado SSL para o dominio: $DOMAIN_NAME...${NC}"
