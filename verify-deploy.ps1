@@ -24,10 +24,10 @@ $hasErrors = $false
 
 # 1. TESTE ESTATICO DE SINTAXE (AST PARSER COMPILER)
 Write-Host ""
-Write-Host ">>> [TESTE 1/3] Analisando sintaxe interna do deploy-vps.ps1..." -ForegroundColor Yellow
+Write-Host ">>> [TESTE 1/3] Analisando sintaxe interna do script $(Split-Path $DeployScriptPath -Leaf)..." -ForegroundColor Yellow
 
 if (-not (Test-Path $DeployScriptPath)) {
-    Write-Host "[ERRO CRITICO] Arquivo deploy-vps.ps1 nao encontrado no diretorio atual!" -ForegroundColor Red
+    Write-Host "[ERRO CRITICO] Arquivo $(Split-Path $DeployScriptPath -Leaf) nao encontrado no diretorio atual!" -ForegroundColor Red
     $hasErrors = $true
 } else {
     try {
@@ -37,13 +37,13 @@ if (-not (Test-Path $DeployScriptPath)) {
         $ast = [System.Management.Automation.Language.Parser]::ParseFile($DeployScriptPath, [ref]$tokens, [ref]$errors)
         
         if ($errors) {
-            Write-Host "[ERRO] Falha no Parser: Foram encontrados erros de sintaxe no compilador do PowerShell!" -ForegroundColor Red
+            Write-Host "[ERRO] Falha no Parser: Foram encontrados erros de sintaxe no compilador do PowerShell para $(Split-Path $DeployScriptPath -Leaf)!" -ForegroundColor Red
             foreach ($err in $errors) {
                 Write-Host ("  - Linha " + $err.Extent.StartLineNumber + ", Coluna " + $err.Extent.StartColumnNumber + ": " + $err.Message) -ForegroundColor Red
             }
             $hasErrors = $true
         } else {
-            Write-Host "[SUCESSO] A arvore sintatica (AST) do deploy-vps.ps1 esta 100% integra!" -ForegroundColor Green
+            Write-Host "[SUCESSO] A arvore sintatica (AST) do $(Split-Path $DeployScriptPath -Leaf) esta 100% integra!" -ForegroundColor Green
             Write-Host "  [OK] Sem blocos Try/Catch ausentes." -ForegroundColor Green
             Write-Host "  [OK] Sem referencias a chaves '{}' ou tokens inesperados." -ForegroundColor Green
         }
@@ -115,7 +115,7 @@ if ($hasErrors) {
     exit 1
 } else {
     Write-Host "   STATUS DE VERIFICACAO: APROVADO                        " -ForegroundColor Green
-    Write-Host "   O script deploy-vps.ps1 esta 100% seguro para rodar!   " -ForegroundColor Green
+    Write-Host "   O script $(Split-Path $DeployScriptPath -Leaf) esta 100% seguro para rodar!   " -ForegroundColor Green
     Write-Host "===========================================================" -ForegroundColor Cyan
     exit 0
 }
