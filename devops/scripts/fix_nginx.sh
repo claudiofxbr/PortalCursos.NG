@@ -21,12 +21,16 @@ fi
 echo "🧹 Limpando conflitos..."
 sudo rm /etc/nginx/sites-enabled/default 2>/dev/null || true
 
-# 4. Validar Certificados SSL
+# 4. Validar Certificados SSL e criar placeholders se ausentes (Evita falha catastrófica do Nginx)
 echo "🔐 Verificando certificados SSL..."
 if [ ! -f "/etc/letsencrypt/live/portalcursos.ng/fullchain.pem" ]; then
-    echo "⚠️ Certificado SSL não encontrado. Reexecutando Certbot em modo de teste..."
-    # Se o certificado não existe, o Nginx vai falhar ao iniciar com a nova config.
-    # Recomendamos rodar ./devops/scripts/setup_ssl.sh
+    echo "⚠️ Certificado SSL nao encontrado! Gerando certificado autoassinado de contingencia..."
+    sudo mkdir -p /etc/letsencrypt/live/portalcursos.ng/
+    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/letsencrypt/live/portalcursos.ng/privkey.pem \
+      -out /etc/letsencrypt/live/portalcursos.ng/fullchain.pem \
+      -subj "/CN=portalcursos.ng"
+    echo "✅ Certificado autoassinado gerado com sucesso!"
 fi
 
 # 5. Aplicar Nova Configuração

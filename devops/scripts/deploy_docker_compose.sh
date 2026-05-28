@@ -139,21 +139,30 @@ sudo apt install -y certbot python3-certbot-nginx
 DOMAIN_NAME=$(grep -v '^#' "$PROJECT_ROOT/.env" | grep 'DOMAIN_NAME' | cut -d= -f2 || echo "portalcursos.ng")
 EMAIL_ADDRESS=$(grep -v '^#' "$PROJECT_ROOT/.env" | grep 'EMAIL_ADDRESS' | cut -d= -f2 || echo "ti@portalcursos.com")
 
-if [[ "$DOMAIN_NAME" != "portalcursos.ng" ]]; then
-    echo -e "${BLUE}📜 Solicitando certificado SSL para o domínio: $DOMAIN_NAME...${NC}"
-    # Substituir domínio temporário pelo domínio real no arquivo do Nginx
+if [[ -n "$DOMAIN_NAME" && "$DOMAIN_NAME" != "localhost" ]]; then
+    echo -e "${BLUE}📜 Solicitando certificado SSL para o dominio: $DOMAIN_NAME...${NC}"
+    # Garantir que o certificado autoassinado inicial exista para permitir que o Nginx inicie antes do Certbot rodar
+    if [ ! -f "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" ]; then
+        echo -e "${YELLOW}⚠️ Certificado nao encontrado. Criando placeholder temporario para inicializar o Nginx...${NC}"
+        sudo mkdir -p "/etc/letsencrypt/live/$DOMAIN_NAME/"
+        sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout "/etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem" \
+          -out "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" \
+          -subj "/CN=$DOMAIN_NAME"
+    fi
+    
+    # Substituir dominio temporario pelo dominio real no arquivo do Nginx
     sudo sed -i "s/portalcursos.ng/$DOMAIN_NAME/g" /etc/nginx/sites-available/portalcursos
     sudo sed -i "s/www.portalcursos.ng/www.$DOMAIN_NAME/g" /etc/nginx/sites-available/portalcursos
-    sudo systemctl reload nginx
+    sudo systemctl restart nginx || true
     
-    # Obter certificado com redirecionamento automático
+    # Obter certificado com redirecionamento automatico
     sudo certbot --nginx -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --agree-tos -m "$EMAIL_ADDRESS" --non-interactive --redirect || {
-        echo -e "${RED}⚠️  Não foi possível obter o SSL. O Nginx continuará servindo em HTTP.${NC}"
-        echo -e "${RED}Verifique se os registros de DNS A estão apontados para o IP desta VPS.${NC}"
+        echo -e "${RED}⚠️  Nao foi possivel obter o SSL Let's Encrypt. A aplicacao podera ser servida com o certificado de contingencia.${NC}"
+        echo -e "${RED}Verifique se os registros de DNS A estao apontados para o IP desta VPS.${NC}"
     }
 else
-    echo -e "${YELLOW}⚠️  Domínio padrão detectado. Pulando emissão do SSL.${NC}"
-    echo -e "${YELLOW}Configure o DOMAIN_NAME no .env com seu domínio real para emissão do SSL.${NC}"
+    echo -e "${YELLOW}⚠️  Dominio local ou ausente detectado. Pulando emissao do SSL Let's Encrypt.${NC}"
 fi
 
 echo -e "${GREEN}====================================================${NC}"
