@@ -50,11 +50,11 @@ echo "🔄 Reiniciando Nginx..."
 sudo systemctl restart nginx
 
 echo "📊 Verificação de Portas (Escuta):"
-sudo netstat -tulpn | grep -E '(:80|:443|:3000|:8080)'
+sudo netstat -tulpn | grep -E '(:80|:443|:3010|:8090)'
 
 echo "🌐 Teste de Resposta Local (Loopback):"
-curl -I http://localhost:3000 2>/dev/null | grep HTTP || echo "❌ Frontend (3000) Offline"
-curl -I http://localhost:8080/api/health 2>/dev/null | grep HTTP || echo "❌ Backend (8080) Offline"
+curl -I http://localhost:3010 2>/dev/null | grep HTTP || echo "❌ Frontend (3010) Offline"
+curl -I http://localhost:8090/api/health 2>/dev/null | grep HTTP || echo "❌ Backend (8090) Offline"
 
 echo "✅ Script concluído. Se o erro persistir, verifique os logs: sudo journalctl -u nginx -f"
 

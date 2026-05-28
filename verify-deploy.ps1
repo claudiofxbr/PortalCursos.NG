@@ -14,7 +14,10 @@ Write-Host "===========================================================" -Foregr
 
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Get-Location }
-$DeployScriptPath = Join-Path $ScriptDir "deploy-vps.ps1"
+$DeployScriptPath = Join-Path $ScriptDir "deploy-hostinger.ps1"
+if (-not (Test-Path $DeployScriptPath)) {
+    $DeployScriptPath = Join-Path $ScriptDir "deploy-vps.ps1"
+}
 $EnvPath = Join-Path $ScriptDir ".env"
 
 $hasErrors = $false
