@@ -58,7 +58,15 @@ Write-Host ""
 Write-Host ">>> [PASSO 3/4] Conectando à VPS Hostinger e executando implantação..." -ForegroundColor Yellow
 Write-Host "    -> Conectando a root@$vpsIp via SSH..." -ForegroundColor DarkCyan
 
-$sshCommand = "cd /var/www/portalcursos && git pull && chmod +x devops/scripts/deploy_docker_compose.sh && ./devops/scripts/deploy_docker_compose.sh"
+$sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
+              "  echo '    [!] Repositorio nao encontrado ou corrompido na VPS. Clonando do Github...' && " +
+              "  sudo rm -rf /var/www/portalcursos && " +
+              "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos; " +
+              "fi && " +
+              "cd /var/www/portalcursos && " +
+              "git pull && " +
+              "chmod +x devops/scripts/deploy_docker_compose.sh && " +
+              "./devops/scripts/deploy_docker_compose.sh"
 
 try {
     # Executa o comando diretamente via SSH de forma transparente
