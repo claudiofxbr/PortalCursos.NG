@@ -97,20 +97,22 @@ fi
 # 6. Build e Inicialização coordenada com Docker Compose
 echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Frontend)...${NC}"
 cd "$DEVOPS_DIR"
-# Remove imagens órfãs e recria a pilha
-docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
-echo -e "${YELLOW}🧹 Removendo conflitos de containers com nomes duplicados...${NC}"
+echo -e "${YELLOW}🧹 Removendo conflitos de containers antigos no daemon do Docker...${NC}"
 for container in portalcursos_postgres portalcursos_backend portalcursos_frontend; do
     if docker ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
-        echo -e "${YELLOW}⚠️  Removendo container conflitante antigo: ${container}...${NC}"
+        echo -e "${YELLOW}⚠️  Removendo container conflitante ativo/inativo: ${container}...${NC}"
         docker stop "$container" || true
         docker rm "$container" || true
     fi
 done
 
+# Limpa o estado e remove órfãos
+docker compose -f docker-compose.prod.yml down --remove-orphans || true
+
+# Reconstrói a pilha e inicializa forçando a recriação limpa (limpa cache corrompido do Docker)
 docker compose -f docker-compose.prod.yml build --no-cache
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d --force-recreate
 
 echo -e "${GREEN}✅ Pilha de containers inicializada com sucesso.${NC}"
 docker compose -f docker-compose.prod.yml ps
