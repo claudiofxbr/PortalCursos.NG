@@ -55,6 +55,9 @@ public class AuthController {
     private final StaffMemberRepository staffMemberRepository;
     private final LoginAttemptService loginAttemptService;
 
+    @org.springframework.beans.factory.annotation.Value("${portalcursos.jwt.refresh-expiration:604800000}")
+    private Long refreshExpirationMs;
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
@@ -95,7 +98,7 @@ public class AuthController {
             UserSession session = UserSession.builder()
                     .user(user)
                     .refreshToken(refreshTokenStr)
-                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
+                    .expiryDate(Instant.now().plusMillis(refreshExpirationMs))
                     .userAgent(request.getHeader("User-Agent") != null ? request.getHeader("User-Agent") : "Unknown")
                     .ipAddress(ipAddress)
                     .build();

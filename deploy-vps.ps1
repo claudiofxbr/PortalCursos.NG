@@ -60,6 +60,10 @@ function Write-Log {
         [string]$Level = "INFO",
         [string]$Color = "White"
     )
+    # Substituir mensagem vazia por valor padrão
+    if ([string]::IsNullOrWhiteSpace($Message)) {
+        $Message = "Sem mensagem"
+    }
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logLine = "[" + $timestamp + "] [" + $Level + "] " + $Message
     Add-Content -Path $global:LogFile -Value $logLine -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -347,72 +351,130 @@ function Invoke-SupremeDeploy {
             throw "A VPS nao atende aos pre-requisitos logicos para deploy."
         }
 
-        # 3. Sincronizacao GitHub
-        if (-not $SkipGitPush) {
-            Write-Log "" "INFO" "White"
-            Write-Log "Step 1: Sincronizando Alteracoes com o GitHub..." "INFO" "Yellow"
-            Write-Progress -Activity "Deploy Supremo" -Status "Subindo atualizacoes para o GitHub..." -PercentComplete 40
-            
-            $pushScript = Join-Path $ScriptDir "push-to-github.ps1"
-            if (Test-Path $pushScript) {
-                Write-Log "Disparando push-to-github automatico..." "INFO" "Cyan"
-                & powershell -ExecutionPolicy Bypass -File $pushScript
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Falha ao sincronizar o repositorio Git local com o GitHub remoto."
-                }
-            } else {
-                Write-Log "[!] push-to-github.ps1 nao localizado. Executando git push direto..." "WARN" "Yellow"
-                & git add .
-                & git commit -m "OMEGA-SUPREME V3.7: Atualizacao Estabilizada" 2>&1 | Out-Null
-                & git push origin main
-            }
-        } else {
-            Write-Log "Step 1: Sincronizacao do GitHub pulada (-SkipGitPush ativo)." "INFO" "Yellow"
-        }
-
-        $gitRemote = (git remote get-url origin 2>$null)
-        if (-not $gitRemote) {
-            throw "Repositorio remoto Git origin nao configurado no seu repositorio local."
-        }
-        $gitRemote = $gitRemote.Trim()
-
-        # 4. Clone ou Pull na VPS
+        # 3. Empacotamento Local & Transferência Resiliente (Failsafe Zip Deploy)
         Write-Log "" "INFO" "White"
-        Write-Log "Step 2: Sincronizando fontes na VPS..." "INFO" "Yellow"
-        Write-Progress -Activity "Deploy Supremo" -Status "Atualizando fontes Git na VPS..." -PercentComplete 60
-
-        $sshCloneCmd = 'sudo mkdir -p ' + $global:vpsPath + ' && ' +
-                       'sudo chown -R ' + $global:VpsUser + ' ' + $global:vpsPath + ' && ' +
-                       'if [ -d ' + "'" + $global:vpsPath + '/.git' + "'" + ' ]; then ' +
-                           'cd ' + $global:vpsPath + ' && git fetch --all && git reset --hard origin/main && git pull origin main; ' +
-                       'elif [ -d ' + "'" + $global:vpsPath + "'" + ' ] && [ $(ls -A ' + $global:vpsPath + ' 2>/dev/null | wc -l) -gt 0 ]; then ' +
-                           'cd ' + $global:vpsPath + ' && git init && git remote add origin ' + $gitRemote + ' 2>/dev/null || git remote set-url origin ' + $gitRemote + ' && git fetch --all && git reset --hard origin/main && git branch --set-upstream-to=origin/main main 2>/dev/null || true && git pull origin main; ' +
-                       'else ' +
-                           'git clone ' + $gitRemote + ' ' + $global:vpsPath + '; ' +
-                       'fi'
+        Write-Log "Passo 1: Preparando Pacote de Produção no Windows..." "INFO" "Yellow"
+        Write-Progress -Activity "Deploy Supremo" -Status "Compactando fontes locais..." -PercentComplete 40
         
-        Write-Log "Conectando a VPS e puxando os arquivos Git..." "INFO" "Cyan"
-        $cloneRes = Invoke-SshCommand -Command $sshCloneCmd
-        if ($cloneRes.ExitCode -ne 0) {
-            throw ("Erro critico ao puxar fontes Git na VPS: " + $cloneRes.Output)
+        $zipPath = Join-Path $ScriptDir "app-deploy.zip"
+        if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+        
+        # Cria a pasta temporária para empacotar o código de produção limpo
+        $tempBuildDir = Join-Path $env:TEMP "PortalCursosBuildTemp"
+        if (Test-Path $tempBuildDir) { Remove-Item $tempBuildDir -Recurse -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType Directory -Path $tempBuildDir | Out-Null
+        
+        # Copia apenas as pastas e arquivos de interesse
+        $foldersToCopy = @("backend", "frontend", "devops", "database")
+        foreach ($folder in $foldersToCopy) {
+            $src = Join-Path $ScriptDir $folder
+            $dst = Join-Path $tempBuildDir $folder
+            if (Test-Path $src) {
+                Write-Log "Copiando $folder para estrutura de build temporaria..." "INFO" "Cyan"
+                Copy-Item -Path $src -Destination $dst -Recurse -Force
+            }
         }
-        Write-Log "Repositorio de codigo atualizado na VPS com sucesso." "INFO" "Green"
-
-        # 5. Copia do arquivo .env via SCP
-        Write-Log "" "INFO" "White"
-        Write-Log "Step 3: Enviando variaveis de ambiente (.env) via SCP..." "INFO" "Yellow"
-        Write-Progress -Activity "Deploy Supremo" -Status "Copiando .env via SCP..." -PercentComplete 75
-
+        # Garantir a remoção explícita de arquivos de cache e node_modules pesados
+        $pathsToRemove = @(
+            "frontend\node_modules",
+            "frontend\.next",
+            "frontend\out",
+            "backend\target",
+            "backend\node_modules"
+        )
+        foreach ($p in $pathsToRemove) {
+            $targetPath = Join-Path $tempBuildDir $p
+            if (Test-Path $targetPath) {
+                Write-Log "Expurgando pasta residual pesada no build temporario (nativa): $p" "INFO" "Cyan"
+                # Usar cmd para apagar de forma ultra-confiável e contornar problemas de caminhos longos do Windows
+                cmd.exe /c "rmdir /s /q `"$targetPath`"" 2>&1 | Out-Null
+                # Garantir como fallback
+                if (Test-Path $targetPath) {
+                    Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        
+        # Cria o arquivo .env de Produção dinamicamente com o IP correto da VPS!
+        Write-Log "Gerando variáveis de ambiente .env exclusivas para a VPS..." "INFO" "Cyan"
+        $tempEnvFile = Join-Path $tempBuildDir ".env"
+        $envLines = @(
+            "SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/portalcursos_db",
+            "SPRING_DATASOURCE_USERNAME=portal_admin",
+            "SPRING_DATASOURCE_PASSWORD=portal_password",
+            "NEXT_PUBLIC_API_URL=http://$($global:VpsIp):8090",
+            "PORT=8080",
+            "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
+            "APP_JWT_EXPIRATION=900000"
+        )
+        # Unir as linhas com caractere de quebra nativo do Linux (\n) e gravar sem BOM
+        $envContentText = [string]::Join([char]10, $envLines) + [char]10
+        [System.IO.File]::WriteAllText($tempEnvFile, $envContentText)
+        
+        # Copia o .env de produção também para a pasta devops
+        $tempDevopsEnvFile = Join-Path $tempBuildDir "devops\.env"
+        [System.IO.File]::WriteAllText($tempDevopsEnvFile, $envContentText)
+        
+        # Copia outros arquivos raiz necessários
+        $filesToCopy = @(".gitignore", "README.md")
+        foreach ($file in $filesToCopy) {
+            $srcFile = Join-Path $ScriptDir $file
+            if (Test-Path $srcFile) {
+                Copy-Item -Path $srcFile -Destination $tempBuildDir -Force
+            }
+        }
+        
+        # Compacta a pasta temporária gerando o zip de deploy (incluindo arquivos ocultos/ponto)
+        Write-Log "Compactando os arquivos locais no arquivo ZIP de deploy..." "INFO" "Cyan"
+        [System.Reflection.Assembly]::LoadWithPartialName("System.IO.Compression.FileSystem") | Out-Null
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($tempBuildDir, $zipPath)
+        
+        # Transferir arquivo compactado via SCP
+        Write-Log "Enviando arquivo compactado para a VPS via SCP (IP: $($global:VpsIp))..." "INFO" "Yellow"
+        Write-Progress -Activity "Deploy Supremo" -Status "Enviando ZIP para a VPS..." -PercentComplete 65
+        
+        $remoteZipPath = "/tmp/app-deploy.zip"
+        $scpResult = Invoke-ScpTransfer -LocalFilePath $zipPath -RemoteDestinationPath $remoteZipPath
+        if ($scpResult -ne 0) {
+            throw "Erro critico ao transferir o arquivo ZIP de deploy para a VPS via SCP."
+        }
+        
+        Write-Log "Extraindo fontes compactadas na VPS..." "INFO" "Yellow"
+        Write-Progress -Activity "Deploy Supremo" -Status "Extraindo arquivos na VPS..." -PercentComplete 80
+        
+        # Garante a existência do diretório, instala unzip, limpa as pastas de código antigas para evitar arquivos órfãos e extrai
+        $sshExtractCmd = "sudo apt-get update -y && sudo apt-get install -y unzip && " +
+                         "sudo rm -rf " + $global:vpsPath + " && sudo mkdir -p " + $global:vpsPath + " && " +
+                         "sudo chown -R " + $global:VpsUser + " " + $global:vpsPath + " && " +
+                         "unzip -o " + $remoteZipPath + " -d " + $global:vpsPath + " && " +
+                         "rm -f " + $remoteZipPath + " && " +
+                         "echo 'ZIP_EXTRACT_SUCCESS'"
+                         
+        $extractRes = Invoke-SshCommand -Command $sshExtractCmd
+        $sshCheckCmd = "if [ -f " + $global:vpsPath + "/devops/scripts/deploy_docker_compose.sh ]; then echo 'ZIP_EXTRACT_SUCCESS'; else echo 'ZIP_EXTRACT_FAILED'; fi"
+        $checkRes = Invoke-SshCommand -Command $sshCheckCmd
+        $checkOutput = $checkRes.Output | Out-String
+        if ($checkOutput -notmatch "ZIP_EXTRACT_SUCCESS") {
+            throw ("Erro ao validar a extração de arquivos na VPS. O script de deploy não foi localizado após o unzip: " + $checkRes.Output)
+        }
+        
+        # Redundância SCP Dedicada para Garantia Absoluta do arquivo .env
+        Write-Log "Enviando arquivos .env de produção por SCP dedicado para redundância absoluta..." "INFO" "Cyan"
         $destEnv = $global:vpsPath + "/.env"
         $destDevopsEnv = $global:vpsPath + "/devops/.env"
-
-        $scp1 = Invoke-ScpTransfer -LocalFilePath $localEnv -RemoteDestinationPath $destEnv
-        $scp2 = Invoke-ScpTransfer -LocalFilePath $localEnv -RemoteDestinationPath $destDevopsEnv
-
-        if ($scp1 -ne 0 -or $scp2 -ne 0) {
-            throw "Erro critico ao transferir arquivos .env via SCP."
+        $scpEnv1 = Invoke-ScpTransfer -LocalFilePath $tempEnvFile -RemoteDestinationPath $destEnv
+        $scpEnv2 = Invoke-ScpTransfer -LocalFilePath $tempEnvFile -RemoteDestinationPath $destDevopsEnv
+        if ($scpEnv1 -ne 0 -or $scpEnv2 -ne 0) {
+            Write-Log "[WARN] SCP de redundância retornou código não-zero, continuando com os arquivos do pacote principal." "WARN" "Yellow"
+        } else {
+            Write-Log "Redundância do .env injetada diretamente na VPS com sucesso." "INFO" "Green"
         }
-        Write-Log "Arquivo .env local transferido com seguranca para a VPS." "INFO" "Green"
+        
+        # Remove arquivos temporários locais
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item $tempBuildDir -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Log "Código-fonte local limpo extraído na VPS com absoluto sucesso (zero dependências Git)." "INFO" "Green"
 
         # 6. Docker Compose e SSL na VPS
         Write-Log "" "INFO" "White"

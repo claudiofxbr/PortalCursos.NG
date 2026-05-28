@@ -30,6 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_repair_status ON repair_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_repair_active ON repair_tickets(active);
 
 -- Performance em Estudantes
+ALTER TABLE students ADD COLUMN IF NOT EXISTS registration_number VARCHAR(255);
+ALTER TABLE postgrad_students ADD COLUMN IF NOT EXISTS registration_number VARCHAR(255);
 CREATE INDEX IF NOT EXISTS idx_student_registration ON students(registration_number);
 CREATE INDEX IF NOT EXISTS idx_postgrad_registration ON postgrad_students(registration_number);
 

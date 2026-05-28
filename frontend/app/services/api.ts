@@ -14,15 +14,26 @@ const getBaseUrl = () => {
         if (host === 'localhost' || host === '127.0.0.1') {
             return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/';
         }
+        
+        // Em produção, se acessado por IP puro (ex: 69.62.87.38), deve usar HTTP na porta 8090
+        // Se acessado por domínio (ex: portalcursos.ng), usa o protocolo atual do navegador (http/https) na porta do backend (8090)
+        // Se a porta correspondente for diferente ou estiver por trás de um proxy reverso sem portas explícitas,
+        // ajustamos dinamicamente. Para garantir compatibilidade total, usamos a porta 8090 padrão.
+        const protocol = window.location.protocol; // http: ou https:
+        // O Nginx (Proxy Reverso) no servidor lida com a rota /api transparentemente sob o mesmo domínio/IP.
+        // Forçar a porta 8090 causa erros de protocolo SSL/handshake em produção.
+        return `${protocol}//${host}/api/`;
     }
-    // Prioridade para Hostinger, fallback para Render
-    return process.env.NEXT_PUBLIC_API_URL || 'https://portalcursos-backend.onrender.com/api/';
+    
+    // Fallback de build ou SSR (aponta para o proxy reverso do Nginx na porta padrão)
+    return process.env.NEXT_PUBLIC_API_URL || 'http://69.62.87.38/api/';
 };
 
 export const API_BASE_URL = getBaseUrl();
 export const BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
-const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
+const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 // Estado Global OMEGA V30.2
 if (typeof window !== 'undefined') {

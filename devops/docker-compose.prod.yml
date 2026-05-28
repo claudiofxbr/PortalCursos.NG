@@ -47,10 +47,12 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://69.62.87.38:8090}
     container_name: portalcursos_frontend
     restart: always
     environment:
-      NEXT_PUBLIC_API_URL: http://69.62.87.38:8090
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://69.62.87.38:8090}
       NEXT_PUBLIC_ENV: production
       PORT: 3000
     ports:

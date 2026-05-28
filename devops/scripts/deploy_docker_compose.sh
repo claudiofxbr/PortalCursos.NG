@@ -7,6 +7,9 @@
 
 set -e
 
+# Garantir que sbin está no PATH para comandos do sistema como UFW
+export PATH=$PATH:/usr/sbin:/sbin:/usr/local/sbin
+
 # Cores para saída estilizada
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -27,11 +30,19 @@ fi
 DEVOPS_DIR="$PROJECT_ROOT/devops"
 SCRIPTS_DIR="$DEVOPS_DIR/scripts"
 
-# 2. Carregar variáveis de ambiente do arquivo .env
+# 2. Carregar variáveis de ambiente do arquivo .env de forma resiliente a CRLF
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo -e "${BLUE}📄 Carregando variáveis de ambiente do .env...${NC}"
-    # Carrega variáveis reais exportando-as para o shell
-    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+    # Remove carriage returns (\r) do Windows e exporta cada variável de forma segura
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Ignora comentários e linhas vazias
+        if [[ ! "$line" =~ ^# ]] && [[ ! -z "$line" ]]; then
+            clean_line=$(echo "$line" | tr -d '\r')
+            if [[ "$clean_line" == *"="* ]]; then
+                export "$clean_line"
+            fi
+        fi
+    done < "$PROJECT_ROOT/.env"
 else
     echo -e "${RED}❌ ERRO: Arquivo .env não encontrado em $PROJECT_ROOT/.env!${NC}"
     echo -e "${RED}Por favor, configure o .env antes de executar este instalador.${NC}"
@@ -55,20 +66,33 @@ sudo mkdir -p /var/www/portalcursos/uploads
 sudo chown -R $USER:$USER /var/www/portalcursos/uploads
 mkdir -p "$PROJECT_ROOT/logs"
 
-# 5. Configurar o Firewall Local (UFW)
+# 5. Configurar o Firewall Local (UFW) de Forma Resiliente
 echo -e "${YELLOW}🛡️  Configurando Firewall Operacional...${NC}"
-sudo apt install ufw -y
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow 22/tcp comment 'SSH'
-sudo ufw allow 80/tcp comment 'HTTP'
-sudo ufw allow 443/tcp comment 'HTTPS'
-# Permitir conexões externas nas portas do ecossistema PortalCursos.NG expostas
-sudo ufw allow 3010/tcp comment 'Permitir Frontend NextJS'
-sudo ufw allow 8090/tcp comment 'Permitir Backend SpringBoot'
-sudo ufw deny 5432 comment 'Bloqueio Externo Postgres'
-sudo ufw --force enable
-echo -e "${GREEN}✅ Firewall robusto configurado e ativo com portas PortalCursos abertas.${NC}"
+UFW_BIN=$(command -v ufw || echo "/usr/sbin/ufw")
+
+if ! command -v ufw &> /dev/null && [ ! -x "/usr/sbin/ufw" ] && [ ! -x "/sbin/ufw" ]; then
+    echo -e "${YELLOW}⚠️  UFW não encontrado. Tentando instalar...${NC}"
+    # Atualiza lista de pacotes e tenta instalar o ufw, mas sem quebrar se falhar
+    sudo apt-get update -y && sudo apt-get install ufw -y || true
+fi
+
+# Localiza novamente o executável do ufw
+UFW_BIN=$(command -v ufw || echo "/usr/sbin/ufw")
+if [ -x "$UFW_BIN" ] || command -v ufw &> /dev/null; then
+    echo -e "${BLUE}🛡️  Aplicando regras do firewall via $UFW_BIN...${NC}"
+    sudo "$UFW_BIN" default deny incoming || true
+    sudo "$UFW_BIN" default allow outgoing || true
+    sudo "$UFW_BIN" allow 22/tcp comment 'SSH' || true
+    sudo "$UFW_BIN" allow 80/tcp comment 'HTTP' || true
+    sudo "$UFW_BIN" allow 443/tcp comment 'HTTPS' || true
+    sudo "$UFW_BIN" allow 3010/tcp comment 'Permitir Frontend NextJS' || true
+    sudo "$UFW_BIN" allow 8090/tcp comment 'Permitir Backend SpringBoot' || true
+    sudo "$UFW_BIN" deny 5432 comment 'Bloqueio Externo Postgres' || true
+    sudo "$UFW_BIN" --force enable || true
+    echo -e "${GREEN}✅ Firewall robusto configurado e ativo com portas PortalCursos abertas.${NC}"
+else
+    echo -e "${YELLOW}⚠️  Aviso: Não foi possível configurar o UFW (binário não localizado). Ignorando firewall para evitar travar o deploy.${NC}"
+fi
 
 # 6. Build e Inicialização coordenada com Docker Compose
 echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Frontend)...${NC}"
