@@ -34,7 +34,7 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXPIRATION: ${APP_JWT_EXPIRATION:-900000}
     ports:
-      - "8090:8080"
+      - "127.0.0.1:8090:8080"
     volumes:
       - uploads_data:/app/uploads
     networks:
@@ -48,15 +48,15 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://69.62.87.38:8090}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://portalcursos.ng}
     container_name: portalcursos_frontend
     restart: always
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://69.62.87.38:8090}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://portalcursos.ng}
       NEXT_PUBLIC_ENV: production
       PORT: 3000
     ports:
-      - "3010:3000"
+      - "127.0.0.1:3010:3000"
     networks:
       - portal_net
     depends_on:

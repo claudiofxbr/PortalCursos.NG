@@ -85,8 +85,8 @@ if [ -x "$UFW_BIN" ] || command -v ufw &> /dev/null; then
     sudo "$UFW_BIN" allow 22/tcp comment 'SSH' || true
     sudo "$UFW_BIN" allow 80/tcp comment 'HTTP' || true
     sudo "$UFW_BIN" allow 443/tcp comment 'HTTPS' || true
-    sudo "$UFW_BIN" allow 3010/tcp comment 'Permitir Frontend NextJS' || true
-    sudo "$UFW_BIN" allow 8090/tcp comment 'Permitir Backend SpringBoot' || true
+    sudo "$UFW_BIN" deny 3010 comment 'Bloqueio Externo Frontend' || true
+    sudo "$UFW_BIN" deny 8090 comment 'Bloqueio Externo Backend' || true
     sudo "$UFW_BIN" deny 5432 comment 'Bloqueio Externo Postgres' || true
     sudo "$UFW_BIN" --force enable || true
     echo -e "${GREEN}✅ Firewall robusto configurado e ativo com portas PortalCursos abertas.${NC}"
