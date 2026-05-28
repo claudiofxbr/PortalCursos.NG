@@ -72,11 +72,9 @@ try {
     $sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
                   "  echo '    [!] Repositorio nao encontrado na VPS. Clonando do Github...' && " +
                   "  sudo rm -rf /var/www/portalcursos && " +
-                  "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos && " +
-                  "  sudo cp /tmp/portal_env /var/www/portalcursos/.env 2>/dev/null || true; " + # Garante restauração se necessário
+                  "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos; " +
                   "fi && " +
                   "cd /var/www/portalcursos && " +
-                  "# Copia o .env novamente para garantir atualização " +
                   "git pull && " +
                   "chmod +x devops/scripts/deploy_docker_compose.sh && " +
                   "./devops/scripts/deploy_docker_compose.sh"
