@@ -116,6 +116,7 @@ public class PostgradStudentService {
         return studentRepository.save(student);
     }
 
+    @Transactional
     public void delete(Long id) {
         studentRepository.findById(id).ifPresent(student -> studentRepository.delete(student));
     }
