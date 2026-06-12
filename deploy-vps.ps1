@@ -395,17 +395,35 @@ function Invoke-SupremeDeploy {
             }
         }
         
-        # Cria o arquivo .env de Produção dinamicamente com o IP correto da VPS!
-        Write-Log "Gerando variáveis de ambiente .env exclusivas para a VPS..." "INFO" "Cyan"
+        # Lê DOMAIN_NAME e EMAIL_ADDRESS do .env local para preservar as chaves corretas do usuário
+        $domainName = "xavierbr-vps.tech"
+        $emailAddress = "claudiofxbr@gmail.com"
+        if (Test-Path $localEnv) {
+            $localEnvContent = Get-Content $localEnv
+            foreach ($line in $localEnvContent) {
+                if ($line -match "^DOMAIN_NAME=(.+)") {
+                    $domainName = $Matches[1].Trim()
+                }
+                if ($line -match "^EMAIL_ADDRESS=(.+)") {
+                    $emailAddress = $Matches[1].Trim()
+                }
+            }
+        }
+
+        # Cria o arquivo .env de Produção dinamicamente com o IP e Domínio corretos da VPS!
+        Write-Log "Gerando variáveis de ambiente .env exclusivas para a VPS (Dominio: $domainName)..." "INFO" "Cyan"
         $tempEnvFile = Join-Path $tempBuildDir ".env"
         $envLines = @(
             "SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/portalcursos_db",
             "SPRING_DATASOURCE_USERNAME=portal_admin",
             "SPRING_DATASOURCE_PASSWORD=portal_password",
-            "NEXT_PUBLIC_API_URL=http://$($global:VpsIp):8090",
+            "NEXT_PUBLIC_API_URL=https://$domainName",
             "PORT=8080",
             "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
-            "APP_JWT_EXPIRATION=900000"
+            "APP_JWT_EXPIRATION=900000",
+            "DOMAIN_NAME=$domainName",
+            "EMAIL_ADDRESS=$emailAddress",
+            "CORS_ALLOWED_ORIGINS=https://$domainName,https://www.$domainName,http://localhost:3000,http://127.0.0.1:3000,http://$($global:VpsIp),https://$($global:VpsIp)"
         )
         # Unir as linhas com caractere de quebra nativo do Linux (\n) e gravar sem BOM
         $envContentText = [string]::Join([char]10, $envLines) + [char]10
