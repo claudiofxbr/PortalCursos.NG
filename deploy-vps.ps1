@@ -410,22 +410,57 @@ function Invoke-SupremeDeploy {
             }
         }
 
-        # Cria o arquivo .env de Produção dinamicamente com o IP e Domínio corretos da VPS!
-        Write-Log "Gerando variáveis de ambiente .env exclusivas para a VPS (Dominio: $domainName)..." "INFO" "Cyan"
+        # Cria o arquivo .env de Produção lendo credenciais do .env local (nunca hardcoded)
+        Write-Log "Gerando variáveis de ambiente .env para a VPS a partir do .env local (Dominio: $domainName)..." "INFO" "Cyan"
         $tempEnvFile = Join-Path $tempBuildDir ".env"
+
+        # Lê credenciais sensíveis do .env local (não devem ser hardcoded aqui)
+        $dbUrl      = "jdbc:postgresql://postgres:5432/portalcursos_db"
+        $dbUser     = "portal_admin"
+        $dbPass     = "portal_password"
+        $jwtSecret  = ""
+        $rootPass   = ""
+        $adminPass  = ""
+
+        if (Test-Path $localEnv) {
+            Get-Content $localEnv | ForEach-Object {
+                if ($_ -match "^SPRING_DATASOURCE_URL=(.+)")      { $dbUrl     = $Matches[1].Trim() }
+                if ($_ -match "^SPRING_DATASOURCE_USERNAME=(.+)") { $dbUser    = $Matches[1].Trim() }
+                if ($_ -match "^SPRING_DATASOURCE_PASSWORD=(.+)") { $dbPass    = $Matches[1].Trim() }
+                if ($_ -match "^APP_JWT_SECRET=(.+)")              { $jwtSecret = $Matches[1].Trim() }
+                if ($_ -match "^APP_ROOT_PASSWORD=(.+)")           { $rootPass  = $Matches[1].Trim() }
+                if ($_ -match "^APP_ADMIN_PASSWORD=(.+)")          { $adminPass = $Matches[1].Trim() }
+            }
+        }
+
+        # No modo Docker Compose local, o banco é o container postgres interno
+        # Sobrescreve a URL para apontar para o container (ignora URL do Neon no .env local)
+        $dbUrlDocker = "jdbc:postgresql://postgres:5432/portalcursos_db"
+
+        if (-not $jwtSecret) {
+            Write-Log "[AVISO] APP_JWT_SECRET não encontrado no .env local. Usando chave gerada aleatoriamente." "WARN" "Yellow"
+            # Gera 64 bytes aleatórios em base64 como fallback seguro
+            $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+            $bytes = New-Object byte[] 64
+            $rng.GetBytes($bytes)
+            $jwtSecret = [Convert]::ToBase64String($bytes)
+        }
+
         $envLines = @(
-            "SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/portalcursos_db",
-            "SPRING_DATASOURCE_USERNAME=portal_admin",
-            "SPRING_DATASOURCE_PASSWORD=portal_password",
+            "SPRING_DATASOURCE_URL=$dbUrlDocker",
+            "SPRING_DATASOURCE_USERNAME=$dbUser",
+            "SPRING_DATASOURCE_PASSWORD=$dbPass",
             "NEXT_PUBLIC_API_URL=https://$domainName",
             "PORT=8080",
-            "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
+            "APP_JWT_SECRET=$jwtSecret",
             "APP_JWT_EXPIRATION=900000",
+            "APP_ROOT_PASSWORD=$rootPass",
+            "APP_ADMIN_PASSWORD=$adminPass",
             "DOMAIN_NAME=$domainName",
             "EMAIL_ADDRESS=$emailAddress",
-            "CORS_ALLOWED_ORIGINS=https://$domainName,https://www.$domainName,http://localhost:3000,http://127.0.0.1:3000,http://$($global:VpsIp),https://$($global:VpsIp)"
+            "CORS_ALLOWED_ORIGINS=https://$domainName,https://www.$domainName,http://localhost:3000,http://127.0.0.1:3000"
         )
-        # Unir as linhas com caractere de quebra nativo do Linux (\n) e gravar sem BOM
+        # Gravar com quebras de linha Linux (\n) e sem BOM
         $envContentText = [string]::Join([char]10, $envLines) + [char]10
         [System.IO.File]::WriteAllText($tempEnvFile, $envContentText)
         

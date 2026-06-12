@@ -162,43 +162,54 @@ else
     echo -e "${RED}⚠️  Aviso: nginx.conf não encontrado em $SCRIPTS_DIR/nginx.conf. Nginx não configurado.${NC}"
 fi
 
-# 8. Instalar SSL Criptografado Automatizado (Let's Encrypt / Certbot)
+# 8. Instalar e configurar SSL (Let's Encrypt / Certbot)
 echo -e "${YELLOW}🔐 Configurando segurança SSL/HTTPS automatizada...${NC}"
-sudo apt install -y certbot python3-certbot-nginx
 
-# Obter o dominio definido no .env ou usar o padrao se ausente
-DOMAIN_NAME=$(grep 'DOMAIN_NAME' "$PROJECT_ROOT/.env" | cut -d= -f2 || true)
-DOMAIN_NAME=$(echo "$DOMAIN_NAME" | tr -d '\r ' )
-if [ -z "$DOMAIN_NAME" ]; then DOMAIN_NAME="portalcursos.ng"; fi
+# Lê domínio e e-mail do .env (já carregado acima)
+DOMAIN_NAME=$(echo "${DOMAIN_NAME:-}" | tr -d '\r ')
+EMAIL_ADDRESS=$(echo "${EMAIL_ADDRESS:-}" | tr -d '\r ')
+if [ -z "$DOMAIN_NAME" ]; then DOMAIN_NAME="xavierbr-vps.tech"; fi
+if [ -z "$EMAIL_ADDRESS" ]; then EMAIL_ADDRESS="claudiofxbr@gmail.com"; fi
 
-EMAIL_ADDRESS=$(grep 'EMAIL_ADDRESS' "$PROJECT_ROOT/.env" | cut -d= -f2 || true)
-EMAIL_ADDRESS=$(echo "$EMAIL_ADDRESS" | tr -d '\r ' )
-if [ -z "$EMAIL_ADDRESS" ]; then EMAIL_ADDRESS="ti@portalcursos.com"; fi
-
-if [[ -n "$DOMAIN_NAME" && "$DOMAIN_NAME" != "localhost" ]]; then
-    echo -e "${BLUE}📜 Solicitando certificado SSL para o dominio: $DOMAIN_NAME...${NC}"
-    # Garantir que o certificado autoassinado inicial exista para permitir que o Nginx inicie antes do Certbot rodar
-    if [ ! -f "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" ]; then
-        echo -e "${YELLOW}⚠️ Certificado nao encontrado. Criando placeholder temporario para inicializar o Nginx...${NC}"
-        sudo mkdir -p "/etc/letsencrypt/live/$DOMAIN_NAME/"
-        sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-          -keyout "/etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem" \
-          -out "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" \
-          -subj "/CN=$DOMAIN_NAME"
-    fi
-    
-    # Substituir dominio temporario pelo dominio real no arquivo do Nginx
-    sudo sed -i "s/portalcursos.ng/$DOMAIN_NAME/g" /etc/nginx/sites-available/portalcursos
-    sudo sed -i "s/www.portalcursos.ng/www.$DOMAIN_NAME/g" /etc/nginx/sites-available/portalcursos
-    sudo systemctl restart nginx || true
-    
-    # Obter certificado com redirecionamento automatico
-    sudo certbot --nginx -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" --agree-tos -m "$EMAIL_ADDRESS" --non-interactive --redirect || {
-        echo -e "${RED}⚠️  Nao foi possivel obter o SSL Let's Encrypt. A aplicacao podera ser servida com o certificado de contingencia.${NC}"
-        echo -e "${RED}Verifique se os registros de DNS A estao apontados para o IP desta VPS.${NC}"
-    }
+if [[ "$DOMAIN_NAME" == "localhost" || "$DOMAIN_NAME" == "127.0.0.1" ]]; then
+    echo -e "${YELLOW}⚠️  Domínio local detectado. Pulando SSL Let's Encrypt.${NC}"
 else
-    echo -e "${YELLOW}⚠️  Dominio local ou ausente detectado. Pulando emissao do SSL Let's Encrypt.${NC}"
+    echo -e "${BLUE}📜 Domínio alvo: $DOMAIN_NAME${NC}"
+    sudo apt-get install -y certbot python3-certbot-nginx -qq
+
+    # Criar certificado autoassinado temporário para que o Nginx inicie
+    # (necessário pois o nginx.conf já referencia os caminhos de cert)
+    if [ ! -f "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" ]; then
+        echo -e "${YELLOW}⚠️  Certificado não encontrado. Criando autoassinado temporário...${NC}"
+        sudo mkdir -p "/etc/letsencrypt/live/$DOMAIN_NAME/"
+        sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+            -keyout "/etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem" \
+            -out  "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" \
+            -subj "/CN=$DOMAIN_NAME" 2>/dev/null
+        echo -e "${GREEN}✅ Certificado temporário criado. O Nginx pode iniciar.${NC}"
+    fi
+
+    # Garantir que o nginx.conf usa o domínio correto
+    sudo sed -i "s|server_name .*;|server_name $DOMAIN_NAME www.$DOMAIN_NAME;|g" \
+        /etc/nginx/sites-available/portalcursos 2>/dev/null || true
+    sudo sed -i "s|/etc/letsencrypt/live/[^/]*/|/etc/letsencrypt/live/$DOMAIN_NAME/|g" \
+        /etc/nginx/sites-available/portalcursos 2>/dev/null || true
+
+    sudo systemctl reload nginx 2>/dev/null || sudo systemctl restart nginx || true
+
+    # Emitir certificado real Let's Encrypt
+    echo -e "${BLUE}📜 Solicitando certificado Let's Encrypt...${NC}"
+    sudo certbot --nginx \
+        -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" \
+        --agree-tos -m "$EMAIL_ADDRESS" \
+        --non-interactive --redirect 2>&1 || {
+        echo -e "${YELLOW}⚠️  SSL Let's Encrypt não obtido. Causas comuns:${NC}"
+        echo -e "${YELLOW}    1. DNS A de '$DOMAIN_NAME' não aponta para este IP.${NC}"
+        echo -e "${YELLOW}    2. Porta 80 bloqueada ou ocupada.${NC}"
+        echo -e "${YELLOW}    3. Rate limit do Let's Encrypt (5 emissões/semana).${NC}"
+        echo -e "${YELLOW}    A aplicação continuará rodando com certificado temporário.${NC}"
+        echo -e "${YELLOW}    Use: ./manage-vps.ps1 → opção 3 para instalar SSL depois.${NC}"
+    }
 fi
 
 echo -e "${GREEN}====================================================${NC}"
