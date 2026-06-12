@@ -24,7 +24,7 @@ public class JwtUtils {
     private int jwtExpirationMs;
 
     @Value("${portalcursos.jwt.refresh-expiration}")
-    private int jwtRefreshExpirationMs;
+    private long jwtRefreshExpirationMs;
 
     public String generateTokenFromUsername(String username) {
         return Jwts.builder()

@@ -41,10 +41,11 @@ if [ ! -d "$BACKEND_DIR/uploads" ]; then
     mkdir -p "$BACKEND_DIR/uploads"
 fi
 
-# Garantir que o .env exista (aviso apenas)
+# Garantir que o .env exista (obrigatório)
 if [ ! -f "$PROJECT_ROOT/.env" ]; then
-    echo -e "${RED}⚠️  AVISO: Arquivo .env não encontrado na raiz!${NC}"
-    echo -e "${RED}Certifique-se de criá-lo com as credenciais do banco.${NC}"
+    echo -e "${RED}❌ ERRO CRÍTICO: Arquivo .env não encontrado na raiz!${NC}"
+    echo -e "${RED}Crie o arquivo .env com as credenciais antes de fazer deploy.${NC}"
+    exit 1
 fi
 
 echo -e "${GREEN}✅ Estrutura de diretórios validada.${NC}"
@@ -70,6 +71,15 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
         fi
     done < "$PROJECT_ROOT/.env"
 fi
+
+# Verificar variáveis críticas
+for VAR in SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD APP_JWT_SECRET; do
+    if [ -z "${!VAR}" ]; then
+        echo -e "${RED}❌ ERRO CRÍTICO: Variável $VAR não definida no .env. Deploy abortado.${NC}"
+        exit 1
+    fi
+done
+echo -e "${GREEN}✅ Variáveis de ambiente validadas.${NC}"
 
 # 2. Build do Backend (Java/Spring Boot)
 echo -e "${YELLOW}🏗️  Construindo Backend...${NC}"

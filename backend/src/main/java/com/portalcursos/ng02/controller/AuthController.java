@@ -60,7 +60,8 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
+        // X-Real-IP é injetado pelo Nginx (confiável). X-Forwarded-For pode ser forjado por clientes.
+        String ipAddress = request.getHeader("X-Real-IP");
         if (ipAddress == null || ipAddress.isEmpty()) {
             ipAddress = request.getRemoteAddr();
         }

@@ -84,12 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsColdStart(false);
         };
 
-        window.addEventListener('ULTRA_BOOTING', handleUltraBooting);
+        window.addEventListener('OMEGA_BOOTING', handleUltraBooting);
         window.addEventListener('HEALTH_SUCCESS', handleHealthSuccess);
 
         return () => {
             clearTimeout(safetyTimer);
-            window.removeEventListener('ULTRA_BOOTING', handleUltraBooting);
+            window.removeEventListener('OMEGA_BOOTING', handleUltraBooting);
             window.removeEventListener('HEALTH_SUCCESS', handleHealthSuccess);
         };
     }, []);
