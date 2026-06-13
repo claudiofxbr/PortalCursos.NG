@@ -27,7 +27,7 @@ const cspDirectives = isDev
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `font-src 'self' https://fonts.gstatic.com`,
       `img-src 'self' data: blob: https:`,
-      `connect-src 'self' https://ep-small-shadow-acm4l09l-pooler.sa-east-1.aws.neon.tech`,
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || ''}`.trimEnd(),
       `worker-src 'self' blob:`,
       `frame-ancestors 'none'`,
       `upgrade-insecure-requests`,

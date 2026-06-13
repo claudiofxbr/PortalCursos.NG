@@ -26,7 +26,7 @@ const getBaseUrl = () => {
     }
     
     // Fallback de build ou SSR (aponta para o proxy reverso do Nginx na porta padrão)
-    return process.env.NEXT_PUBLIC_API_URL || 'http://69.62.87.38/api/';
+    return process.env.NEXT_PUBLIC_API_URL || '/api/';
 };
 
 export const API_BASE_URL = getBaseUrl();

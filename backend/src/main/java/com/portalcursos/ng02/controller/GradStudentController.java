@@ -18,7 +18,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/grad-students")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class GradStudentController {
 

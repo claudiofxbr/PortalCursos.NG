@@ -29,15 +29,29 @@ public class DataLoader implements CommandLineRunner {
     @Autowired
     PasswordEncoder encoder;
 
-    @org.springframework.beans.factory.annotation.Value("${APP_ROOT_PASSWORD:admin123}")
+    @org.springframework.beans.factory.annotation.Value("${APP_ROOT_PASSWORD:}")
     private String rootPass;
 
-    @org.springframework.beans.factory.annotation.Value("${APP_ADMIN_PASSWORD:admin123}")
+    @org.springframework.beans.factory.annotation.Value("${APP_ADMIN_PASSWORD:}")
     private String adminPass;
+
+    private static final int MIN_PASSWORD_LENGTH = 12;
 
     @Override
     public void run(String... args) throws Exception {
         System.out.println("[DataLoader] Iniciando inicialização de dados base no Neon...");
+
+        // Rejeitar senhas padrão inseguras — impede boot com credenciais vazias ou fracas
+        if (rootPass == null || rootPass.isBlank() || rootPass.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalStateException(
+                "[DataLoader] SEGURANÇA: APP_ROOT_PASSWORD não definida ou muito curta (mín. " + MIN_PASSWORD_LENGTH + " chars). " +
+                "Defina a variável de ambiente APP_ROOT_PASSWORD antes de iniciar.");
+        }
+        if (adminPass == null || adminPass.isBlank() || adminPass.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalStateException(
+                "[DataLoader] SEGURANÇA: APP_ADMIN_PASSWORD não definida ou muito curta (mín. " + MIN_PASSWORD_LENGTH + " chars). " +
+                "Defina a variável de ambiente APP_ADMIN_PASSWORD antes de iniciar.");
+        }
 
         // 1. Inicializar Roles se não existirem
         System.out.println("[DataLoader] Sincronizando perfis com o enum ERole...");

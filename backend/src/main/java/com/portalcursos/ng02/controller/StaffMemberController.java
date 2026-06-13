@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import com.portalcursos.ng02.dto.MessageResponse;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/staff")
 public class StaffMemberController {

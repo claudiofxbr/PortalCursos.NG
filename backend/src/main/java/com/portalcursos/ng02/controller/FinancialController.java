@@ -15,7 +15,6 @@ import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/finance")
 public class FinancialController {
