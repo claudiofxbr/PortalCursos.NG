@@ -1,4 +1,4 @@
-name: CI/CD PortalCursos.NG - OMEGA DEPLOY
+name: CI/CD PortalCursos.NG
 
 on:
   push:
@@ -6,36 +6,33 @@ on:
 
 jobs:
   deploy:
-    name: Production Deploy (Hostinger)
+    name: Deploy → VPS Hostinger
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Execute Remote Deploy via SSH
-      uses: appleboy/ssh-action@v1.2.0
-      with:
-        host: ${{ secrets.HOSTINGER_IP }}
-        username: ${{ secrets.HOSTINGER_USER }}
-        key: ${{ secrets.HOSTINGER_SSH_KEY }}
-        port: 22
-        script: |
-          echo "🚀 Conectado à VPS: ${{ secrets.HOSTINGER_IP }}"
-          
-          # Navegar para o diretório de produção
-          cd /var/www/portalcursos || { echo "❌ Diretório /var/www/portalcursos não encontrado"; exit 1; }
-          
-          # Sincronizar código com o GitHub
-          echo "📥 Atualizando código..."
-          git fetch origin main
-          git reset --hard origin/main
-          
-          # Garantir permissões de execução
-          echo "🔐 Garantindo permissões nos scripts..."
-          chmod +x devops/scripts/*.sh
-          
-          # Executar o deploy automatizado (Backend + Frontend + PM2)
-          echo "🏗️ Iniciando Ciclo de Deploy OMEGA..."
-          ./devops/scripts/deploy_omega.sh
-          
-          echo "✅ PortalCursos.NG atualizado com sucesso!"
+      - name: Validate required secrets
+        run: |
+          [ -n "${{ secrets.HOSTINGER_IP }}" ]     || { echo "❌ Secret HOSTINGER_IP não configurado"; exit 1; }
+          [ -n "${{ secrets.HOSTINGER_USER }}" ]   || { echo "❌ Secret HOSTINGER_USER não configurado"; exit 1; }
+          [ -n "${{ secrets.HOSTINGER_SSH_KEY }}" ] || { echo "❌ Secret HOSTINGER_SSH_KEY não configurado"; exit 1; }
+          echo "✅ Secrets validados"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOSTINGER_IP }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 22
+          command_timeout: 20m
+          script: |
+            set -e
+            echo "🚀 Deploy iniciado em: $(date)"
+            echo "📍 Servidor: $(hostname)"
+
+            cd /var/www/portalcursos || { echo "❌ Diretório não encontrado"; exit 1; }
+
+            chmod +x devops/scripts/deploy_ci.sh
+            bash devops/scripts/deploy_ci.sh
