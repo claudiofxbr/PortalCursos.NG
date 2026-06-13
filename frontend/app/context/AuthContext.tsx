@@ -120,7 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(false);
             
             // Redirecionamento atômico para tela de login (Evita 401 em rotas privadas)
-            window.location.href = '/auth/signin';
+            const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+            window.location.href = `${basePath}/auth/signin`;
         }
     };
 

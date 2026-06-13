@@ -18,7 +18,7 @@ export default function VersionPage() {
         if (confirm("Deseja realizar uma limpeza profunda? Isso limpará todo o cache do seu navegador para este site.")) {
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = "/auth/signin?reset=true";
+            window.location.href = (process.env.NEXT_PUBLIC_BASE_PATH || '') + "/auth/signin?reset=true";
         }
     };
 
@@ -61,7 +61,7 @@ export default function VersionPage() {
                 </div>
 
                 <button 
-                    onClick={() => window.location.href = "/auth/signin"}
+                    onClick={() => window.location.href = (process.env.NEXT_PUBLIC_BASE_PATH || '') + "/auth/signin"}
                     style={{
                         backgroundColor: '#c5a059',
                         color: '#0d123d',

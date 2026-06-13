@@ -63,8 +63,14 @@ const securityHeaders = [
   },
 ];
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
+
+  // Subpath deployment: /portalcursos.ng em produção, vazio em dev
+  basePath: BASE_PATH,
+  assetPrefix: BASE_PATH || undefined,
 
   // Cabeçalhos de segurança aplicados a todas as rotas
   async headers() {

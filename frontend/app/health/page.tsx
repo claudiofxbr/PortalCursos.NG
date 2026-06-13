@@ -86,7 +86,7 @@ export default function HealthPage() {
             }
 
             console.info("[SIGMA-V18.1] Purga Concluída. Reiniciando...");
-            window.location.replace('/');
+            window.location.replace((process.env.NEXT_PUBLIC_BASE_PATH || '') + '/');
         }
     };
 

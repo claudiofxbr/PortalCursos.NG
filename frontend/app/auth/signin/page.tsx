@@ -58,7 +58,8 @@ export default function SignInPage() {
     localStorage.clear();
     sessionStorage.clear();
     // Usa o motor de purga oficial (sem alert/reload que travam o navegador)
-    var target = window.location.origin + '/auth/signin?purge=' + Date.now();
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    var target = window.location.origin + basePath + '/auth/signin?purge=' + Date.now();
     window.location.replace(target);
   };
 

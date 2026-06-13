@@ -84,7 +84,7 @@ export default function RepairsPage() {
             O módulo <b>Campus Care</b> é uma prerrogativa prioritária apenas para funcionários e corpo docente autorizado.
           </p>
           <button 
-            onClick={() => window.location.href = '/'} 
+            onClick={() => window.location.href = (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/'}
             className="btn-primary" 
             style={{ marginTop: '2rem', padding: '12px 24px', backgroundColor: '#1a237e' }}
           >
