@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PortalCursos.NG - Documentação Técnica Oficial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #0f172a;
+            --accent: #10b981;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #334155;
+            --text-dark: #0f172a;
+            --border: #e2e8f0;
+            --code-bg: #f1f5f9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text);
+            background-color: var(--bg);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 60px 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+        }
+
+        .header-tag {
+            background-color: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+            margin-bottom: 16px;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 8px;
+            color: white;
+        }
+
+        .header-meta {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            margin-top: 16px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header-meta span strong {
+            color: #cbd5e1;
+        }
+
+        /* Sumário / TOC */
+        .toc-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .toc-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 640px) {
+            .toc-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toc-list a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .toc-list a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        /* Seções Gerais */
+        section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        h4 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text);
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-bottom: 16px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        strong {
+            color: var(--text-dark);
+        }
+
+        /* Callouts / Alertas */
+        .callout {
+            border-left: 4px solid var(--primary);
+            background-color: #eff6ff;
+            padding: 16px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+        }
+
+        .callout-title {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 4px;
+        }
+
+        .callout.warning {
+            border-left-color: #eab308;
+            background-color: #fef9c3;
+        }
+
+        .callout.warning .callout-title {
+            color: #854d0e;
+        }
+
+        .callout.success {
+            border-left-color: var(--accent);
+            background-color: #ecfdf5;
+        }
+
+        .callout.success .callout-title {
+            color: #065f46;
+        }
+
+        /* Código */
+        pre {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            background-color: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #0f172a;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: inherit;
+            color: inherit;
+        }
+
+        /* Tabelas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            margin-top: 12px;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Diagrama Simulado ou Grid */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .arch-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .arch-node {
+            background-color: #f8fafc;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .arch-node-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #64748b;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        /* Configuração de Impressão de PDF */
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+                font-size: 12pt;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            header {
+                border-radius: 0;
+                background: white;
+                color: black;
+                border-bottom: 3px double #000;
+                padding: 20px 0;
+                box-shadow: none;
+                margin-bottom: 30px;
+            }
+
+            header::before {
+                display: none;
+            }
+
+            h1 {
+                color: black;
+                font-size: 24pt;
+            }
+
+            .header-tag {
+                border-color: black;
+                color: black;
+                background-color: transparent;
+            }
+
+            .header-meta span strong {
+                color: black;
+            }
+
+            .toc-card {
+                display: none; /* Oculta sumário no PDF impresso */
+            }
+
+            section {
+                border: none;
+                box-shadow: none;
+                padding: 20px 0;
+                margin-bottom: 0;
+                page-break-after: always; /* Cada seção começa em uma nova página */
+            }
+
+            section:last-of-type {
+                page-break-after: avoid;
+            }
+
+            h2 {
+                color: black;
+                border-bottom-color: black;
+                font-size: 18pt;
+            }
+
+            h3 {
+                font-size: 14pt;
+            }
+
+            pre {
+                background-color: #f8fafc;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+            }
+
+            table {
+                page-break-inside: avoid;
+            }
+
+            tr {
+                page-break-inside: avoid;
+            }
+
+            .arch-node {
+                border-color: #aaa;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-tag">Especificação Técnica de Produção</div>
+            <h1>PortalCursos.NG - Manual do Sistema</h1>
+            <p style="color: #94a3b8; font-size: 1.1rem; margin-bottom: 0;">Arquitetura OMEGA-SUPREME v4.0 e Protocolo de Deploy Remoto</p>
+            <div class="header-meta">
+                <span>Autor: <strong>Antigravity OMEGA</strong></span>
+                <span>Data: <strong>Maio, 2026</strong></span>
+                <span>Status: <strong>Produção Homologada</strong></span>
+                <span>Destino: <strong>VPS Hostinger</strong></span>
+            </div>
+        </header>
+
+        <!-- SUMÁRIO INTERATIVO -->
+        <div class="toc-card">
+            <div class="toc-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+                Sumário da Documentação
+            </div>
+            <ul class="toc-list">
+                <li><a href="#section-1">1. Resumo Executivo</a></li>
+                <li><a href="#section-2">2. Visão Geral do Produto</a></li>
+                <li><a href="#section-3">3. Escopo Funcional & Técnico</a></li>
+                <li><a href="#section-4">4. Arquitetura do Sistema</a></li>
+                <li><a href="#section-5">5. Governança & Codificação</a></li>
+                <li><a href="#section-6">6. Processo de Git & GitHub</a></li>
+                <li><a href="#section-7">7. Protocolo de Deploy VPS</a></li>
+                <li><a href="#section-8">8. Segurança & Monitoramento</a></li>
+                <li><a href="#section-9">9. Estratégia de Testes</a></li>
+                <li><a href="#section-10">10. Plano de Contingência</a></li>
+            </ul>
+        </div>
+
+        <!-- 1. RESUMO EXECUTIVO -->
+        <section id="section-1">
+            <h2>1. Resumo Executivo</h2>
+            <p>O <strong>PortalCursos.NG</strong> é um ecossistema educacional de ponta, desenvolvido em arquitetura isolada de alta fidelidade e robustez operacional. Unificando o poder do framework <strong>Spring Boot (Java 17)</strong> no ecossistema de retaguarda e a responsividade do <strong>Next.js (React 18/19)</strong> no portal do usuário, o sistema garante conformidade rigorosa com segurança de dados, integridade de cadastros e velocidade excepcional sob carga de tráfego.</p>
+            
+            <div class="callout success">
+                <div class="callout-title">Estabilização OMEGA-SUPREME</div>
+                A arquitetura resolve de forma definitiva o problema de acoplamento entre os tipos de matrículas estudantis através de uma unificação física no banco de dados relacional e encapsulamento em contêineres virtuais.
+            </div>
+        </section>
+
+        <!-- 2. VISÃO GERAL DO PRODUTO -->
+        <section id="section-2">
+            <h2>2. Visão Geral do Produto</h2>
+            <p>A plataforma serve como o hub administrativo e acadêmico para o gerenciamento de estudantes matriculados em cursos de Graduação e Pós-Graduação da instituição. O sistema lida com a captura de documentos, verificação de fotos de identificação, trilha de auditoria financeira de mensalidades e homologação de grades curriculares e código IES no e-MEC.</p>
+            
+            <h3>Objetivos Estratégicos</h3>
+            <ul>
+                <li><strong>Unicidade Cadastral Global</strong>: Prevenção absoluta de cadastros duplicados de e-mails ou CPF utilizando validação ativa sem filtros lógicos no banco de dados.</li>
+                <li><strong>Resiliência de Infraestrutura</strong>: Minimização a zero de indisponibilidades por meio de empacotamento Docker local e injeção redundante de ambiente de produção.</li>
+                <li><strong>Garantia de Performance</strong>: Carregamento instantâneo de páginas e respostas de API em sub-segundos, mesmo em servidores remotos compartilhados.</li>
+            </ul>
+        </section>
+
+        <!-- 3. ESCOPO FUNCIONAL & TÉCNICO -->
+        <section id="section-3">
+            <h2>3. Escopo Funcional & Técnico</h2>
+            <p>As especificações funcionais e as tecnologias centrais que formam os pilares de desenvolvimento do ecossistema são categorizadas a seguir:</p>
+            
+            <h3>Especificações Técnicas</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Camada</th>
+                        <th>Tecnologia</th>
+                        <th>Versão / Padrão</th>
+                        <th>Função Crítica</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Frontend</strong></td>
+                        <td>Next.js / TypeScript</td>
+                        <td>React 18/19</td>
+                        <td>Interface com renderização híbrida otimizada para SEO.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Backend</strong></td>
+                        <td>Spring Boot / Java</td>
+                        <td>Versão 17 / JPA</td>
+                        <td>Camada transacional, sanitização e segurança via RBAC.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Banco de Dados</strong></td>
+                        <td>PostgreSQL</td>
+                        <td>Versão 15+</td>
+                        <td>Persistência relacional robusta com pooling resiliente Hikari.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Containerização</strong></td>
+                        <td>Docker & Compose</td>
+                        <td>Versão 3.8 / V2</td>
+                        <td>Empacotamento, isolamento e portabilidade do sistema.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Servidor Host</strong></td>
+                        <td>Nginx & Certbot</td>
+                        <td>Hostinger Ubuntu</td>
+                        <td>Proxy reverso seguro com SSL auto-renovável e firewall.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 4. ARQUITETURA DO SISTEMA -->
+        <section id="section-4">
+            <h2>4. Arquitetura do Sistema</h2>
+            <p>O PortalCursos.NG opera sob o modelo <strong>OMEGA-SUPREME</strong> de isolamento de rede e volumes persistentes no host da VPS.</p>
+            
+            <div class="arch-grid">
+                <div class="arch-node">
+                    <div class="arch-node-title">Frontend Next.js</div>
+                    <p style="font-size:0.85rem; text-align:center; margin:0;">Porta Interna 3000<br>Mapeada: 127.0.0.1:3010</p>
+                </div>
+                <div class="arch-node">
+                    <div class="arch-node-title">Backend Spring Boot</div>
+                    <p style="font-size:0.85rem; text-align:center; margin:0;">Porta Interna 8080<br>Mapeada: 127.0.0.1:8090</p>
+                </div>
+                <div class="arch-node">
+                    <div class="arch-node-title">Banco PostgreSQL</div>
+                    <p style="font-size:0.85rem; text-align:center; margin:0;">Porta Interna 5432<br>Não exposta ao host</p>
+                </div>
+            </div>
+
+            <h3>Camada de Persistência de Estudantes</h3>
+            <p>O sistema adota o padrão de mapeamento de herança de banco de dados <strong>Single Table Inheritance</strong> do Hibernate/JPA. Isso agrupa estudantes de Graduação e Pós-Graduação na mesma tabela física <code>students</code>, garantindo a unicidade e indexação de campos de auditoria em uma única consulta.</p>
+            <pre><code>@Entity
+@Table(name = "students")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "student_type", discriminatorType = DiscriminatorType.STRING)
+public abstract class BaseStudent { ... }</code></pre>
+
+            <h3>Configurações do Pool de Conexões Hikari (Neon Serverless)</h3>
+            <p>Para atenuar desconexões abruptas provocadas pela ociosidade inerente de provedores de banco de dados serverless (Neon.tech), o pool Hikari foi configurado da seguinte forma:</p>
+            <pre><code>spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=3
+spring.datasource.hikari.connection-timeout=120000
+spring.datasource.hikari.keepalive-time=45000
+spring.datasource.hikari.connection-test-query=SELECT 1</code></pre>
+        </section>
+
+        <!-- 5. GOVERNANÇA & CODIFICAÇÃO -->
+        <section id="section-5">
+            <h2>5. Governança & Codificação</h2>
+            <p>Para assegurar que o PortalCursos.NG permaneça sustentável e de fácil manutenção ao longo dos anos, as seguintes regras são aplicadas de forma inflexível:</p>
+            
+            <h3>Boas Práticas de Codificação</h3>
+            <ul>
+                <li><strong>Higienização Automática</strong>: Todos os campos de identificação numérica como CPF e números de telefone passam por limpeza Regex obrigatória (<code>replaceAll("[^0-9]", "")</code>) antes de qualquer persistência no banco.</li>
+                <li><strong>Exclusão Lógica Sem Conflitos</strong>: Métodos de verificação de cadastro único como <code>existsByEmailGlobal</code> e <code>existsByCpfGlobal</code> ignoram filtros <code>@Where(clause = "active=true")</code> para evitar que um CPF inativo seja duplicado no banco.</li>
+                <li><strong>Tratamento Centralizado de Exceções</strong>: O uso de blocos try-catch vazios é expressamente proibido. Toda exceção transacional deve disparar rollback completo (<code>@Transactional(rollbackFor = Exception.class)</code>).</li>
+            </ul>
+        </section>
+
+        <!-- 6. PROCESSO DE GIT & GITHUB -->
+        <section id="section-6">
+            <h2>6. Processo de Git & GitHub</h2>
+            <p>O fluxo de desenvolvimento da equipe baseia-se em um modelo simplificado e rigoroso de ramificações (Git Flow), projetado para blindar a estabilidade da branch principal de produção.</p>
+            
+            <h3>Políticas de Branches</h3>
+            <ul>
+                <li><code>main</code>: Código puramente de produção. Protegida contra pushes diretos.</li>
+                <li><code>develop</code>: Branch estável de homologação acadêmica e testes de integração.</li>
+                <li><code>feature/nome-recurso</code>: Branches curtas criadas para o desenvolvimento de tarefas específicas.</li>
+            </ul>
+
+            <h3>Fluxo de Code Review e Pull Request</h3>
+            <ol>
+                <li>O engenheiro cria uma ramificação <code>feature/sua-feature</code> a partir da <code>develop</code>.</li>
+                <li>Após finalizar e validar localmente, abre-se um Pull Request direcionado à branch <code>develop</code>.</li>
+                <li>A branch é submetida a compilação obrigatória e análise de integridade estática.</li>
+                <li>Pelo menos <strong>uma aprovação</strong> de Engenheiro Sênior ou Tech Lead é requerida antes do merge.</li>
+            </ol>
+        </section>
+
+        <!-- 7. PROTOCOLO DE DEPLOY VPS -->
+        <section id="section-7">
+            <h2>7. Protocolo de Deploy VPS</h2>
+            <p>O deploy é orquestrado de forma totalmente automatizada por meio do painel interativo local do Windows <code>deploy-vps.ps1</code> e executado na VPS Hostinger sob o script blindado <code>deploy_docker_compose.sh</code>.</p>
+            
+            <div class="callout warning">
+                <div class="callout-title">Bloqueio Automático do Nginx</div>
+                Durante o deploy, o script desativa temporariamente outros servidores conflitantes (como Apache ou EasyPanel) que ocupam as portas HTTP/HTTPS (80/443), para garantir que o Nginx assuma a escuta do host principal de forma exclusiva.
+            </div>
+
+            <h3>Passo a Passo da Implantação</h3>
+            <ol>
+                <li><strong>Compilação e Limpeza Local</strong>: O PowerShell compacta as pastas <code>backend</code>, <code>frontend</code>, <code>devops</code> e <code>database</code> limpando dependências pesadas de desenvolvimento (<code>node_modules</code> e <code>target</code>).</li>
+                <li><strong>Injeção de Ambiente Segura</strong>: Lê o domínio final (ex: <code>xavierbr-vps.tech</code>) e injeta um <code>.env</code> com as rotas HTTPS devidamente corrigidas para o Nginx da VPS.</li>
+                <li><strong>Transferência Compacta</strong>: Envia o pacote <code>app-deploy.zip</code> via SCP para a pasta <code>/tmp</code> da VPS da Hostinger.</li>
+                <li><strong>Instalação Remota e Isolamento</strong>: Extrai os fontes limpos, encerra instâncias de containers órfãos, reconstrói as imagens locais com <code>--no-cache</code> e sobe a pilha produtiva.</li>
+                <li><strong>Geração Automática de SSL</strong>: Roda o Certbot Let's Encrypt para configurar HTTPS seguro definitivo sob o domínio configurado.</li>
+            </ol>
+        </section>
+
+        <!-- 8. SEGURANÇA & MONITORAMENTO -->
+        <section id="section-8">
+            <h2>8. Segurança & Monitoramento</h2>
+            <p>O PortalCursos.NG implementa um sistema robusto de barreiras físicas e lógicas de proteção de dados.</p>
+            
+            <h3>Mecanismos de Defesa</h3>
+            <ul>
+                <li><strong>Firewall UFW Blindado</strong>: Portas expostas no contêiner do banco ou das portas originais do Node/Java são inacessíveis externamente. Apenas as portas de controle seguro 22, 80 e 443 estão abertas na VPS Hostinger.</li>
+                <li><strong>Gatekeeper Local (7512)</strong>: Um componente global no frontend (<code>SecurityGate</code>) bloqueia renderizações caso o token de acesso <code>7512</code> esteja ausente no cache do navegador.</li>
+                <li><strong>Segurança JWT e CORS</strong>: Autenticação baseada em tokens com tempo de expiração curto (15 minutos) e expiração longa do cookie de atualização, blindando a API contra ataques Cross-Site Scripting (XSS).</li>
+            </ul>
+        </section>
+
+        <!-- 9. ESTRATÉGIA DE TESTES -->
+        <section id="section-9">
+            <h2>9. Estratégia de Testes</h2>
+            <p>Nenhuma versão é considerada pronta para homologação sem cumprir as metas mínimas de testes do pipeline de qualidade do QA Lead:</p>
+            
+            <h3>Checklist de Validação Acadêmica</h3>
+            <ul>
+                <li>[ ] <strong>Testes Unitários</strong>: Cobertura total das lógicas de validação de CPF e cálculo acadêmico no Spring Boot (<code>./mvnw test</code>).</li>
+                <li>[ ] <strong>Testes E2E</strong>: Validação automatizada do fluxo de ponta a ponta de matrículas via scripts Playwright simulando inserções de dados e uploads reais de fotos.</li>
+                <li>[ ] <strong>Teste de Carga do Nginx</strong>: Execução de testes de estresse com concorrentes simulados usando Apache Benchmark para verificar se há vazamento de memória ou travamento do Hikari Pool.</li>
+            </ul>
+        </section>
+
+        <!-- 10. PLANO DE CONTINGÊNCIA -->
+        <section id="section-10">
+            <h2>10. Plano de Contingência</h2>
+            <p>Para mitigar falhas catastróficas ou corrupção de dados da plataforma em produção:</p>
+            
+            <h3>Políticas de Rollback e Backup</h3>
+            <ul>
+                <li><strong>Backup do Banco de Dados PostgreSQL</strong>: O script automatizado <code>backup_db.sh</code> realiza dumps periódicos dos volumes do banco Docker e armazena em diretórios criptografados no host local da VPS.</li>
+                <li><strong>Rollback Instantâneo de Containers</strong>: Caso uma nova imagem apresente bugs pós-deploy, o time de infraestrutura pode retornar à versão estável anterior em segundos rodando:
+                <pre><code>docker compose -f docker-compose.prod.yml rollback</code></pre></li>
+            </ul>
+        </section>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 PortalCursos.NG. Todos os direitos reservados. Homologado por Antigravity OMEGA.</p>
+    </footer>
+</body>
+</html>
