@@ -35,5 +35,10 @@ jobs:
 
             cd /var/www/portalcursos || { echo "❌ Diretório não encontrado"; exit 1; }
 
+            # Bootstrap: sync code first so deploy_ci.sh itself is up-to-date
+            git fetch origin main --depth=1
+            git reset --hard FETCH_HEAD
+            echo "✅ Código sincronizado: $(git log --oneline -1)"
+
             chmod +x devops/scripts/deploy_ci.sh
             bash devops/scripts/deploy_ci.sh
