@@ -7,7 +7,6 @@ services:
       POSTGRES_DB: portalcursos_db
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
       POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-portal_password}
-    # Sem mapeamento de porta externa para garantir privacidade total
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -31,18 +30,46 @@ services:
       PORT: 8080
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXPIRATION: ${APP_JWT_EXPIRATION:-900000}
+      APP_JWT_REFRESH_EXPIRATION: ${APP_JWT_REFRESH_EXPIRATION:-86400000}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      APP_ROOT_PASSWORD: ${APP_ROOT_PASSWORD}
-      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD}
+      APP_ROOT_PASSWORD: ${APP_ROOT_PASSWORD:-}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_SECURE_COOKIES: ${APP_SECURE_COOKIES:-true}
+    # Porta local para healthcheck interno do fix_502.sh
     ports:
       - "127.0.0.1:8090:8080"
     volumes:
       - uploads_data:/app/uploads
     networks:
       - portal_net
+      - easypanel
     depends_on:
       postgres:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # Router HTTPS para /api
+      - "traefik.http.routers.portalcursos-api.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.portalcursos-api.entrypoints=websecure"
+      - "traefik.http.routers.portalcursos-api.tls=true"
+      - "traefik.http.routers.portalcursos-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portalcursos-api.service=portalcursos-api-svc"
+      - "traefik.http.services.portalcursos-api-svc.loadbalancer.server.port=8080"
+      # Passa cookies HttpOnly sem modificacao
+      - "traefik.http.middlewares.portalcursos-headers.headers.customResponseHeaders.Set-Cookie="
+      - "traefik.http.routers.portalcursos-api.middlewares=portalcursos-security@docker"
+      # Middleware de segurança
+      - "traefik.http.middlewares.portalcursos-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.portalcursos-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.portalcursos-security.headers.stsPreload=true"
+      - "traefik.http.middlewares.portalcursos-security.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.portalcursos-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.portalcursos-security.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.portalcursos-security.headers.referrerPolicy=strict-origin-when-cross-origin"
+      # Router HTTP para /api (redireciona para HTTPS)
+      - "traefik.http.routers.portalcursos-api-http.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.portalcursos-api-http.entrypoints=web"
+      - "traefik.http.routers.portalcursos-api-http.middlewares=redirect-to-https@docker"
 
   frontend:
     build:
@@ -58,16 +85,59 @@ services:
       NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/portalcursos.ng}
       NEXT_PUBLIC_ENV: production
       PORT: 3000
+    # Porta local para healthcheck interno do fix_502.sh
     ports:
       - "127.0.0.1:3010:3000"
     networks:
       - portal_net
+      - easypanel
     depends_on:
       - backend
+    labels:
+      - "traefik.enable=true"
+      # Router HTTPS para /portalcursos.ng
+      - "traefik.http.routers.portalcursos-fe.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/portalcursos.ng`)"
+      - "traefik.http.routers.portalcursos-fe.entrypoints=websecure"
+      - "traefik.http.routers.portalcursos-fe.tls=true"
+      - "traefik.http.routers.portalcursos-fe.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portalcursos-fe.service=portalcursos-fe-svc"
+      - "traefik.http.services.portalcursos-fe-svc.loadbalancer.server.port=3000"
+      - "traefik.http.routers.portalcursos-fe.middlewares=portalcursos-security@docker"
+      # Router HTTPS para _next/static (assets imutaveis)
+      - "traefik.http.routers.portalcursos-static.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/_next/static`)"
+      - "traefik.http.routers.portalcursos-static.entrypoints=websecure"
+      - "traefik.http.routers.portalcursos-static.tls=true"
+      - "traefik.http.routers.portalcursos-static.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portalcursos-static.service=portalcursos-fe-svc"
+      # Router HTTP para /portalcursos.ng (redireciona para HTTPS)
+      - "traefik.http.routers.portalcursos-fe-http.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/portalcursos.ng`)"
+      - "traefik.http.routers.portalcursos-fe-http.entrypoints=web"
+      - "traefik.http.routers.portalcursos-fe-http.middlewares=redirect-to-https@docker"
+      # Router para favicon.ico na raiz (evita 502 no browser)
+      - "traefik.http.routers.portalcursos-favicon.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && Path(`/favicon.ico`)"
+      - "traefik.http.routers.portalcursos-favicon.entrypoints=websecure"
+      - "traefik.http.routers.portalcursos-favicon.tls=true"
+      - "traefik.http.routers.portalcursos-favicon.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portalcursos-favicon.service=portalcursos-fe-svc"
+      # Router raiz: redireciona / para /portalcursos.ng
+      - "traefik.http.routers.portalcursos-root.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && Path(`/`)"
+      - "traefik.http.routers.portalcursos-root.entrypoints=websecure"
+      - "traefik.http.routers.portalcursos-root.tls=true"
+      - "traefik.http.routers.portalcursos-root.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portalcursos-root.middlewares=redirect-root@docker"
+      - "traefik.http.middlewares.redirect-root.redirectregex.regex=^https://([^/]+)/?$$"
+      - "traefik.http.middlewares.redirect-root.redirectregex.replacement=https://$${1}/portalcursos.ng"
+      - "traefik.http.middlewares.redirect-root.redirectregex.permanent=true"
+      # Middleware redirect HTTP->HTTPS (compartilhado)
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
 
 networks:
   portal_net:
     driver: bridge
+  # Rede do EasyPanel/Traefik - deve existir na VPS
+  easypanel:
+    external: true
 
 volumes:
   pgdata:
