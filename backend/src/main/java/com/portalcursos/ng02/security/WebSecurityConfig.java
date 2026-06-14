@@ -80,28 +80,28 @@ public class WebSecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        
-        // Suporte a múltiplas origens e wildcards
+
+        // Origens explícitas — wildcards são incompatíveis com allowCredentials=true
+        // Valores carregados de app.cors.allowed-origins (sem padrões glob)
         java.util.List<String> origins = java.util.Arrays.asList(allowedOrigins);
-        configuration.setAllowedOriginPatterns(origins);
-        
+        configuration.setAllowedOrigins(origins);
+
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.Arrays.asList(
-            "Authorization", 
-            "Cache-Control", 
-            "Content-Type", 
-            "Accept", 
-            "X-Requested-With", 
-            "Origin", 
-            "Access-Control-Request-Method", 
+            "Authorization",
+            "Cache-Control",
+            "Content-Type",
+            "Accept",
+            "X-Requested-With",
+            "Origin",
+            "Access-Control-Request-Method",
             "Access-Control-Request-Headers",
-            "x-protocol",
             "x-build-id"
         ));
-        configuration.setExposedHeaders(java.util.Arrays.asList("Authorization", "Set-Cookie"));
+        configuration.setExposedHeaders(java.util.Arrays.asList("Set-Cookie"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        
+
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

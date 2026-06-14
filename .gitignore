@@ -23,12 +23,13 @@ yarn-error.log*
 .DS_Store
 *.pid
 
-# Variáveis de Ambiente (Segurança)
+# Variáveis de Ambiente (Segurança) — nunca commitar arquivos .env com segredos reais
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+devops/.env
 
 # Java binários e builds
 backend/bin/

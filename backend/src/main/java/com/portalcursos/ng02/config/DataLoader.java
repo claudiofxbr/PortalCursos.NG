@@ -3,6 +3,8 @@ package com.portalcursos.ng02.config;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +15,8 @@ import java.util.Set;
 
 @Component
 public class DataLoader implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataLoader.class);
 
     @Autowired
     RoleRepository roleRepository;
@@ -39,7 +43,7 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("[DataLoader] Iniciando inicialização de dados base no Neon...");
+        logger.info("[DataLoader] Iniciando inicialização de dados base no Neon...");
 
         // Rejeitar senhas padrão inseguras — impede boot com credenciais vazias ou fracas
         if (rootPass == null || rootPass.isBlank() || rootPass.length() < MIN_PASSWORD_LENGTH) {
@@ -54,13 +58,13 @@ public class DataLoader implements CommandLineRunner {
         }
 
         // 1. Inicializar Roles se não existirem
-        System.out.println("[DataLoader] Sincronizando perfis com o enum ERole...");
+        logger.info("[DataLoader] Sincronizando perfis com o enum ERole...");
         for (Role.ERole erole : Role.ERole.values()) {
             roleRepository.findByName(erole).ifPresentOrElse(
-                role -> System.out.println("[DataLoader] Role OK: " + erole),
+                role -> logger.debug("[DataLoader] Role OK: {}", erole),
                 () -> {
                     roleRepository.save(Role.builder().name(erole).build());
-                    System.out.println("[DataLoader] Criada Role: " + erole);
+                    logger.info("[DataLoader] Criada Role: {}", erole);
                 }
             );
         }
@@ -69,7 +73,7 @@ public class DataLoader implements CommandLineRunner {
         // 2. Criar ou Atualizar Usuário Root Master (TI/Desenvolvedor)
         userRepository.findByUsername("rootmaster").ifPresentOrElse(
             root -> {
-                System.out.println("[DataLoader] [AUTH] Usuário ROOTMASTER localizado.");
+                logger.info("[DataLoader] [AUTH] Usuário ROOTMASTER localizado.");
                 // Evitar redefinir senha hardcoded se já existir
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER).orElseGet(() -> 
                     roleRepository.save(Role.builder().name(Role.ERole.ROLE_ROOT_MASTER).build()));
@@ -79,7 +83,7 @@ public class DataLoader implements CommandLineRunner {
                 }
             },
             () -> {
-                System.out.println("[DataLoader] [AUTH] Criando ROOTMASTER inicial...");
+                logger.info("[DataLoader] [AUTH] Criando ROOTMASTER inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER)
                         .orElseThrow(() -> new RuntimeException("Error: Role ROLE_ROOT_MASTER is not found."));
@@ -97,7 +101,7 @@ public class DataLoader implements CommandLineRunner {
         // 3. Criar ou Atualizar Usuário Admin Inicial (Diretoria)
         userRepository.findByUsername("admin").ifPresentOrElse(
             admin -> {
-                System.out.println("[DataLoader] [AUTH] Usuário ADMIN já existe. Garantindo permissões...");
+                logger.info("[DataLoader] [AUTH] Usuário ADMIN já existe. Garantindo permissões...");
                 Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN).orElseGet(() -> {
                     return roleRepository.save(Role.builder().name(Role.ERole.ROLE_ADMIN).build());
                 });
@@ -107,7 +111,7 @@ public class DataLoader implements CommandLineRunner {
                 }
             },
             () -> {
-                System.out.println("[DataLoader] [AUTH] Criando novo administrador inicial...");
+                logger.info("[DataLoader] [AUTH] Criando novo administrador inicial...");
                 Set<Role> roles = new HashSet<>();
                 Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
                         .orElseThrow(() -> new RuntimeException("Error: Role ROLE_ADMIN is not found."));
@@ -121,10 +125,10 @@ public class DataLoader implements CommandLineRunner {
                         .build();
 
                 userRepository.save(adminUser);
-                System.out.println("[DataLoader] [AUTH] Administrador 'admin' CRIADO com sucesso!");
+                logger.info("[DataLoader] [AUTH] Administrador 'admin' CRIADO com sucesso!");
             }
         );
 
-        System.out.println("[DataLoader] Inicialização concluída.");
+        logger.info("[DataLoader] Inicialização concluída.");
     }
 }

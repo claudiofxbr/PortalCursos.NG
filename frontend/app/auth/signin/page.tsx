@@ -72,12 +72,7 @@ export default function SignInPage() {
       const response = await api.post('auth/signin', { username, password });
       
       if (response.data) {
-        if (typeof window !== 'undefined' && response.data.token && response.data.refreshToken) {
-            localStorage.setItem('accessToken', response.data.token);
-            localStorage.setItem('refreshToken', response.data.refreshToken);
-        }
-
-        console.log("[AUTH SUCCESS] Login realizado com sucesso via Token.");
+        // Tokens chegam via cookie HttpOnly — não são acessíveis ao JavaScript
         loginSuccess(response.data);
         
         setSuccess(true);

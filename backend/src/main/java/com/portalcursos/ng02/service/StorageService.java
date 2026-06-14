@@ -23,13 +23,20 @@ public class StorageService {
     private String uploadDir;
 
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc");
+    private static final List<String> ALLOWED_SUBFOLDERS = Arrays.asList("fotos-perfil", "postgrad", "documents", "repairs");
 
     public String store(MultipartFile file, String subfolder) throws IOException {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
-        // 1. Validação de Extensão (Segurança OMEGA)
+        // 1. Validação de Subfolder (Segurança OMEGA — evita path traversal)
+        if (subfolder == null || !ALLOWED_SUBFOLDERS.contains(subfolder)) {
+            logger.error("[SECURITY-ALERT] Tentativa de upload em subfolder não permitido: {}", subfolder);
+            throw new IOException("Destino de upload inválido.");
+        }
+
+        // 2. Validação de Extensão (Segurança OMEGA)
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
@@ -41,11 +48,11 @@ public class StorageService {
             throw new IOException("Tipo de arquivo não permitido. Apenas PDF, Imagens e Word são aceitos.");
         }
 
-        // 2. Preparação do Caminho
+        // 3. Preparação do Caminho
         Path uploadPath = Paths.get(uploadDir, subfolder);
         Files.createDirectories(uploadPath);
 
-        // 3. Nome Único (Evita colisão e ataques de path traversal)
+        // 4. Nome Único (Evita colisão e ataques de path traversal)
         String filename = UUID.randomUUID().toString() + extension;
         Path targetLocation = uploadPath.resolve(filename);
 
@@ -55,18 +62,23 @@ public class StorageService {
         return subfolder + "/" + filename;
     }
 
-    public void delete(String filePath) {
-        if (filePath == null || filePath.isBlank()) return;
+    public boolean delete(String filePath) {
+        if (filePath == null || filePath.isBlank()) return false;
         try {
             // Proteção contra Path Traversal: Garante que o caminho não saia da pasta de uploads
             Path path = Paths.get(uploadDir, filePath).normalize();
             if (!path.startsWith(Paths.get(uploadDir).normalize())) {
-                 logger.warn("[SECURITY-WARN] Tentativa de deleção fora do diretório de uploads detectada!");
-                 return;
+                logger.warn("[SECURITY-WARN] Tentativa de deleção fora do diretório de uploads detectada!");
+                return false;
             }
-            Files.deleteIfExists(path);
+            boolean deleted = Files.deleteIfExists(path);
+            if (!deleted) {
+                logger.warn("[STORAGE-WARN] Arquivo não encontrado para deleção: {}", filePath);
+            }
+            return deleted;
         } catch (IOException e) {
             logger.error("[STORAGE-ERROR] Falha ao deletar arquivo: {}", filePath);
+            return false;
         }
     }
 }

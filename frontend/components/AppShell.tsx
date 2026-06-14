@@ -20,13 +20,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         setIsMounted(true);
 
-        // Redirecionamento de segurança OMEGA-V30.2
+        // Redireciona para login se não autenticado em rota protegida
         if (!isLoading && !isAuthenticated && !isPublicRoute) {
-            const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('accessToken');
-            if (!hasToken) {
-                console.warn("[OMEGA-V30.2] Rota protegida detectada (No Token). Redirecionando para login...");
-                router.replace('/auth/signin');
-            }
+            router.replace('/auth/signin');
         }
     }, [isAuthenticated, isPublicRoute, router, isLoading]);
 
@@ -39,10 +35,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return <div style={{ minHeight: '100vh', backgroundColor: 'var(--sidebar-bg)' }} />;
     }
 
-    const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('accessToken');
-
-    // 2. Estado de Carregamento (Apenas se estivermos esperando a Auth e tivermos um token)
-    if (isLoading && hasToken) {
+    // 2. Estado de Carregamento (enquanto checkAuth está rodando)
+    if (isLoading) {
         return (
             <div style={{
                 display: 'flex', justifyContent: 'center', alignItems: 'center',

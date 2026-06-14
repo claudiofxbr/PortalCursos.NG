@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 
+// O código de acesso é validado exclusivamente no servidor (Route Handler /api/portal-auth).
+// Nenhum segredo é enviado ao browser — o cliente nunca vê o valor correto.
 export default function SecurityGate({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const authorized = sessionStorage.getItem("portal_authorized");
@@ -14,21 +17,35 @@ export default function SecurityGate({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const accessCode = process.env.NEXT_PUBLIC_PORTAL_ACCESS_CODE;
-    if (!accessCode) {
-      console.error("[SECURITY] A variável de ambiente NEXT_PUBLIC_PORTAL_ACCESS_CODE não está configurada!");
-      setError(true);
-      return;
-    }
-    if (password === accessCode) {
-      sessionStorage.setItem("portal_authorized", "true");
-      setIsAuthorized(true);
-      setError(false);
-    } else {
+    setLoading(true);
+    setError(false);
+
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      const res = await fetch(`${basePath}/api/portal-auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: password }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) {
+          sessionStorage.setItem("portal_authorized", "true");
+          setIsAuthorized(true);
+          return;
+        }
+      }
+
       setError(true);
       setPassword("");
+    } catch {
+      setError(true);
+      setPassword("");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,24 +68,32 @@ export default function SecurityGate({ children }: { children: React.ReactNode }
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Código de Acesso</label>
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+              Código de Acesso
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite a senha global"
-              className={`w-full px-4 py-3 bg-slate-800 border ${error ? 'border-red-500' : 'border-slate-700'} rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center text-lg tracking-[0.5em]`}
+              disabled={loading}
+              className={`w-full px-4 py-3 bg-slate-800 border ${
+                error ? "border-red-500" : "border-slate-700"
+              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center text-lg tracking-[0.5em]`}
               autoFocus
             />
             {error && (
-              <p className="mt-2 text-red-400 text-xs text-center font-medium">Senha incorreta. Tente novamente.</p>
+              <p className="mt-2 text-red-400 text-xs text-center font-medium">
+                Senha incorreta. Tente novamente.
+              </p>
             )}
           </div>
           <button
             type="submit"
-            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
           >
-            Validar Acesso
+            {loading ? "Validando..." : "Validar Acesso"}
           </button>
         </form>
 

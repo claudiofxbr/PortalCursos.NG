@@ -1,60 +1,77 @@
 package com.portalcursos.ng02.service;
 
-import org.springframework.stereotype.Service;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
-import java.time.LocalDateTime;
+import com.portalcursos.ng02.model.LoginAttempt;
+import com.portalcursos.ng02.repository.LoginAttemptRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
- * Serviço de Proteção contra Força Bruta (Brute Force Protection)
- * Monitora tentativas de login por IP e bloqueia temporariamente após excesso de falhas.
- * Protocolo OMEGA-SECURITY.
+ * Proteção contra força bruta baseada em banco de dados.
+ * Persiste tentativas de login por IP — sobrevive a restarts e funciona em múltiplas instâncias.
  */
 @Service
+@RequiredArgsConstructor
 public class LoginAttemptService {
     private static final Logger logger = LoggerFactory.getLogger(LoginAttemptService.class);
-    
-    private final int MAX_ATTEMPT = 5;
-    private final int BLOCK_DURATION_MINUTES = 15;
-    
-    private Map<String, Integer> attemptsCache = new ConcurrentHashMap<>();
-    private Map<String, LocalDateTime> blockCache = new ConcurrentHashMap<>();
 
+    private static final int MAX_ATTEMPTS = 5;
+    private static final int BLOCK_MINUTES = 15;
+
+    private final LoginAttemptRepository loginAttemptRepository;
+
+    @Transactional
     public void loginSucceeded(String ip) {
-        attemptsCache.remove(ip);
-        blockCache.remove(ip);
+        if (ip == null || ip.isBlank()) return;
+        loginAttemptRepository.deleteById(ip);
+        logger.debug("[SECURITY] Login bem-sucedido — tentativas resetadas para IP: {}", ip);
     }
 
+    @Transactional
     public void loginFailed(String ip) {
-        int attempts = attemptsCache.getOrDefault(ip, 0);
-        attempts++;
-        attemptsCache.put(ip, attempts);
-        
-        logger.warn("[SECURITY-AUDIT] Falha de login detectada para o IP: {}. Tentativa: {}/{}", ip, attempts, MAX_ATTEMPT);
-        
-        if (attempts >= MAX_ATTEMPT) {
-            LocalDateTime unblockTime = LocalDateTime.now().plusMinutes(BLOCK_DURATION_MINUTES);
-            blockCache.put(ip, unblockTime);
-            logger.error("[SECURITY-ALERT] IP BLOQUEADO por força bruta: {}. Desbloqueio em: {}", ip, unblockTime);
+        if (ip == null || ip.isBlank()) return;
+        LoginAttempt record = loginAttemptRepository.findById(ip)
+                .orElse(LoginAttempt.builder()
+                        .ipAddress(ip)
+                        .attempts(0)
+                        .lastAttempt(Instant.now())
+                        .build());
+
+        record.setAttempts(record.getAttempts() + 1);
+        record.setLastAttempt(Instant.now());
+
+        logger.warn("[SECURITY] Falha de login para IP: {}. Tentativa: {}/{}", ip, record.getAttempts(), MAX_ATTEMPTS);
+
+        if (record.getAttempts() >= MAX_ATTEMPTS) {
+            Instant unblockAt = Instant.now().plus(BLOCK_MINUTES, ChronoUnit.MINUTES);
+            record.setBlockedUntil(unblockAt);
+            logger.error("[SECURITY] IP BLOQUEADO por força bruta: {}. Desbloqueio em: {}", ip, unblockAt);
         }
+
+        loginAttemptRepository.save(record);
     }
 
+    @Transactional
     public boolean isBlocked(String ip) {
-        if (blockCache.containsKey(ip)) {
-            if (blockCache.get(ip).isBefore(LocalDateTime.now())) {
-                blockCache.remove(ip);
-                attemptsCache.remove(ip);
-                logger.info("[SECURITY-INFO] IP desbloqueado automaticamente (tempo expirado): {}", ip);
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-    
-    public int getRemainingAttempts(String ip) {
-        return MAX_ATTEMPT - attemptsCache.getOrDefault(ip, 0);
+        if (ip == null || ip.isBlank()) return false;
+        return loginAttemptRepository.findById(ip)
+                .map(record -> {
+                    if (record.getBlockedUntil() == null) return false;
+
+                    if (record.getBlockedUntil().isBefore(Instant.now())) {
+                        // Bloqueio expirou — limpa o registro
+                        loginAttemptRepository.delete(record);
+                        logger.info("[SECURITY] IP desbloqueado automaticamente: {}", ip);
+                        return false;
+                    }
+
+                    return true;
+                })
+                .orElse(false);
     }
 }

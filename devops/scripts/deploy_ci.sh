@@ -22,9 +22,9 @@ fail() { echo "[$(date '+%H:%M:%S')] ❌ $*" >&2; exit 1; }
 log "=== FASE 1: Validações ==="
 [ -f "$ENV_FILE" ] || fail ".env não encontrado em $ENV_FILE"
 
-for VAR in APP_JWT_SECRET APP_ROOT_PASSWORD APP_ADMIN_PASSWORD SPRING_DATASOURCE_URL CORS_ALLOWED_ORIGINS; do
+for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL CORS_ALLOWED_ORIGINS; do
     val=$(grep "^${VAR}=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r')
-    [ -n "$val" ] || fail "Variável crítica $VAR não definida no .env"
+    [ -n "$val" ] || fail "Variavel critica $VAR nao definida no .env"
 done
 ok "Variáveis de ambiente validadas"
 

@@ -3,6 +3,7 @@ package com.portalcursos.ng02.security;
 import com.portalcursos.ng02.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class AuthTokenFilter extends OncePerRequestFilter {
     @Autowired
@@ -24,6 +26,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+
+    @org.springframework.beans.factory.annotation.Value("${portalcursos.jwt.access-cookie-name:accessToken}")
+    private String accessCookieName;
 
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
 
@@ -51,8 +56,14 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                     String email = claims.get("email", String.class);
                     @SuppressWarnings("unchecked")
                     java.util.List<String> roles = (java.util.List<String>) claims.get("roles");
-                    
-                    java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = 
+
+                    if (roles == null) {
+                        logger.warn("[FILTER WARN] Claims 'roles' ausente no token para: {}", username);
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
+                    java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities =
                             roles.stream()
                                  .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
                                  .collect(java.util.stream.Collectors.toList());
@@ -79,8 +90,18 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     }
 
     private String parseJwt(HttpServletRequest request) {
-        String headerAuth = request.getHeader("Authorization");
+        // 1. Cookie HttpOnly tem prioridade (mais seguro — inacessível ao JavaScript)
+        if (request.getCookies() != null) {
+            return Arrays.stream(request.getCookies())
+                    .filter(c -> accessCookieName.equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .filter(StringUtils::hasText)
+                    .findFirst()
+                    .orElse(null);
+        }
 
+        // 2. Fallback: header Authorization Bearer (para compatibilidade com clientes nativos/API)
+        String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);
         }

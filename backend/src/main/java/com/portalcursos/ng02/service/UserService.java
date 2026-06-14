@@ -7,6 +7,8 @@ import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -101,10 +104,10 @@ public class UserService {
                 staff.setActive(true);
                 
                 staffMemberRepository.saveAndFlush(staff);
-                System.out.println("[V50.0] Ativação Institucional concluída para: " + savedUser.getUsername());
+                logger.info("[V50.0] Ativação Institucional concluída para: {}", savedUser.getUsername());
             }
         } catch (Exception e) {
-            System.err.println("[V50.0-ERROR] Falha na sincronização: " + e.getMessage());
+            logger.error("[V50.0-ERROR] Falha na sincronização: {}", e.getMessage());
             throw new RuntimeException("Falha Crítica de Governança: Não foi possível ativar o perfil institucional. Operação cancelada. " + e.getMessage());
         }
 
@@ -125,7 +128,7 @@ public class UserService {
         }
 
         userRepository.deleteById(id);
-        System.out.println("[V50.0] Usuário deletado por autoridade superior: " + target.getUsername());
+        logger.info("[V50.0] Usuário deletado por autoridade superior: {}", target.getUsername());
     }
 
     @Transactional
@@ -178,7 +181,7 @@ public class UserService {
                 staffMemberRepository.saveAndFlush(staff);
             }
         } catch (Exception e) {
-            System.err.println("[V50.0-WARN] Falha na sincronização parcial: " + e.getMessage());
+            logger.warn("[V50.0-WARN] Falha na sincronização parcial: {}", e.getMessage());
         }
     }
 

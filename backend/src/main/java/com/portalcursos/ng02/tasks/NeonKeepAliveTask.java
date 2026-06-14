@@ -1,11 +1,15 @@
 package com.portalcursos.ng02.tasks;
 
+import com.portalcursos.ng02.repository.LoginAttemptRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Protocolo V21.1-ULTRA: Neon Keep-Alive Heartbeat
@@ -20,15 +24,29 @@ public class NeonKeepAliveTask {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // Executa a cada 5 minutos (300.000 ms)
+    @Autowired
+    private LoginAttemptRepository loginAttemptRepository;
+
+    /** Heartbeat a cada 5 minutos para manter o Neon serverless ativo. */
     @Scheduled(fixedRate = 300000)
     public void keepNeonAwake() {
         try {
-            logger.info("[V21.1-ULTRA] Emitindo Heartbeat para Banco Neon...");
             jdbcTemplate.execute("SELECT 1");
-            logger.info("[V21.1-ULTRA] Banco Neon Ativo e Responsivo.");
+            logger.info("[KEEPALIVE] Banco Neon ativo.");
         } catch (Exception e) {
-            logger.error("[V21.1-ULTRA] Falha ao emitir Heartbeat: {}", e.getMessage());
+            logger.error("[KEEPALIVE] Falha no heartbeat: {}", e.getMessage());
+        }
+    }
+
+    /** Limpeza diária de registros de tentativas de login expirados há mais de 24h. */
+    @Scheduled(fixedRate = 86400000)
+    public void cleanExpiredLoginAttempts() {
+        try {
+            Instant cutoff = Instant.now().minus(24, ChronoUnit.HOURS);
+            loginAttemptRepository.deleteExpiredBefore(cutoff);
+            logger.info("[KEEPALIVE] Registros de login_attempts expirados removidos.");
+        } catch (Exception e) {
+            logger.error("[KEEPALIVE] Falha na limpeza de login_attempts: {}", e.getMessage());
         }
     }
 }

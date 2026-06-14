@@ -23,15 +23,10 @@ export default function AuthModal() {
                 password: password
             });
 
-            if (response.data.token) {
-                if (typeof window !== 'undefined' && response.data.refreshToken) {
-                    localStorage.setItem('accessToken', response.data.token);
-                    localStorage.setItem('refreshToken', response.data.refreshToken);
-                }
-                console.log("[AUTH MODAL] Re-login bem sucedido!");
-                loginSuccess(response.data);
-                setPassword('');
-            }
+            // Tokens chegam via cookie HttpOnly — não são acessíveis ao JavaScript.
+            // O backend seta Set-Cookie na resposta; withCredentials no api.ts envia automaticamente.
+            loginSuccess(response.data);
+            setPassword('');
         } catch (err: any) {
             console.error("[AUTH MODAL] Erro no re-login:", err);
             setError("Senha incorreta ou erro no servidor.");

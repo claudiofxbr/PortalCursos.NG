@@ -40,15 +40,14 @@ export default function ConnectivityGuard({ children }: { children: React.ReactN
 
     if (!isMounted) return null;
 
-    // Se o sistema estiver saudável e NÃO estiver no boot inicial, renderiza o app normalmente
-    const isBooting = status?.isBooting || (!status && typeof window !== 'undefined' && (window as any).PC_OMEGA_STATUS?.isBooting);
+    // Mostra overlay APENAS quando há retries ativos (cold start confirmado)
+    const isBooting = status?.isBooting === true;
 
-    // Libera o app se: backend respondeu com sucesso OU timeout de segurança ativado
-    if (timedOut || (!isBooting && status?.isHealthy)) {
+    // Libera se: saudável, timeout, ou ainda sem status (primeira carga — deixa AuthContext decidir)
+    if (timedOut || !isBooting) {
         return <>{children}</>;
     }
 
-    // Se estiver em boot ou sem status inicial (primeira carga)
     return (
         <div style={OVERLAY_STYLE}>
             <div style={CONTENT_BOX_STYLE}>
