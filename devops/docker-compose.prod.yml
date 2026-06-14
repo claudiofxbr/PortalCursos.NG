@@ -24,9 +24,9 @@ services:
     container_name: portalcursos_backend
     restart: always
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portalcursos_db
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-portal_password}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       PORT: 8080
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXPIRATION: ${APP_JWT_EXPIRATION:-900000}
@@ -43,9 +43,6 @@ services:
     networks:
       - portal_net
       - easypanel
-    depends_on:
-      postgres:
-        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Router HTTPS para /api
