@@ -7,6 +7,7 @@ interface User {
     username: string;
     email: string;
     roles: string[];
+    fullName?: string;
     position?: string;
     fotoUrl?: string;
 }
