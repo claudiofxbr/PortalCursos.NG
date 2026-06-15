@@ -7,7 +7,7 @@ RUN mvn dependency:go-offline -q
 
 # Build do código
 COPY src ./src
-RUN mvn clean package -DskipTests -o
+RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 RUN apk add --no-cache wget
