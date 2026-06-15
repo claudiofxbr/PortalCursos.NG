@@ -1,17 +1,9 @@
 import { useState } from 'react';
 import api from '@/app/services/api';
-import { useAuth } from '@/app/context/AuthContext';
 import { toast } from 'sonner';
 
 export const useAuditCRUD = (endpoint: string) => {
-    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
-
-    const getAuditData = () => ({
-        creatorName: user?.username || 'Sistema',
-        creatorPosition: user?.roles?.[0] || 'Operador',
-        creatorPhotoUrl: user?.fotoUrl || null
-    });
 
     const list = async (params = {}, subPath = "") => {
         setLoading(true);
@@ -29,8 +21,7 @@ export const useAuditCRUD = (endpoint: string) => {
     const create = async (data: any, subPath = "") => {
         setLoading(true);
         try {
-            const auditPayload = { ...data, ...getAuditData() };
-            const res = await api.post(`${endpoint}${subPath}`, auditPayload);
+            const res = await api.post(`${endpoint}${subPath}`, data);
             toast.success('Registro criado com sucesso!');
             return res.data;
         } catch (error: any) {
@@ -44,8 +35,7 @@ export const useAuditCRUD = (endpoint: string) => {
     const update = async (id: number | string, data: any, subPath = "") => {
         setLoading(true);
         try {
-            const auditPayload = { ...data, ...getAuditData() };
-            const res = await api.put(`${endpoint}${subPath}/${id}`, auditPayload);
+            const res = await api.put(`${endpoint}${subPath}/${id}`, data);
             toast.success('Registro atualizado com sucesso!');
             return res.data;
         } catch (error: any) {

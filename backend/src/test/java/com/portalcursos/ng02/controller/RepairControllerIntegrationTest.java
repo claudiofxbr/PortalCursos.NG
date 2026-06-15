@@ -29,7 +29,9 @@ import java.util.Collections;
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.flyway.enabled=false",
     "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
-    "APP_JWT_EXPIRATION=900000"
+    "APP_JWT_EXPIRATION=900000",
+    "APP_ROOT_PASSWORD=TestRootPass123!",
+    "APP_ADMIN_PASSWORD=TestAdminPass123!"
 })
 @AutoConfigureMockMvc
 public class RepairControllerIntegrationTest {

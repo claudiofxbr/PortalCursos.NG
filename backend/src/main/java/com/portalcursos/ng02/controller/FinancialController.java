@@ -3,39 +3,29 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
-import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
+import com.portalcursos.ng02.service.AuditService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/finance")
+@RequiredArgsConstructor
 public class FinancialController {
 
-    @Autowired
-    PaymentRepository paymentRepository;
-
-    @Autowired
-    StaffMemberRepository staffMemberRepository;
-
-    @Autowired
-    com.portalcursos.ng02.repository.UserRepository userRepository;
-
-    @Autowired
-    StudentRepository studentRepository;
-
-    @Autowired
-    PostgradStudentRepository postgradStudentRepository;
+    private final PaymentRepository paymentRepository;
+    private final StudentRepository studentRepository;
+    private final PostgradStudentRepository postgradStudentRepository;
+    private final AuditService auditService;
 
     @GetMapping("/invoices/{level}")
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getInvoicesByLevel(@PathVariable String level) {
         EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
         List<Payment> invoices = paymentRepository.findByAcademicLevelAndStatusIn(
@@ -46,7 +36,7 @@ public class FinancialController {
     }
 
     @GetMapping("/history/{level}")
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getHistoryByLevel(@PathVariable String level) {
         EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
         List<Payment> history = paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
@@ -54,37 +44,36 @@ public class FinancialController {
     }
 
     @PostMapping("/charge")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> createManualCharge(@RequestBody ManualChargeRequest request) {
-        Payment.PaymentBuilder<?, ?> paymentBuilder = Payment.builder()
+        Payment payment = Payment.builder()
                 .amount(request.getAmount())
                 .dueDate(request.getDueDate())
                 .status(EPaymentStatus.PENDING)
                 .category(request.getCategory())
                 .secretaryProcessType(request.getSecretaryProcessType())
                 .academicLevel(request.getAcademicLevel())
-                .description(request.getDescription());
-
-        injectAuditStamps(paymentBuilder);
+                .description(request.getDescription())
+                .build();
 
         if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
             Student student = studentRepository.findById(request.getStudentId())
                     .orElseThrow(() -> new RuntimeException("Estudante de graduação não encontrado"));
-            paymentBuilder.student(student);
-            paymentBuilder.studentPhotoUrl(student.getFotoMatricula());
+            payment.setStudent(student);
+            payment.setStudentPhotoUrl(student.getFotoMatricula());
         } else {
             PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
                     .orElseThrow(() -> new RuntimeException("Estudante de pós-graduação não encontrado"));
-            paymentBuilder.postgradStudent(postgradStudent);
-            paymentBuilder.studentPhotoUrl(postgradStudent.getFotoMatricula());
+            payment.setPostgradStudent(postgradStudent);
+            payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
         }
 
-        Payment saved = paymentRepository.save(paymentBuilder.build());
-        return ResponseEntity.ok(saved);
+        auditService.injectCreator(payment);
+        return ResponseEntity.ok(paymentRepository.save(payment));
     }
 
     @PutMapping("/invoices/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
@@ -95,35 +84,18 @@ public class FinancialController {
         payment.setSecretaryProcessType(request.getSecretaryProcessType());
         payment.setDescription(request.getDescription());
 
-        injectAuditStamps(payment);
-
+        auditService.injectCreator(payment);
         return ResponseEntity.ok(paymentRepository.save(payment));
     }
 
     @DeleteMapping("/invoices/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
 
-        injectAuditStamps(payment);
-        paymentRepository.save(payment);
         paymentRepository.delete(payment);
         return ResponseEntity.ok(new MessageResponse("Cobrança removida com sucesso"));
-    }
-
-    private void injectAuditStamps(Object p) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
-            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                if (p instanceof Payment.PaymentBuilder) {
-                    ((Payment.PaymentBuilder<?, ?>) p).creator(staff);
-                } else if (p instanceof BaseAuditEntity) {
-                    ((BaseAuditEntity) p).setCreator(staff);
-                }
-            });
-        }
     }
 
     public static class ManualChargeRequest {
@@ -152,7 +124,7 @@ public class FinancialController {
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getStudentPayments(@PathVariable Long studentId) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
@@ -179,19 +151,19 @@ public class FinancialController {
     }
 
     @GetMapping("/invoices")
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getInvoices() {
         return ResponseEntity.ok(paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)));
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getHistory() {
         return ResponseEntity.ok(paymentRepository.findByStatus(EPaymentStatus.PAID));
     }
 
     @PostMapping("/generate-pix/{paymentId}")
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generatePix(@PathVariable @NonNull Long paymentId) {
         Payment p = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Fatura não encontrada para gerar PIX"));
@@ -203,7 +175,7 @@ public class FinancialController {
     }
 
     @PostMapping("/generate-boleto/{paymentId}")
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generateBoleto(@PathVariable @NonNull Long paymentId) {
         Payment p = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Fatura não encontrada para gerar boleto"));

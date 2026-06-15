@@ -35,6 +35,12 @@ services:
       APP_ROOT_PASSWORD: ${APP_ROOT_PASSWORD:-}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
       APP_SECURE_COOKIES: ${APP_SECURE_COOKIES:-true}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     # Porta local para healthcheck interno do fix_502.sh
     ports:
       - "127.0.0.1:8090:8080"
@@ -52,8 +58,6 @@ services:
       - "traefik.http.routers.portalcursos-api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.portalcursos-api.service=portalcursos-api-svc"
       - "traefik.http.services.portalcursos-api-svc.loadbalancer.server.port=8080"
-      # Passa cookies HttpOnly sem modificacao
-      - "traefik.http.middlewares.portalcursos-headers.headers.customResponseHeaders.Set-Cookie="
       - "traefik.http.routers.portalcursos-api.middlewares=portalcursos-security@docker"
       # Middleware de segurança
       - "traefik.http.middlewares.portalcursos-security.headers.stsSeconds=31536000"
@@ -82,6 +86,12 @@ services:
       NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/portalcursos.ng}
       NEXT_PUBLIC_ENV: production
       PORT: 3000
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/portalcursos.ng || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     # Porta local para healthcheck interno do fix_502.sh
     ports:
       - "127.0.0.1:3010:3000"
@@ -89,7 +99,8 @@ services:
       - portal_net
       - easypanel
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Router HTTPS para /portalcursos.ng
@@ -122,8 +133,8 @@ services:
       - "traefik.http.routers.portalcursos-root.tls=true"
       - "traefik.http.routers.portalcursos-root.tls.certresolver=letsencrypt"
       - "traefik.http.routers.portalcursos-root.middlewares=redirect-root@docker"
-      - "traefik.http.middlewares.redirect-root.redirectregex.regex=^https://([^/]+)/?$$"
-      - "traefik.http.middlewares.redirect-root.redirectregex.replacement=https://$${1}/portalcursos.ng"
+      - "traefik.http.middlewares.redirect-root.redirectregex.regex=^https://([^/]+)/?$"
+      - "traefik.http.middlewares.redirect-root.redirectregex.replacement=https://$$1/portalcursos.ng"
       - "traefik.http.middlewares.redirect-root.redirectregex.permanent=true"
       # Middleware redirect HTTP->HTTPS (compartilhado)
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"

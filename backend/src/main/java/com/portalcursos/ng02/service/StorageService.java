@@ -23,7 +23,19 @@ public class StorageService {
     private String uploadDir;
 
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc");
-    private static final List<String> ALLOWED_SUBFOLDERS = Arrays.asList("fotos-perfil", "postgrad", "documents", "repairs");
+    private static final List<String> ALLOWED_SUBFOLDERS = Arrays.asList(
+        "fotos-perfil",
+        "grad-students/rg", "grad-students/comprovante_residencia", "grad-students/certificado_em",
+        "grad-students/historico_em", "grad-students/enem_sisu", "grad-students/diploma_ant",
+        "grad-students/historico_ies_ant", "grad-students/laudo_medico", "grad-students/rnm_rne",
+        "grad-students/titulo_eleitor", "grad-students/certificado_reservista",
+        "grad-students/certidao_nascimento", "grad-students/autodeclaracao_racial",
+        "postgrad/fotos-perfil", "postgrad/diplomas", "postgrad/documentos",
+        "postgrad/residencia", "postgrad/historicos",
+        "repairs-main", "repairs-gallery",
+        "staff-photos",
+        "documents", "repairs"
+    );
 
     public String store(MultipartFile file, String subfolder) throws IOException {
         if (file == null || file.isEmpty()) {

@@ -92,15 +92,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     private String parseJwt(HttpServletRequest request) {
         // 1. Cookie HttpOnly tem prioridade (mais seguro — inacessível ao JavaScript)
         if (request.getCookies() != null) {
-            return Arrays.stream(request.getCookies())
+            String fromCookie = Arrays.stream(request.getCookies())
                     .filter(c -> accessCookieName.equals(c.getName()))
                     .map(Cookie::getValue)
                     .filter(StringUtils::hasText)
                     .findFirst()
                     .orElse(null);
+            if (fromCookie != null) return fromCookie;
         }
 
-        // 2. Fallback: header Authorization Bearer (para compatibilidade com clientes nativos/API)
+        // 2. Fallback: header Authorization Bearer (clientes nativos/API sem cookies)
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);

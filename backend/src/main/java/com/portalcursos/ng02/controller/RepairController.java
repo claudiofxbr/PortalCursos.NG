@@ -4,11 +4,9 @@ import com.portalcursos.ng02.dto.RepairTicketDTO;
 import com.portalcursos.ng02.model.RepairTicket;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.RepairRepository;
-import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StorageService;
-import com.portalcursos.ng02.service.UserDetailsImpl;
 import com.portalcursos.ng02.dto.MessageResponse;
-import com.portalcursos.ng02.service.LoginAttemptService;
 
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -16,8 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,20 +29,8 @@ public class RepairController {
     private static final Logger logger = LoggerFactory.getLogger(RepairController.class);
 
     private final RepairRepository repairRepository;
-    private final StaffMemberRepository staffMemberRepository;
     private final StorageService storageService;
-
-    private void injectAuditStamps(Object entity) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                if (entity instanceof com.portalcursos.ng02.model.BaseAuditEntity) {
-                    ((com.portalcursos.ng02.model.BaseAuditEntity) entity).setCreator(staff);
-                }
-            });
-        }
-    }
+    private final AuditService auditService;
 
     private RepairTicketDTO convertToDTO(RepairTicket ticket) {
         if (ticket == null) return null;
@@ -109,7 +93,7 @@ public class RepairController {
         ticket.setStatus(RepairTicket.ERepairStatus.OPEN);
 
         // Sincronização Biométrica do Auditor normalizada
-        injectAuditStamps(ticket);
+        auditService.injectCreator(ticket);
 
         if (mainPhotoFile != null && !mainPhotoFile.isEmpty()) {
             try {
@@ -156,7 +140,7 @@ public class RepairController {
         try {
             ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
             // Re-sincroniza auditor responsável pela alteração de status
-            injectAuditStamps(ticket);
+            auditService.injectCreator(ticket);
             return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse("Status inválido."));

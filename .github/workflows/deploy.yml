@@ -9,14 +9,15 @@ jobs:
   deploy:
     name: Deploy → VPS Hostinger
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Validate required secrets
         run: |
-          [ -n "${{ secrets.HOSTINGER_IP }}" ]     || { echo "❌ Secret HOSTINGER_IP não configurado"; exit 1; }
-          [ -n "${{ secrets.HOSTINGER_USER }}" ]   || { echo "❌ Secret HOSTINGER_USER não configurado"; exit 1; }
+          [ -n "${{ secrets.HOSTINGER_IP }}" ]      || { echo "❌ Secret HOSTINGER_IP não configurado"; exit 1; }
+          [ -n "${{ secrets.HOSTINGER_USER }}" ]    || { echo "❌ Secret HOSTINGER_USER não configurado"; exit 1; }
           [ -n "${{ secrets.HOSTINGER_SSH_KEY }}" ] || { echo "❌ Secret HOSTINGER_SSH_KEY não configurado"; exit 1; }
           echo "✅ Secrets validados"
 
@@ -27,13 +28,27 @@ jobs:
           username: ${{ secrets.HOSTINGER_USER }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 22
-          command_timeout: 20m
+          command_timeout: 35m
           script: |
             set -e
             echo "🚀 Deploy iniciado em: $(date)"
             echo "📍 Servidor: $(hostname)"
 
-            cd /var/www/portalcursos || { echo "❌ Diretório não encontrado"; exit 1; }
+            PROJECT_ROOT="/var/www/portalcursos"
+
+            # Verificar que o diretório existe
+            [ -d "$PROJECT_ROOT" ] || { echo "❌ Diretório $PROJECT_ROOT não encontrado — execute deploy_vps.sh primeiro"; exit 1; }
+
+            # Verificar que o .env existe com variáveis críticas
+            ENV_FILE="$PROJECT_ROOT/.env"
+            [ -f "$ENV_FILE" ] || { echo "❌ .env não encontrado em $ENV_FILE"; exit 1; }
+            for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL APP_ROOT_PASSWORD APP_ADMIN_PASSWORD; do
+                val=$(grep "^${VAR}=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true)
+                [ -n "$val" ] || { echo "❌ Variável $VAR ausente no .env"; exit 1; }
+            done
+            echo "✅ .env validado"
+
+            cd "$PROJECT_ROOT"
 
             # Bootstrap: sync code first so deploy_ci.sh itself is up-to-date
             git fetch origin main --depth=1

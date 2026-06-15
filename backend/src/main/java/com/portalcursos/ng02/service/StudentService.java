@@ -68,7 +68,7 @@ public class StudentService {
         if (foto3x4 != null && !foto3x4.isEmpty()) {
             String path = storageService.store(foto3x4, "fotos-perfil");
             saved.setFotoMatricula(path);
-            addDocument(saved, path, EDocumentType.RG); 
+            addDocument(saved, path, EDocumentType.FOTO_3X4);
         }
 
         for (DocEntry entry : otherDocs) {

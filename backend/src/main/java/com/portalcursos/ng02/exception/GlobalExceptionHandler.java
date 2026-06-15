@@ -54,12 +54,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<?> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", new Date());
+        logger.warn("[AUTH WARN] Falha de autenticação: {}", ex.getMessage());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.UNAUTHORIZED.value());
         body.put("error", "Unauthorized");
-        body.put("message", "Falha na autenticação: " + ex.getMessage());
-        body.put("path", request.getDescription(false));
+        body.put("message", "Usuário ou senha inválidos.");
+        body.put("path", request.getDescription(false).replace("uri=", ""));
 
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }

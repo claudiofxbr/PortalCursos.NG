@@ -1,50 +1,29 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
-import com.portalcursos.ng02.service.*;
-import com.portalcursos.ng02.repository.*;
-import com.portalcursos.ng02.dto.MessageResponse;
-import com.portalcursos.ng02.model.PostgradStudent;
+import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.PostgradStudentService;
 import com.portalcursos.ng02.repository.CourseRepository;
-import com.portalcursos.ng02.repository.StaffMemberRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.portalcursos.ng02.dto.MessageResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
- 
+
 @RestController
 @RequestMapping("/api/v1/postgrad-students")
 @Slf4j
 @RequiredArgsConstructor
 public class PostgradStudentController {
- 
-    private final PostgradStudentService studentService;
-    private final StaffMemberRepository staffMemberRepository;
-    private final CourseRepository courseRepository;
 
-    private void injectAuditStamps(Object entity) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                if (entity instanceof PostgradStudent.PostgradStudentBuilder) {
-                    ((PostgradStudent.PostgradStudentBuilder<?, ?>) entity).creator(staff);
-                } else if (entity instanceof BaseAuditEntity) {
-                    ((BaseAuditEntity) entity).setCreator(staff);
-                }
-            });
-        }
-    }
+    private final PostgradStudentService studentService;
+    private final CourseRepository courseRepository;
+    private final AuditService auditService;
  
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
@@ -87,7 +66,7 @@ public class PostgradStudentController {
             return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
-        PostgradStudent.PostgradStudentBuilder<?, ?> studentBuilder = PostgradStudent.builder()
+        PostgradStudent student = PostgradStudent.builder()
                 .fullName(fullName)
                 .email(email)
                 .cpf(cpf)
@@ -96,12 +75,11 @@ public class PostgradStudentController {
                 .address(address)
                 .graduationInstitution(graduationInstitution)
                 .graduationYear(graduationYear)
-                .desiredCourse(desiredCourse);
+                .desiredCourse(desiredCourse)
+                .build();
 
-        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(studentBuilder::course);
-
-        injectAuditStamps(studentBuilder);
-        PostgradStudent student = studentBuilder.build();
+        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(student::setCourse);
+        auditService.injectCreator(student);
 
         PostgradStudent finalSaved = studentService.create(student, diplomaFile, rgCpfFile, proofOfAddressFile, academicTranscriptFile, foto3x4File);
         return ResponseEntity.ok(finalSaved);
@@ -127,9 +105,7 @@ public class PostgradStudentController {
                 .build();
 
         courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(student::setCourse);
-
-        injectAuditStamps(student);
-
+        auditService.injectCreator(student);
         return ResponseEntity.ok(studentService.update(id, student, foto3x4File));
     }
 
@@ -139,7 +115,7 @@ public class PostgradStudentController {
         return studentService.findById(id).map(student -> {
             try {
                 student.setEnrollmentStatus(status);
-                injectAuditStamps(student);
+                auditService.injectCreator(student);
                 return ResponseEntity.ok(studentService.update(id, student, null));
             } catch (java.io.IOException e) {
                 throw new RuntimeException("Erro ao atualizar status: falha de I/O", e);

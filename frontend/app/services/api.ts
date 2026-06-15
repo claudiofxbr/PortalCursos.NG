@@ -10,15 +10,20 @@ import axios from 'axios';
 export const V_BUILD_ID = "V31.0-SECURE";
 
 const getBaseUrl = () => {
+    // Em localhost sem NEXT_PUBLIC_API_URL configurado, usa o backend local
     if (typeof window !== 'undefined') {
         const host = window.location.hostname;
         if (host === 'localhost' || host === '127.0.0.1') {
             return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/';
         }
-        const protocol = window.location.protocol;
-        return `${protocol}//${host}/api/`;
     }
-    return process.env.NEXT_PUBLIC_API_URL || '/api/';
+    // Em produção (e SSR): usa NEXT_PUBLIC_API_URL injetado no build
+    // Garante que termina com /api/ para que api.get('auth/me') resolva corretamente
+    const envUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    if (envUrl) {
+        return envUrl.endsWith('/') ? envUrl : `${envUrl}/`;
+    }
+    return '/api/';
 };
 
 export const API_BASE_URL = getBaseUrl();

@@ -29,13 +29,13 @@ public class AcademicController {
     private final StaffMemberRepository staffMemberRepository;
 
     @GetMapping("/students")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllStudents() {
         return ResponseEntity.ok(studentRepository.findAllWithCourseAndCreator());
     }
 
     @GetMapping("/teachers")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllTeachers() {
         return ResponseEntity.ok(teacherRepository.findAll());
     }

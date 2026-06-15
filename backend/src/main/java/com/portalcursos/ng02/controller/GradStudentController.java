@@ -1,10 +1,10 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
+import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StudentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,6 @@ import com.portalcursos.ng02.dto.MessageResponse;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/grad-students")
@@ -22,22 +21,8 @@ import java.util.Optional;
 public class GradStudentController {
 
     private final StudentService studentService;
-    private final com.portalcursos.ng02.repository.StaffMemberRepository staffMemberRepository;
     private final com.portalcursos.ng02.repository.CourseRepository courseRepository;
-
-    private void injectAuditStamps(Object entity) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl) {
-            com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-            staffMemberRepository.findById(userDetails.getId()).ifPresent(staff -> {
-                if (entity instanceof Student.StudentBuilder) {
-                    ((Student.StudentBuilder<?, ?>) entity).creator(staff);
-                } else if (entity instanceof BaseAuditEntity) {
-                    ((BaseAuditEntity) entity).setCreator(staff);
-                }
-            });
-        }
-    }
+    private final AuditService auditService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
@@ -87,7 +72,7 @@ public class GradStudentController {
             return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
-        Student.StudentBuilder<?, ?> studentBuilder = Student.builder()
+        Student student = Student.builder()
                 .fullName(fullName)
                 .email(email)
                 .cpf(cpf)
@@ -102,10 +87,10 @@ public class GradStudentController {
                 .tituloEleitor(tituloEleitor)
                 .isEstrangeiro(isEstrangeiro)
                 .formaIngresso(formaIngresso)
-                .tipoCota(tipoCota);
+                .tipoCota(tipoCota)
+                .build();
 
-        injectAuditStamps(studentBuilder);
-        Student student = studentBuilder.build();
+        auditService.injectCreator(student);
 
         List<StudentService.DocEntry> otherDocs = new ArrayList<>();
         otherDocs.add(new StudentService.DocEntry(rgCpf, EDocumentType.RG));
@@ -153,8 +138,7 @@ public class GradStudentController {
                 .enrollmentStatus(enrollmentStatus)
                 .build();
 
-        injectAuditStamps(student);
-
+        auditService.injectCreator(student);
         return ResponseEntity.ok(studentService.update(id, student, foto3x4));
     }
 
@@ -165,7 +149,7 @@ public class GradStudentController {
                 .orElseThrow(() -> new RuntimeException("Aluno não encontrado."));
         
         student.setEnrollmentStatus(status);
-        injectAuditStamps(student);
+        auditService.injectCreator(student);
         return ResponseEntity.ok(studentService.update(id, student, null));
     }
 

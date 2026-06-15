@@ -30,7 +30,8 @@ const cspDirectives = isDev
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `font-src 'self' https://fonts.gstatic.com`,
       `img-src 'self' data: blob: https:`,
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || ''}`.trimEnd(),
+      // Extrai apenas a origem (protocolo + host) para que o CSP cubra todos os subpaths /api/*
+      `connect-src 'self' ${(() => { try { return new URL(process.env.NEXT_PUBLIC_API_URL || '').origin; } catch { return process.env.NEXT_PUBLIC_API_URL || ''; } })()}`.trimEnd(),
       `worker-src 'self' blob:`,
       `frame-ancestors 'none'`,
       `upgrade-insecure-requests`,

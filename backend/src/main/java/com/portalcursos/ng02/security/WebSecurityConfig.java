@@ -62,7 +62,7 @@ public class WebSecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
+
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
@@ -82,8 +82,11 @@ public class WebSecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
 
         // Origens explícitas — wildcards são incompatíveis com allowCredentials=true
-        // Valores carregados de app.cors.allowed-origins (sem padrões glob)
-        java.util.List<String> origins = java.util.Arrays.asList(allowedOrigins);
+        // Trim de cada origem para tolerar espaços ao redor de vírgulas no .env
+        java.util.List<String> origins = java.util.Arrays.stream(allowedOrigins)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
         configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
