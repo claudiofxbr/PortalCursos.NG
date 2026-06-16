@@ -126,12 +126,16 @@ services:
       - "traefik.http.routers.portalcursos-fe-http.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/portalcursos.ng`)"
       - "traefik.http.routers.portalcursos-fe-http.entrypoints=http"
       - "traefik.http.routers.portalcursos-fe-http.middlewares=redirect-to-https@file"
-      # Router para favicon.ico na raiz (evita 502 no browser)
+      # Router para favicon.ico na raiz (evita 404 no browser — basePath
+      # exige que o asset real seja servido em /portalcursos.ng/favicon.ico)
       - "traefik.http.routers.portalcursos-favicon.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && Path(`/favicon.ico`)"
       - "traefik.http.routers.portalcursos-favicon.entrypoints=https"
       - "traefik.http.routers.portalcursos-favicon.tls=true"
       - "traefik.http.routers.portalcursos-favicon.tls.certresolver=letsencrypt"
       - "traefik.http.routers.portalcursos-favicon.service=portalcursos-fe-svc"
+      - "traefik.http.routers.portalcursos-favicon.middlewares=portalcursos-favicon-rewrite@docker"
+      - "traefik.http.middlewares.portalcursos-favicon-rewrite.replacepathregex.regex=^/favicon.ico$$"
+      - "traefik.http.middlewares.portalcursos-favicon-rewrite.replacepathregex.replacement=/portalcursos.ng/favicon.ico"
       # Router raiz: redireciona / para /portalcursos.ng
       - "traefik.http.routers.portalcursos-root.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && Path(`/`)"
       - "traefik.http.routers.portalcursos-root.entrypoints=https"
