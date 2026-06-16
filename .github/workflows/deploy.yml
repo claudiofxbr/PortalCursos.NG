@@ -43,7 +43,7 @@ jobs:
             # Verificar que o .env existe com variáveis críticas
             ENV_FILE="$PROJECT_ROOT/.env"
             [ -f "$ENV_FILE" ] || { echo "❌ .env não encontrado em $ENV_FILE"; exit 1; }
-            for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL APP_ROOT_PASSWORD APP_ADMIN_PASSWORD; do
+            for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL APP_ROOT_PASSWORD APP_ADMIN_PASSWORD PORTAL_ACCESS_CODE; do
                 val=$(grep "^${VAR}=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true)
                 [ -n "$val" ] || { echo "❌ Variável $VAR ausente no .env"; exit 1; }
             done

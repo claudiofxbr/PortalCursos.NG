@@ -87,6 +87,10 @@ services:
       NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/portalcursos.ng}
       NEXT_PUBLIC_ENV: production
       PORT: 3000
+      # Sem prefixo NEXT_PUBLIC_ — lido só no servidor (Route Handler
+      # /api/portal-auth), nunca embutido no bundle do cliente. Sem essa
+      # var o gate de senha global fica fail-closed (sempre 500/nega acesso).
+      PORTAL_ACCESS_CODE: ${PORTAL_ACCESS_CODE}
     healthcheck:
       # 127.0.0.1 explícito: o server.js standalone do Next.js faz bind
       # IPv4-only (HOSTNAME=0.0.0.0); "localhost" resolve ::1 primeiro no
