@@ -51,6 +51,7 @@ services:
       - easypanel
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
       # Router HTTPS para /api
       - "traefik.http.routers.portalcursos-api.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.portalcursos-api.entrypoints=https"
@@ -87,7 +88,10 @@ services:
       NEXT_PUBLIC_ENV: production
       PORT: 3000
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/portalcursos.ng || exit 1"]
+      # 127.0.0.1 explícito: o server.js standalone do Next.js faz bind
+      # IPv4-only (HOSTNAME=0.0.0.0); "localhost" resolve ::1 primeiro no
+      # Alpine e o wget falha com "Connection refused" mesmo com app saudável.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/portalcursos.ng || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -103,6 +107,7 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
       # Router HTTPS para /portalcursos.ng
       - "traefik.http.routers.portalcursos-fe.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/portalcursos.ng`)"
       - "traefik.http.routers.portalcursos-fe.entrypoints=https"

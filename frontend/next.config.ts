@@ -72,6 +72,11 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
 
+  // Build standalone: gera .next/standalone com server.js autocontido
+  // (config + node_modules mínimos já embutidos), exigido pelo Dockerfile
+  // multi-stage para que basePath/assetPrefix sejam aplicados em runtime.
+  output: "standalone",
+
   // Subpath deployment: /portalcursos.ng em produção, vazio em dev
   basePath: BASE_PATH,
   assetPrefix: BASE_PATH || undefined,
