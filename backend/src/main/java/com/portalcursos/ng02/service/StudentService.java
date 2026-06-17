@@ -116,7 +116,10 @@ public class StudentService {
 
     @Transactional
     public void delete(Long id) {
-        studentRepository.findById(id).ifPresent(studentRepository::delete);
+        studentRepository.findById(id).ifPresent(student -> {
+            student.setActive(false);
+            studentRepository.save(student);
+        });
     }
 
     private String sanitizeNumber(String value) {

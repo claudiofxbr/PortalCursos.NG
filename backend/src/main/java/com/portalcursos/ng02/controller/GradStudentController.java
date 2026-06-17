@@ -72,6 +72,9 @@ public class GradStudentController {
             return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(currentCourse)
+                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + currentCourse));
+
         Student student = Student.builder()
                 .fullName(fullName)
                 .email(email)
@@ -79,7 +82,7 @@ public class GradStudentController {
                 .phone(phone)
                 .dateOfBirth(dateOfBirth)
                 .address(address)
-                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
+                .course(course)
                 .nacionalidade(nacionalidade)
                 .estadoCivil(estadoCivil)
                 .sexo(sexo)
@@ -130,11 +133,14 @@ public class GradStudentController {
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
     ) throws java.io.IOException {
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(currentCourse)
+                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + currentCourse));
+
         Student student = Student.builder()
                 .fullName(fullName)
                 .phone(phone)
                 .address(address)
-                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
+                .course(course)
                 .enrollmentStatus(enrollmentStatus)
                 .build();
 

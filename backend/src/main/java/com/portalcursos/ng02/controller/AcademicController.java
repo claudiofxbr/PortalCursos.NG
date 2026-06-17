@@ -41,13 +41,13 @@ public class AcademicController {
     }
 
     @GetMapping("/staff")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllStaff() {
         return ResponseEntity.ok(staffMemberRepository.findAll());
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllAcademicUsers() {
         List<Map<String, Object>> allUsers = new ArrayList<>();
 

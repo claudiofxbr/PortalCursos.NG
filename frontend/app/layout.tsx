@@ -9,7 +9,7 @@ import ConnectivityGuard from "../components/ConnectivityGuard";
 import SecurityGate from "../components/SecurityGate";
 
 export const metadata: Metadata = {
-  title: "PortalCursos OMEGA-SUPREME | Pós-Graduação",
+  title: "PortalCursos OMEGA-SUPREME",
   description: "Sistema de Alta Resiliência Institucional",
 };
 

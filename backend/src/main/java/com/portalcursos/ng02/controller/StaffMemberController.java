@@ -2,32 +2,29 @@ package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StorageService;
-import com.portalcursos.ng02.service.UserDetailsImpl;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.portalcursos.ng02.dto.MessageResponse;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Optional;
-import com.portalcursos.ng02.dto.MessageResponse;
 
 @RestController
 @RequestMapping("/api/v1/staff")
+@RequiredArgsConstructor
 public class StaffMemberController {
 
     private static final Logger logger = LoggerFactory.getLogger(StaffMemberController.class);
 
-    @Autowired
-    private StaffMemberRepository staffRepository;
-
-    @Autowired
-    private StorageService storageService;
+    private final StaffMemberRepository staffRepository;
+    private final StorageService storageService;
+    private final AuditService auditService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('ROOT_MASTER')")
@@ -54,20 +51,14 @@ public class StaffMemberController {
             }
         }
 
-        StaffMember creator = null;
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            creator = staffRepository.findById(userDetails.getId()).orElse(null);
-        }
-
         StaffMember staff = StaffMember.builder()
                 .fullName(fullName)
                 .position(position)
                 .department(department)
                 .fotoUrl(fotoPath)
-                .creator(creator)
                 .build();
+
+        auditService.injectCreator(staff);
 
         StaffMember saved = staffRepository.save(staff);
         return ResponseEntity.ok(saved);
@@ -102,11 +93,7 @@ public class StaffMemberController {
             }
         }
 
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-            staffRepository.findById(userDetails.getId()).ifPresent(staff::setCreator);
-        }
+        auditService.injectCreator(staff);
 
         StaffMember updated = staffRepository.save(staff);
         return ResponseEntity.ok(updated);

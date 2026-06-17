@@ -78,7 +78,9 @@ public class PostgradStudentController {
                 .desiredCourse(desiredCourse)
                 .build();
 
-        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(student::setCourse);
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(desiredCourse)
+                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + desiredCourse));
+        student.setCourse(course);
         auditService.injectCreator(student);
 
         PostgradStudent finalSaved = studentService.create(student, diplomaFile, rgCpfFile, proofOfAddressFile, academicTranscriptFile, foto3x4File);
@@ -104,7 +106,9 @@ public class PostgradStudentController {
                 .enrollmentStatus(enrollmentStatus)
                 .build();
 
-        courseRepository.findByDenominacaoCurso(desiredCourse).ifPresent(student::setCourse);
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(desiredCourse)
+                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + desiredCourse));
+        student.setCourse(course);
         auditService.injectCreator(student);
         return ResponseEntity.ok(studentService.update(id, student, foto3x4File));
     }

@@ -96,6 +96,12 @@ api.interceptors.response.use(
                 return Promise.resolve({ data: { message: "Logout realizado." } });
             }
 
+            // /auth/me no boot inicial: não disparar AUTH_REQUIRED se for a primeira visita sem sessão.
+            // O AuthContext trata o 401 do /me silenciosamente (setUser(null)) — não precisamos de modal.
+            if (config.url?.includes('auth/me') && !config._retry) {
+                return Promise.reject(error);
+            }
+
             if (!config._retry) {
                 config._retry = true;
                 try {
