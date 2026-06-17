@@ -46,6 +46,23 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
 
+    // Validação cliente — espelha as constraints do SignupRequest
+    if (/\s/.test(formData.username)) {
+      setError("O nome de usuário não pode conter espaços.");
+      setLoading(false);
+      return;
+    }
+    if (formData.username.length < 3 || formData.username.length > 20) {
+      setError("O nome de usuário deve ter entre 3 e 20 caracteres.");
+      setLoading(false);
+      return;
+    }
+    if (formData.password.length < 6 || formData.password.length > 40) {
+      setError("A senha deve ter entre 6 e 40 caracteres.");
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post('auth/signup', formData);
       alert("✅ Conta criada com sucesso! Redirecionando para o login...");
@@ -91,13 +108,15 @@ export default function SignUpPage() {
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>USUÁRIO</label>
             <input 
-              type="text" 
+              type="text"
               name="username"
               required
+              minLength={3}
+              maxLength={20}
               value={formData.username}
-              onChange={handleChange}
-              placeholder="nome_usuario" 
-              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }} 
+              onChange={(e) => setFormData({ ...formData, username: e.target.value.replace(/\s/g, '') })}
+              placeholder="nome_usuario (sem espaços)"
+              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }}
             />
           </div>
 
