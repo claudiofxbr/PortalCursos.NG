@@ -320,6 +320,7 @@ public class AuthController {
                 .anyMatch(role -> {
                     String r = role.toUpperCase();
                     return !r.equals("ALUNO") && !r.equals("CANDIDATO")
+                            && !r.equals("STUDENT") && !r.equals("ROLE_STUDENT")
                             && !r.equals("ROLE_ALUNO") && !r.equals("ROLE_CANDIDATO");
                 });
 

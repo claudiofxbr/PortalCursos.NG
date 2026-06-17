@@ -11,7 +11,7 @@ export default function SignUpPage() {
     username: '',
     email: '',
     password: '',
-    role: ['student'] // Role padrão
+    role: ['aluno']
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
