@@ -315,10 +315,13 @@ public class AuthController {
                 signUpRequest.getUsername(), signUpRequest.getEmail());
 
         Set<String> requestedRoles = signUpRequest.getRole();
+        // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados
         boolean isRequestingPrivilegedRoles = requestedRoles != null && requestedRoles.stream()
-                .anyMatch(role -> role.equalsIgnoreCase("admin")
-                        || role.equalsIgnoreCase("staff")
-                        || role.equalsIgnoreCase("teacher"));
+                .anyMatch(role -> {
+                    String r = role.toUpperCase();
+                    return !r.equals("ALUNO") && !r.equals("CANDIDATO")
+                            && !r.equals("ROLE_ALUNO") && !r.equals("ROLE_CANDIDATO");
+                });
 
         if (isRequestingPrivilegedRoles) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();

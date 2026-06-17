@@ -6,7 +6,6 @@ import com.portalcursos.ng02.model.Teacher;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.TeacherRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,7 +42,7 @@ public class AcademicController {
     @GetMapping("/staff")
     @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllStaff() {
-        return ResponseEntity.ok(staffMemberRepository.findAll());
+        return ResponseEntity.ok(staffMemberRepository.findAllByActiveTrue());
     }
 
     @GetMapping("/users")
@@ -71,13 +70,13 @@ public class AcademicController {
             allUsers.add(u);
         });
 
-        staffMemberRepository.findAll().forEach(sm -> {
+        staffMemberRepository.findAllByActiveTrue().forEach(sm -> {
             Map<String, Object> u = new HashMap<>();
             u.put("id", "M_" + sm.getId());
             u.put("name", sm.getFullName());
             u.put("doc", sm.getPosition());
             u.put("course", sm.getDepartment());
-            u.put("role", "STAFF");
+            u.put("role", "SECRETARIA");
             allUsers.add(u);
         });
 

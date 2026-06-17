@@ -2,6 +2,17 @@ import { useState } from 'react';
 import api from '@/app/services/api';
 import { toast } from 'sonner';
 
+const extractUserMessage = (error: any): string => {
+    const serverMsg = error?.response?.data?.message;
+    if (serverMsg && typeof serverMsg === 'string') return serverMsg;
+    const status = error?.response?.status;
+    if (status === 403) return 'Acesso negado: você não tem permissão para esta ação.';
+    if (status === 404) return 'Registro não encontrado.';
+    if (status === 409) return 'Conflito: este registro já existe ou há dados duplicados.';
+    if (status >= 500) return 'Erro interno do servidor. Tente novamente em instantes.';
+    return 'Erro ao comunicar com o servidor. Verifique sua conexão.';
+};
+
 export const useAuditCRUD = (endpoint: string) => {
     const [loading, setLoading] = useState(false);
 
@@ -11,7 +22,7 @@ export const useAuditCRUD = (endpoint: string) => {
             const res = await api.get(`${endpoint}${subPath}`, { params });
             return res.data;
         } catch (error: any) {
-            toast.error(`Erro ao carregar dados: ${error.message}`);
+            toast.error(extractUserMessage(error));
             throw error;
         } finally {
             setLoading(false);
@@ -25,7 +36,7 @@ export const useAuditCRUD = (endpoint: string) => {
             toast.success('Registro criado com sucesso!');
             return res.data;
         } catch (error: any) {
-            toast.error(`Erro ao criar registro: ${error.message}`);
+            toast.error(extractUserMessage(error));
             throw error;
         } finally {
             setLoading(false);
@@ -39,7 +50,7 @@ export const useAuditCRUD = (endpoint: string) => {
             toast.success('Registro atualizado com sucesso!');
             return res.data;
         } catch (error: any) {
-            toast.error(`Erro ao atualizar registro: ${error.message}`);
+            toast.error(extractUserMessage(error));
             throw error;
         } finally {
             setLoading(false);
@@ -53,7 +64,7 @@ export const useAuditCRUD = (endpoint: string) => {
             toast.success('Registro removido com sucesso!');
             return true;
         } catch (error: any) {
-            toast.error(`Erro ao remover registro: ${error.message}`);
+            toast.error(extractUserMessage(error));
             throw error;
         } finally {
             setLoading(false);
