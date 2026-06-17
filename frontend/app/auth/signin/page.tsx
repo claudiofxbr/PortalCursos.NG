@@ -98,6 +98,8 @@ export default function SignInPage() {
         
         if (status === 401) {
           msg = "Usuário ou senha incorretos. Tente novamente.";
+        } else if (status === 423) {
+          msg = serverMsg || "Acesso temporariamente bloqueado por excesso de tentativas. Aguarde 15 minutos e tente novamente.";
         } else if (status === 403) {
           msg = "Acesso Negado. Você não tem permissão para entrar.";
         } else if (status === 404) {
