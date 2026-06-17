@@ -1,9 +1,11 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.service.LoginAttemptService;
 import com.portalcursos.ng02.service.StorageService;
 import com.portalcursos.ng02.service.UserService;
 import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.repository.LoginAttemptRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +21,7 @@ public class UserController {
 
     private final UserService userService;
     private final StorageService storageService;
+    private final LoginAttemptRepository loginAttemptRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN', 'COORDENADOR', 'SECRETARIA')")
@@ -64,5 +67,19 @@ public class UserController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(new MessageResponse("Usuário removido com sucesso"));
+    }
+
+    @DeleteMapping("/security/unblock-ip/{ip}")
+    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
+    public ResponseEntity<?> unblockIp(@PathVariable String ip) {
+        loginAttemptRepository.deleteById(ip);
+        return ResponseEntity.ok(new MessageResponse("IP desbloqueado: " + ip));
+    }
+
+    @DeleteMapping("/security/clear-all-blocks")
+    @PreAuthorize("hasRole('ROOT_MASTER')")
+    public ResponseEntity<?> clearAllBlocks() {
+        loginAttemptRepository.deleteAll();
+        return ResponseEntity.ok(new MessageResponse("Todos os bloqueios de IP foram removidos."));
     }
 }
