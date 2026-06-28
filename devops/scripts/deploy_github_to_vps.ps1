@@ -1,10 +1,13 @@
+#Requires -Version 7.0
 # =================================================================
 # deploy_github_to_vps.ps1
 # PortalCursos.NG — Deploy completo: Antigravity → GitHub → VPS
 #
-# Como usar:
-#   cd C:\Users\VeKTI-01\Desktop\Unifacs\Engenharia\Aplicativos\PortalCursos.NG
-#   .\devops\scripts\deploy_github_to_vps.ps1
+# Como usar (requer PowerShell 7+ / pwsh):
+#   cd "C:\Users\VeKTI-01\Desktop\Unifacs\Engenharia\Aplicativos\PortalCursos.NG"
+#   pwsh .\devops\scripts\deploy_github_to_vps.ps1
+#
+# ATENCAO: NAO execute com "powershell" (v5). Use "pwsh" (v7+).
 #
 # Pre-requisitos:
 #   - Git instalado
@@ -144,7 +147,7 @@ Write-Host "    [2/2] Executando deploy na VPS (pode demorar 8-12 minutos)..." -
 Write-Host "          O build Docker do frontend leva mais tempo." -ForegroundColor DarkGray
 Write-Host ""
 
-$RemoteCmd = "chmod +x /tmp/deploy_vps.sh && bash /tmp/deploy_vps.sh 2>&1"
+$RemoteCmd = "chmod +x /tmp/deploy_vps.sh; bash /tmp/deploy_vps.sh 2>&1"
 $SshRunArgs = $SshOpts + @("${VpsUser}@${VpsIp}", $RemoteCmd)
 & ssh @SshRunArgs
 $ExitCode = $LASTEXITCODE
