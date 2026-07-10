@@ -72,6 +72,9 @@ public class UserController {
     @DeleteMapping("/security/unblock-ip/{ip}")
     @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
     public ResponseEntity<?> unblockIp(@PathVariable String ip) {
+        if (!loginAttemptRepository.existsById(ip)) {
+            return ResponseEntity.ok(new MessageResponse("IP não possui bloqueio registrado: " + ip));
+        }
         loginAttemptRepository.deleteById(ip);
         return ResponseEntity.ok(new MessageResponse("IP desbloqueado: " + ip));
     }

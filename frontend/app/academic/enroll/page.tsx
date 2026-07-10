@@ -233,7 +233,7 @@ export default function GradEnrollPage() {
                             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#3498db', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', color: '#fff' }}>
                                 <FileText size={20} />
                             </div>
-                            <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Documentos Obligatórios</h2>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Documentos Obrigatórios</h2>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>

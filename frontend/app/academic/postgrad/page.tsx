@@ -98,7 +98,6 @@ export default function PostgradStudentsPage() {
         });
 
         try {
-            console.log("[SUPREME] Enviando formulário de matrícula...", Object.fromEntries(form.entries()));
             await api.post('v1/postgrad-students', form, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
@@ -121,7 +120,7 @@ export default function PostgradStudentsPage() {
                 errorMsg = "⚠️ Erro de validação: Verifique se todos os campos obrigatórios (*) foram preenchidos corretamente.";
             }
 
-            const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : (status === 409 ? "\n\n💡 Dica: Se o banco estiver vazio, pode haver registros inativos bloqueando este CPF. Execute o script de cura V36.0." : "");
+            const hint = data?.hint ? `\n\n💡 Dica: ${data.hint}` : (status === 409 ? "\n\n💡 Dica: Verifique se já existe um cadastro (mesmo inativo) com este CPF ou e-mail. Se o problema persistir, contate o suporte técnico." : "");
             setError(`${errorMsg}${hint}`);
         } finally {
             setSubmitting(false);

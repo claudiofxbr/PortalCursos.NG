@@ -2,9 +2,11 @@ package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -28,6 +30,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StaffMemberRepository staffMemberRepository;
+    private final StudentRepository studentRepository;
     private final AuthorityHierarchyService authorityService;
     private final PasswordEncoder encoder;
 
@@ -126,6 +129,17 @@ public class UserService {
         if (target.getId().equals(operator.getId())) {
             throw new RuntimeException("Proteção de Perfil: Você não pode remover sua própria conta.");
         }
+
+        // Desativa registros institucionais/acadêmicos vinculados antes de remover a conta de login,
+        // evitando StaffMember/Student "fantasma" (ativo, mas sem usuário para autenticar).
+        staffMemberRepository.findByIdAndActiveTrue(id).ifPresent(staff -> {
+            staff.setActive(false);
+            staffMemberRepository.save(staff);
+        });
+        studentRepository.findByUserId(id).ifPresent(student -> {
+            student.setActive(false);
+            studentRepository.save(student);
+        });
 
         userRepository.deleteById(id);
         logger.info("[V50.0] Usuário deletado por autoridade superior: {}", target.getUsername());

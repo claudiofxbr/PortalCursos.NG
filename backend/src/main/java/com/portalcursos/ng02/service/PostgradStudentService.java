@@ -104,6 +104,7 @@ public class PostgradStudentService {
         student.setAddress(updatedData.getAddress());
         student.setDesiredCourse(updatedData.getDesiredCourse());
         student.setEnrollmentStatus(updatedData.getEnrollmentStatus());
+        student.setCourse(updatedData.getCourse());
 
         if (foto3x4File != null && !foto3x4File.isEmpty()) {
             if (student.getFotoMatricula() != null) {

@@ -114,6 +114,24 @@ public class AuthController {
         response.addCookie(refresh);
     }
 
+    /**
+     * Extrai o IP real do cliente atrás do Traefik. Traefik popula X-Forwarded-For
+     * (não X-Real-IP, que é convenção do nginx) — por isso ele vem primeiro.
+     * X-Forwarded-For pode conter uma cadeia "cliente, proxy1, proxy2"; o IP original
+     * do cliente é sempre o primeiro da lista.
+     */
+    private String extractClientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return request.getRemoteAddr();
+    }
+
     /** Extrai o refresh token do cookie ou, como fallback, do body da requisição. */
     private String extractRefreshToken(HttpServletRequest request, String bodyToken) {
         if (request.getCookies() != null) {
@@ -134,10 +152,7 @@ public class AuthController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        String ipAddress = request.getHeader("X-Real-IP");
-        if (ipAddress == null || ipAddress.isEmpty()) {
-            ipAddress = request.getRemoteAddr();
-        }
+        String ipAddress = extractClientIp(request);
 
         logger.info("[AUTH API] [SIGNIN] Tentativa de login: {} de {}", loginRequest.getUsername(), ipAddress);
 

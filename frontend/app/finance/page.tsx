@@ -108,8 +108,9 @@ export default function FinancePage() {
           const endpoint = method === 'PIX' ? `/finance/generate-pix/${id}` : `/finance/generate-boleto/${id}`;
           const res = await api.post(endpoint);
           setShowPaymentModal({ ...res.data, method });
-      } catch (err) {
-          alert("Erro ao processar pagamento.");
+      } catch (err: any) {
+          const msg = err?.response?.data?.message || `Não foi possível gerar o ${method === 'PIX' ? 'código Pix' : 'boleto'}. Tente novamente.`;
+          alert(msg);
       }
   };
 
@@ -473,7 +474,7 @@ export default function FinancePage() {
                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(showPaymentModal.paymentCode)}`} alt="Pix QR Code" style={{ borderRadius: '8px' }} />
                            </div>
                            <p style={{ fontSize: '0.7rem', color: '#888', marginBottom: '1rem', wordBreak: 'break-all' }}>{showPaymentModal.paymentCode}</p>
-                           <button onClick={() => { navigator.clipboard.writeText(showPaymentModal.paymentCode); alert("Pixel Copiado!"); }} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>Copiar Chave Pix</button>
+                           <button onClick={() => { navigator.clipboard.writeText(showPaymentModal.paymentCode); alert("Chave Pix copiada!"); }} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>Copiar Chave Pix</button>
                        </div>
                    ) : (
                        <div>

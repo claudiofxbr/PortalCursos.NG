@@ -139,8 +139,8 @@ public class RepairController {
 
         try {
             ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-            // Re-sincroniza auditor responsável pela alteração de status
-            auditService.injectCreator(ticket);
+            // O creator do ticket é sempre quem abriu o chamado — não deve ser
+            // sobrescrito por quem apenas altera o status posteriormente.
             return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse("Status inválido."));

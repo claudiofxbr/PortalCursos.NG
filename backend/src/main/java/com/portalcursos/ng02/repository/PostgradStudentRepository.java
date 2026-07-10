@@ -22,6 +22,8 @@ public interface PostgradStudentRepository extends JpaRepository<PostgradStudent
     @org.springframework.data.jpa.repository.Query("SELECT p FROM PostgradStudent p WHERE p.id = :id AND p.active = true")
     Optional<PostgradStudent> findByIdAndActiveTrue(@org.springframework.data.repository.query.Param("id") Long id);
 
+    Optional<PostgradStudent> findByUserId(Long userId);
+
     // Verificações Globais (Apenas se ativos)
     @org.springframework.data.jpa.repository.Query(value = "SELECT COUNT(*) > 0 FROM students WHERE email = :email AND active = true", nativeQuery = true)
     boolean existsByEmailGlobal(@org.springframework.data.repository.query.Param("email") String email);

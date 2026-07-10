@@ -659,7 +659,7 @@ export default function GraduationPage() {
                                                     onClick={() => handleGenerateFee(viewingStudent.id)}
                                                     style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                                                 >
-                                                    💸 Gerar Taxa Matrícula
+                                                    💸 Gerar Taxa de Matrícula
                                                 </button>
                                                 <button 
                                                     onClick={handlePrintEnrollment}
