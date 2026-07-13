@@ -60,7 +60,7 @@ jobs:
             --build-arg NEXT_PUBLIC_BASE_PATH=/portalcursos.ng
 
       - name: Trivy scan — backend (CRITICAL/HIGH falha o build)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.24.0
         with:
           image-ref: portalcursos-backend:scan
           severity: CRITICAL,HIGH
@@ -68,7 +68,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Trivy scan — frontend (CRITICAL/HIGH falha o build)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.24.0
         with:
           image-ref: portalcursos-frontend:scan
           severity: CRITICAL,HIGH
