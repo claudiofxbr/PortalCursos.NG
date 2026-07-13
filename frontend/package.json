@@ -24,6 +24,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "postcss": "^8.4.38",
-    "typescript": "^5"
+    "typescript": "^7"
   }
 }
