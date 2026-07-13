@@ -9,7 +9,7 @@ RUN mvn dependency:go-offline -q
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine@sha256:02320dd4ce20e243dfb915c686089cf9315c763084fafbb12d5c9993aee18b57
+FROM eclipse-temurin:25-jre-alpine@sha256:28db6fdf60e38945e43d840c0333aeaec66c15943070104f7586fd3c9d1665b0
 # apk upgrade: a imagem base ainda nao incorporou patches do Alpine upstream
 # para libexpat (CVE-2026-56131/56407/56408) e p11-kit/p11-kit-trust
 # (CVE-2026-2100) — corrigidas aqui em vez de esperar nova build do Temurin.
