@@ -400,9 +400,9 @@ export default function CoursesPage() {
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <img 
-                                src={user?.fotoUrl ? (user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`) : `${BASE_URL}/uploads/default-auditor.png`} 
-                                alt="Emissor" 
+                            <img
+                                src={user?.fotoUrl ? (user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/api/uploads/${user.fotoUrl}`) : '/default-auditor.png'}
+                                alt="Emissor"
                                 onError={(e) => {
                                     (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Audit&background=d4af37&color=000';
                                 }}

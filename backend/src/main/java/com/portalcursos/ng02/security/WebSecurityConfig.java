@@ -61,7 +61,8 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
 
-                        .requestMatchers("/uploads/**").permitAll()
+                        // /uploads/** removido: servido agora via DocumentController
+                        // (/api/uploads/**) com autenticação e checagem de role por categoria.
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 );

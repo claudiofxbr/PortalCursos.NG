@@ -10,8 +10,9 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
-RUN apk add --no-cache wget
+RUN apk add --no-cache wget && addgroup -S app && adduser -S app -G app
 WORKDIR /app
-COPY --from=build /app/target/portalcursos-backend.jar app.jar
+COPY --from=build --chown=app:app /app/target/portalcursos-backend.jar app.jar
+USER app
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

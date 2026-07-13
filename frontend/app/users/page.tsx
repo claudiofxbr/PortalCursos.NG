@@ -239,7 +239,7 @@ export default function UsersManagementPage() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                                             <div style={AVATAR_CONTAINER}>
                                                 {user.fotoUrl ? (
-                                                    <img src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`} style={AVATAR_IMG} />
+                                                    <img src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/api/uploads/${user.fotoUrl}`} style={AVATAR_IMG} />
                                                 ) : <div style={AVATAR_PLACEHOLDER}>👤</div>}
                                             </div>
                                             <div>

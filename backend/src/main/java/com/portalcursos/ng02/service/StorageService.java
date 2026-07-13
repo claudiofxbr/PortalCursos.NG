@@ -1,12 +1,15 @@
 package com.portalcursos.ng02.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -72,6 +75,31 @@ public class StorageService {
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
         return subfolder + "/" + filename;
+    }
+
+    /**
+     * Carrega um arquivo já armazenado para servir via HTTP, validando que o
+     * caminho resolvido permanece dentro do diretório de uploads (evita path
+     * traversal via "../"). Não faz checagem de autorização — isso é
+     * responsabilidade do controller/serviço chamador.
+     */
+    public Resource loadAsResource(String relativePath) throws IOException {
+        Path base = Paths.get(uploadDir).normalize().toAbsolutePath();
+        Path target = base.resolve(relativePath).normalize();
+
+        if (!target.startsWith(base)) {
+            logger.warn("[SECURITY-WARN] Tentativa de acesso fora do diretório de uploads: {}", relativePath);
+            throw new IOException("Caminho inválido.");
+        }
+        if (!Files.exists(target) || !Files.isReadable(target)) {
+            throw new IOException("Arquivo não encontrado: " + relativePath);
+        }
+
+        try {
+            return new UrlResource(target.toUri());
+        } catch (MalformedURLException e) {
+            throw new IOException("Não foi possível carregar o arquivo: " + relativePath, e);
+        }
     }
 
     public boolean delete(String filePath) {
