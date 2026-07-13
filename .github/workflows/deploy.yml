@@ -41,9 +41,43 @@ jobs:
           npm ci
           npm run build
 
+  security-scan:
+    name: Scan de Vulnerabilidades (Trivy)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build imagem backend
+        run: docker build -t portalcursos-backend:scan -f backend/Dockerfile backend
+
+      - name: Build imagem frontend
+        run: |
+          docker build -t portalcursos-frontend:scan -f frontend/Dockerfile frontend \
+            --build-arg NEXT_PUBLIC_API_URL=https://xavierbr-vps.tech \
+            --build-arg NEXT_PUBLIC_BASE_PATH=/portalcursos.ng
+
+      - name: Trivy scan — backend (CRITICAL/HIGH falha o build)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: portalcursos-backend:scan
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Trivy scan — frontend (CRITICAL/HIGH falha o build)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: portalcursos-frontend:scan
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
   deploy:
     name: Deploy → VPS Hostinger
-    needs: test
+    needs: [test, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

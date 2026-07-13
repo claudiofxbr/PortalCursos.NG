@@ -39,10 +39,10 @@ public class RepairTicket extends BaseAuditEntity {
     private ERepairStatus status;
 
     @Builder.Default
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "repair_photos", joinColumns = @JoinColumn(name = "repair_ticket_id"))
     @Column(name = "photo_url", columnDefinition = "TEXT")
-    private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Evidências fotográficas (EAGER: carregado junto com o chamado)
+    private java.util.List<String> photoUrls = new java.util.ArrayList<>(); // Evidências fotográficas
 
     @Column(name = "main_photo_url")
     private String mainPhotoUrl;

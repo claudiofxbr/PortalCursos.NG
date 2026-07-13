@@ -74,7 +74,7 @@ public class Student extends BaseAuditEntity {
     @Column(name = "foto_matricula")
     private String fotoMatricula;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @JsonIgnore
     private User user;
