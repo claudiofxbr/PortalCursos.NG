@@ -39,9 +39,13 @@ backend/src/main/java/**/*.class
 *.war
 *.ear
 
-# Maven
-.mvn/
+# Maven wrapper — precisa estar versionado (não baixado em runtime) para
+# que ./mvnw funcione de forma reprodutível no CI. Exceções devem vir
+# depois de *.jar e de .mvn/*, senão o Git nunca chega a avaliá-las.
+backend/.mvn/*
+!backend/.mvn/wrapper/
 !backend/.mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.properties
 
 # Outros
 dist/
