@@ -17,6 +17,9 @@ RUN npm run build
 # autocontido — já inclui next.config.js + apenas os node_modules necessários
 # em runtime, garantindo que basePath/assetPrefix sejam aplicados corretamente.
 FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS runner
+# apk upgrade: corrige CVE-2026-45447 (OpenSSL libcrypto3/libssl3) ainda nao
+# incorporada na imagem base node:20-alpine mais recente disponivel.
+RUN apk upgrade --no-cache libcrypto3 libssl3
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/public ./public
