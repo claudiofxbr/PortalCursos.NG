@@ -4,6 +4,7 @@ import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.PostgradStudentService;
 import com.portalcursos.ng02.repository.CourseRepository;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.dto.MessageResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -79,7 +80,7 @@ public class PostgradStudentController {
                 .build();
 
         com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(desiredCourse)
-                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + desiredCourse));
+                .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado: " + desiredCourse));
         student.setCourse(course);
         auditService.injectCreator(student);
 
@@ -107,7 +108,7 @@ public class PostgradStudentController {
                 .build();
 
         com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(desiredCourse)
-                .orElseThrow(() -> new RuntimeException("Curso não encontrado: " + desiredCourse));
+                .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado: " + desiredCourse));
         student.setCourse(course);
         auditService.injectCreator(student);
         return ResponseEntity.ok(studentService.update(id, student, foto3x4File));

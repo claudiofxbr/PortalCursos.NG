@@ -378,18 +378,25 @@ public class AuthController {
                 roles.add(roleRepository.findByName(Role.ERole.ROLE_ALUNO)
                         .orElseThrow(() -> new RuntimeException("ROLE_ALUNO não encontrado.")));
             } else {
-                strRoles.forEach(role -> {
-                    switch (role.toLowerCase()) {
-                        case "admin" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("ROLE_ADMIN não encontrado.")));
-                        case "staff" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_SECRETARIA)
-                                .orElseThrow(() -> new RuntimeException("ROLE_SECRETARIA não encontrado.")));
-                        case "teacher" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_PROFESSOR)
-                                .orElseThrow(() -> new RuntimeException("ROLE_PROFESSOR não encontrado.")));
-                        default -> roles.add(roleRepository.findByName(Role.ERole.ROLE_ALUNO)
-                                .orElseThrow(() -> new RuntimeException("ROLE_ALUNO não encontrado.")));
-                    }
-                });
+                for (String role : strRoles) {
+                    Role.ERole targetRole = switch (role.toLowerCase()) {
+                        case "admin" -> Role.ERole.ROLE_ADMIN;
+                        case "root_master", "rootmaster" -> Role.ERole.ROLE_ROOT_MASTER;
+                        case "staff", "secretaria" -> Role.ERole.ROLE_SECRETARIA;
+                        case "financeiro" -> Role.ERole.ROLE_FINANCEIRO;
+                        case "academico" -> Role.ERole.ROLE_ACADEMICO;
+                        case "matricula" -> Role.ERole.ROLE_MATRICULA;
+                        case "coordenador" -> Role.ERole.ROLE_COORDENADOR;
+                        case "teacher", "professor" -> Role.ERole.ROLE_PROFESSOR;
+                        case "monitor" -> Role.ERole.ROLE_MONITOR;
+                        case "bibliotecario" -> Role.ERole.ROLE_BIBLIOTECARIO;
+                        case "aluno", "student" -> Role.ERole.ROLE_ALUNO;
+                        case "candidato" -> Role.ERole.ROLE_CANDIDATO;
+                        default -> throw new IllegalArgumentException("Role desconhecida: " + role);
+                    };
+                    roles.add(roleRepository.findByName(targetRole)
+                            .orElseThrow(() -> new RuntimeException(targetRole + " não encontrado.")));
+                }
             }
 
             user.setRoles(roles);
@@ -398,6 +405,8 @@ public class AuthController {
             logger.info("[AUTH] [SIGNUP-SUCCESS] Usuário {} registrado.", signUpRequest.getUsername());
             return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso."));
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Erro: " + e.getMessage()));
         } catch (Exception e) {
             logger.error("[AUTH] [SIGNUP-ERROR] Falha ao salvar usuário: ", e);
             return ResponseEntity

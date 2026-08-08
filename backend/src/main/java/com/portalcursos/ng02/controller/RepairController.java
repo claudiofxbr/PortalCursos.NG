@@ -6,6 +6,7 @@ import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.RepairRepository;
 import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StorageService;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.dto.MessageResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -114,7 +115,7 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
         RepairTicket t = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
         
         if (t.getPhotoUrls().size() >= 4) {
             return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
@@ -135,7 +136,7 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
         RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
 
         try {
             ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
@@ -152,7 +153,7 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
         
         // Limpeza de arquivos relacionados antes de deletar o registro
         if (ticket.getMainPhotoUrl() != null) {

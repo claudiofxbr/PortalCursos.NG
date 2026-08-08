@@ -3,12 +3,14 @@
 -- PROTOCOLO V38.1.1 (FIX-EMERGENCY)
 -- ==========================================================
 
--- 1. GARANTIR QUE O USUÁRIO EXISTE E TEM A SENHA CORRETA
--- Senha: qzWX312#!@
-INSERT INTO users (username, email, password, active) 
-VALUES ('rootmaster', 'ti@portalcursos.com', '$2b$12$52.S5lgBkOdRSBkGHRByIu43Lxq7c13FTjuwhE7dZemPDs.ck73D.', true)
-ON CONFLICT (username) DO UPDATE 
-SET password = EXCLUDED.password, active = true;
+-- 1. GARANTIR QUE O USUÁRIO EXISTE
+-- ATENÇÃO: este script não deve mais fixar senha/hash em texto plano.
+-- O hash de senha do rootmaster é sincronizado no boot pelo DataLoader,
+-- a partir da variável de ambiente APP_ROOT_PASSWORD (ver .env.example).
+INSERT INTO users (username, email, password, active)
+VALUES ('rootmaster', 'ti@portalcursos.com', '<definido pelo DataLoader via APP_ROOT_PASSWORD>', true)
+ON CONFLICT (username) DO UPDATE
+SET active = true;
 
 -- 2. GARANTIR QUE A ROLE ROOT MASTER EXISTE
 INSERT INTO roles (name) VALUES ('ROLE_ROOT_MASTER') ON CONFLICT (name) DO NOTHING;

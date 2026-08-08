@@ -50,7 +50,10 @@ export const AuditStamp: React.FC<AuditStampProps> = ({ name, position, photoUrl
                         const parent = (e.target as HTMLImageElement).parentElement;
                         if (parent) {
                             parent.style.backgroundColor = '#3498db';
-                            parent.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:10px;font-weight:bold">${name.charAt(0)}</div>`;
+                            const fallback = document.createElement('div');
+                            fallback.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:10px;font-weight:bold';
+                            fallback.textContent = name.charAt(0);
+                            parent.appendChild(fallback);
                         }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}

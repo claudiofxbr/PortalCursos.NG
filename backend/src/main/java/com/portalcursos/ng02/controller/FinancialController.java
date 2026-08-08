@@ -5,6 +5,7 @@ import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.service.AuditService;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
@@ -66,12 +67,12 @@ public class FinancialController {
 
         if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
             Student student = studentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new RuntimeException("Estudante de graduação não encontrado"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de graduação não encontrado"));
             payment.setStudent(student);
             payment.setStudentPhotoUrl(student.getFotoMatricula());
         } else {
             PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new RuntimeException("Estudante de pós-graduação não encontrado"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
             payment.setPostgradStudent(postgradStudent);
             payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
         }
@@ -84,7 +85,7 @@ public class FinancialController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
         payment.setAmount(request.getAmount());
         payment.setDueDate(request.getDueDate());
@@ -100,7 +101,7 @@ public class FinancialController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cobrança não encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
         paymentRepository.delete(payment);
         return ResponseEntity.ok(new MessageResponse("Cobrança removida com sucesso"));
@@ -196,7 +197,7 @@ public class FinancialController {
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generatePix(@PathVariable @NonNull Long paymentId) {
         Payment p = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Fatura não encontrada para gerar PIX"));
+                .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar PIX"));
 
         if (!hasElevatedPrivileges() && !ownsPayment(p)) {
             return ResponseEntity.status(403)
@@ -213,7 +214,7 @@ public class FinancialController {
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generateBoleto(@PathVariable @NonNull Long paymentId) {
         Payment p = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Fatura não encontrada para gerar boleto"));
+                .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar boleto"));
 
         if (!hasElevatedPrivileges() && !ownsPayment(p)) {
             return ResponseEntity.status(403)
