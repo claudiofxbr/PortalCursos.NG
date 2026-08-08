@@ -5,6 +5,7 @@ import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentDocumentRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,7 +34,7 @@ public class StudentService {
     }
 
     public Optional<Student> findById(Long id) {
-        return studentRepository.findByIdAndActiveTrue(id);
+        return studentRepository.findByIdWithDocuments(id).filter(Student::isActive);
     }
 
     public Optional<Student> findByEmail(String email) {
@@ -95,7 +96,7 @@ public class StudentService {
     @Transactional
     public Student update(Long id, Student updatedData, MultipartFile foto3x4) throws IOException {
         Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estudante não encontrado com ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Estudante não encontrado com ID: " + id));
 
         student.setFullName(updatedData.getFullName());
         student.setPhone(sanitizeNumber(updatedData.getPhone()));

@@ -81,6 +81,7 @@ public class Student extends BaseAuditEntity {
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @JsonIgnore
     private java.util.List<Payment> payments = new java.util.ArrayList<>();
 
     @JsonProperty("registrationDate")

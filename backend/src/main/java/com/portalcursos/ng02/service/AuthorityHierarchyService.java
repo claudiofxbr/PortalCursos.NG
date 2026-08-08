@@ -4,6 +4,7 @@ import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -87,14 +88,14 @@ public class AuthorityHierarchyService {
         if (isRoot(operator)) return; // Root manda em tudo
         
         if (target.getUsername().equals("rootmaster")) {
-            throw new RuntimeException("Acesso Negado: O perfil Root Master é protegido e inalterável.");
+            throw new AccessDeniedException("Acesso Negado: O perfil Root Master é protegido e inalterável.");
         }
 
         int opLevel = getMaxLevel(operator);
         int tgLevel = getMaxLevel(target);
 
         if (tgLevel >= opLevel) {
-            throw new RuntimeException("Permissão Negada: Você não possui autoridade institucional sobre este perfil (Nível " + tgLevel + " vs Seu Nível " + opLevel + ").");
+            throw new AccessDeniedException("Permissão Negada: Você não possui autoridade institucional sobre este perfil (Nível " + tgLevel + " vs Seu Nível " + opLevel + ").");
         }
     }
 
@@ -109,7 +110,7 @@ public class AuthorityHierarchyService {
         int requestedLevel = getMaxLevelFromRoles(strRoles);
 
         if (requestedLevel >= opLevel) {
-            throw new RuntimeException("Permissão Negada: Você não pode atribuir permissões de nível " + requestedLevel + " (Seu limite é " + (opLevel - 1) + ").");
+            throw new AccessDeniedException("Permissão Negada: Você não pode atribuir permissões de nível " + requestedLevel + " (Seu limite é " + (opLevel - 1) + ").");
         }
     }
 }

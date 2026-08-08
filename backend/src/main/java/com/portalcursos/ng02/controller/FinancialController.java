@@ -73,7 +73,7 @@ public class FinancialController {
         } else {
             PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
-            payment.setPostgradStudent(postgradStudent);
+            payment.setStudent(postgradStudent);
             payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
         }
 
@@ -172,13 +172,9 @@ public class FinancialController {
             return false;
         }
         Long userId = ((com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal()).getId();
-        if (payment.getStudent() != null) {
-            return payment.getStudent().getUser() != null && payment.getStudent().getUser().getId().equals(userId);
-        }
-        if (payment.getPostgradStudent() != null) {
-            return payment.getPostgradStudent().getUser() != null && payment.getPostgradStudent().getUser().getId().equals(userId);
-        }
-        return false;
+        return payment.getStudent() != null
+            && payment.getStudent().getUser() != null
+            && payment.getStudent().getUser().getId().equals(userId);
     }
 
     @GetMapping("/invoices")
@@ -235,11 +231,15 @@ public class FinancialController {
      * Pago, PagSeguro) antes de processar pagamentos de produção.
      */
     private String buildSimulatedPixCode(Payment p) {
-        String amount = p.getTotalAmount() != null ? p.getTotalAmount().toString() : "0.00";
+        java.math.BigDecimal amount = p.getTotalAmount() != null ? p.getTotalAmount() : java.math.BigDecimal.ZERO;
+        String amountDigits = amount.setScale(2, java.math.RoundingMode.HALF_UP)
+                .movePointRight(2)
+                .toBigInteger()
+                .toString();
         String txid = String.format("PORTAL%010d", p.getId());
         return "00020126580014BR.GOV.BCB.PIX0136" + txid
                 + "5204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304"
-                + String.format("%08.2f", Double.parseDouble(amount)).replace(".", "");
+                + String.format("%08s", amountDigits).replace(" ", "0");
     }
 
     private String buildSimulatedBoletoUrl(Payment p) {

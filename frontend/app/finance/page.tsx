@@ -5,6 +5,7 @@ import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useAuditCRUD } from '../hooks/useAuditCRUD';
 import { AuditStamp } from '../components/AuditStamp';
+import { PixQrCode } from '../components/PixQrCode';
 import { toast } from 'sonner';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
@@ -470,8 +471,8 @@ export default function FinancePage() {
                    {showPaymentModal.method === 'PIX' ? (
                        <div>
                            <div style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                               {/* Simulação de QR Code */}
-                               <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(showPaymentModal.paymentCode)}`} alt="Pix QR Code" style={{ borderRadius: '8px' }} />
+                               {/* Simulação de QR Code — gerado no cliente, sem enviar dados financeiros a terceiros */}
+                               <PixQrCode data={showPaymentModal.paymentCode} />
                            </div>
                            <p style={{ fontSize: '0.7rem', color: '#888', marginBottom: '1rem', wordBreak: 'break-all' }}>{showPaymentModal.paymentCode}</p>
                            <button onClick={() => { navigator.clipboard.writeText(showPaymentModal.paymentCode); alert("Chave Pix copiada!"); }} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>Copiar Chave Pix</button>

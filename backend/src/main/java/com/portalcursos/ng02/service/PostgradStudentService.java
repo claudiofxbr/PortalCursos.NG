@@ -4,6 +4,7 @@ import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentDocumentRepository;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -97,7 +98,7 @@ public class PostgradStudentService {
     @Transactional
     public PostgradStudent update(Long id, PostgradStudent updatedData, MultipartFile foto3x4File) throws IOException {
         PostgradStudent student = studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estudante não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Estudante não encontrado"));
 
         student.setFullName(updatedData.getFullName());
         student.setPhone(sanitizeNumber(updatedData.getPhone()));
