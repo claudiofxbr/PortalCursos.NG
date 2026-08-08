@@ -69,6 +69,10 @@ try {
     
     # Executa o orquestrador completo
     Write-Host "    -> Disparando build e deploy Docker..." -ForegroundColor DarkCyan
+    # git fetch + reset --hard origin/main (em vez de "git pull") evita depender de
+    # tracking de branch configurado na VPS — "git pull" falhava silenciosamente
+    # quando a branch local nao tinha upstream, deixando o deploy rodar com codigo
+    # desatualizado sem nenhum erro visivel.
     $sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
                   "  echo '    [!] Repositorio nao encontrado na VPS. Clonando do Github...' && " +
                   "  sudo rm -rf /var/www/portalcursos && " +
@@ -76,12 +80,16 @@ try {
                   "  sudo cp /tmp/portal_env /var/www/portalcursos/.env 2>/dev/null || true; " +
                   "fi && " +
                   "cd /var/www/portalcursos && " +
-                  "git reset --hard HEAD && " +
-                  "git pull && " +
+                  "git fetch origin main && " +
+                  "git reset --hard origin/main && " +
                   "chmod +x devops/scripts/deploy_docker_compose.sh && " +
                   "./devops/scripts/deploy_docker_compose.sh"
-                  
+
     ssh -o StrictHostKeyChecking=no root@$vpsIp $sshCommand
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERRO CRÍTICO] Deploy na VPS falhou (exit code $LASTEXITCODE). Veja a saida do SSH acima para detalhes." -ForegroundColor Red
+        exit 1
+    }
     Write-Host "[OK] Processo de deploy concluído com sucesso dentro da VPS Hostinger!" -ForegroundColor Green
 } catch {
     Write-Host "[ERRO CRÍTICO] Falha na comunicação SSH com a VPS. Verifique sua chave privada ou IP: $vpsIp" -ForegroundColor Red
