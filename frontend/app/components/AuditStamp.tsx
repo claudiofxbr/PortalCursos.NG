@@ -11,8 +11,9 @@ export const AuditStamp: React.FC<AuditStampProps> = ({ name, position, photoUrl
     if (!name) return null;
 
     // Resolução robusta de URL com Fallback V37.6-ULTRA
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const getResolvedPhotoUrl = (url?: string) => {
-        if (!url || url.trim() === "") return "/default-auditor.png"; // asset estático do Next.js, sem auth
+        if (!url || url.trim() === "") return `${basePath}/default-auditor.png`; // asset estático do Next.js, sem auth
         if (url.startsWith('http')) return url;
         if (url.startsWith('/')) return `${BASE_URL}${url}`;
         // Documento/foto do usuário: exige autenticação, servido via DocumentController

@@ -401,7 +401,7 @@ export default function CoursesPage() {
                             justifyContent: 'center'
                         }}>
                             <img
-                                src={user?.fotoUrl ? (user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/api/uploads/${user.fotoUrl}`) : '/default-auditor.png'}
+                                src={user?.fotoUrl ? (user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/api/uploads/${user.fotoUrl}`) : `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/default-auditor.png`}
                                 alt="Emissor"
                                 onError={(e) => {
                                     (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Audit&background=d4af37&color=000';
