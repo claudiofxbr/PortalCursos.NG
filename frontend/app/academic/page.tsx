@@ -63,8 +63,12 @@ export default function GraduationPage() {
     const isLoading = gradService.loading;
 
     const loadStudents = async () => {
-        const data = await gradService.list();
-        setStudents(data);
+        try {
+            const data = await gradService.list();
+            setStudents(data);
+        } catch (e) {
+            // toast já emitido pelo useAuditCRUD
+        }
     };
 
     // Form State
