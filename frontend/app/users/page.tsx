@@ -52,6 +52,59 @@ const ROLE_CONFIG: { [key: string]: { label: string, color: string, bg: string, 
     ROLE_ALUNO: { label: 'Perfil Discente', color: '#fff', bg: '#7f8c8d', level: 'Discente' }
 };
 
+// Categoria macro (Root / Admin / Cliente) — agrupamento puramente visual.
+// As 11 roles institucionais continuam existindo e funcionando normalmente
+// no backend; isto só simplifica a leitura desta tela.
+type Category = 'root' | 'admin' | 'cliente';
+
+const CATEGORY_OF_ROLE: { [key: string]: Category } = {
+    ROLE_ROOT_MASTER: 'root',
+    ROLE_ADMIN: 'admin',
+    ROLE_COORDENADOR: 'admin',
+    ROLE_SECRETARIA: 'admin',
+    ROLE_FINANCEIRO: 'admin',
+    ROLE_PROFESSOR: 'admin',
+    ROLE_ACADEMICO: 'admin',
+    ROLE_MATRICULA: 'admin',
+    ROLE_BIBLIOTECARIO: 'admin',
+    ROLE_MONITOR: 'admin',
+    ROLE_ALUNO: 'cliente',
+    ROLE_STUDENT: 'cliente',
+    ROLE_CANDIDATO: 'cliente',
+};
+
+const CATEGORY_CONFIG: { [key in Category]: { label: string, color: string, bg: string } } = {
+    root: { label: '👑 ROOT', color: '#fff', bg: '#e74c3c' },
+    admin: { label: '🛡️ ADMIN', color: '#000', bg: '#f1c40f' },
+    cliente: { label: '🎓 CLIENTE', color: '#fff', bg: '#7f8c8d' },
+};
+
+const getCategory = (roleName: string): Category => {
+    const rn = roleName.startsWith('ROLE_') ? roleName : `ROLE_${roleName}`;
+    return CATEGORY_OF_ROLE[rn] || 'cliente';
+};
+
+// Opções de role do <select>, agrupadas em 3 categorias visuais (root/admin/cliente).
+// Continua expondo as 11 roles institucionais — nenhuma capacidade é removida.
+const renderRoleOptions = (getRoleLevel: (rk: string) => number, opLevel: number) => {
+    const categories: Category[] = ['root', 'admin', 'cliente'];
+    return categories.map(cat => {
+        const roleKeys = Object.keys(ROLE_CONFIG)
+            .filter(rk => getCategory(rk) === cat)
+            .filter(rk => getRoleLevel(rk) < opLevel || opLevel === 100);
+        if (roleKeys.length === 0) return null;
+        return (
+            <optgroup key={cat} label={CATEGORY_CONFIG[cat].label} style={{ backgroundColor: '#000' }}>
+                {roleKeys.map(rk => (
+                    <option key={rk} value={rk.replace('ROLE_', '')} style={{ backgroundColor: '#000' }}>
+                        [{ROLE_CONFIG[rk].level}] {ROLE_CONFIG[rk].label}
+                    </option>
+                ))}
+            </optgroup>
+        );
+    });
+};
+
 const LABEL_STYLE = {
     display: 'block',
     fontSize: '0.75rem',
@@ -249,16 +302,29 @@ export default function UsersManagementPage() {
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {user.roles.map(r => {
-                                                const rn = typeof r === 'string' ? r : r.name;
-                                                const config = ROLE_CONFIG[rn] || { label: rn, bg: '#333', color: '#fff' };
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                                            {(() => {
+                                                const topRoleName = user.roles.length
+                                                    ? (typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].name)
+                                                    : '';
+                                                const cat = CATEGORY_CONFIG[getCategory(topRoleName)];
                                                 return (
-                                                    <span key={rn} style={{ ...BADGE_STYLE, backgroundColor: config.bg, color: config.color }}>
-                                                        {config.label}
+                                                    <span style={{ ...BADGE_STYLE, backgroundColor: cat.bg, color: cat.color, opacity: 0.85 }}>
+                                                        {cat.label}
                                                     </span>
                                                 );
-                                            })}
+                                            })()}
+                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                {user.roles.map(r => {
+                                                    const rn = typeof r === 'string' ? r : r.name;
+                                                    const config = ROLE_CONFIG[rn] || { label: rn, bg: '#333', color: '#fff' };
+                                                    return (
+                                                        <span key={rn} style={{ ...BADGE_STYLE, backgroundColor: config.bg, color: config.color }}>
+                                                            {config.label}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
@@ -321,14 +387,7 @@ export default function UsersManagementPage() {
                             <div>
                                 <label style={LABEL_STYLE}>Nível de Autoridade</label>
                                 <select style={SELECT_STYLE} value={formData.roles[0].replace('ROLE_', '')} onChange={e => setFormData({...formData, roles: [e.target.value]})}>
-                                    {Object.keys(ROLE_CONFIG)
-                                        .filter(rk => getRoleLevel(rk) < opLevel || opLevel === 100)
-                                        .map(rk => (
-                                            <option key={rk} value={rk.replace('ROLE_', '')} style={{ backgroundColor: '#000' }}>
-                                                [{ROLE_CONFIG[rk].level}] {ROLE_CONFIG[rk].label}
-                                            </option>
-                                        ))
-                                    }
+                                    {renderRoleOptions(getRoleLevel, opLevel)}
                                 </select>
                             </div>
                             <div style={{ gridColumn: 'span 2', marginTop: '2rem', display: 'flex', gap: '1rem' }}>
@@ -352,14 +411,7 @@ export default function UsersManagementPage() {
                         <div style={{ marginBottom: '2rem' }}>
                             <label style={LABEL_STYLE}>Novo Nível Institucional</label>
                             <select style={SELECT_STYLE} value={newRoles[0]} onChange={e => setNewRoles([e.target.value])}>
-                                {Object.keys(ROLE_CONFIG)
-                                    .filter(rk => getRoleLevel(rk) < opLevel || opLevel === 100)
-                                    .map(rk => (
-                                        <option key={rk} value={rk.replace('ROLE_', '')} style={{ backgroundColor: '#000' }}>
-                                            {ROLE_CONFIG[rk].label}
-                                        </option>
-                                    ))
-                                }
+                                {renderRoleOptions(getRoleLevel, opLevel)}
                             </select>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>

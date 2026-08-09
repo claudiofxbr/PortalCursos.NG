@@ -46,7 +46,7 @@ public class UserService {
         boolean isRoot = authorityService.isRoot(currentUser);
         int currentLevel = authorityService.getMaxLevel(currentUser);
 
-        List<User> allUsers = userRepository.findAll();
+        List<User> allUsers = userRepository.findAllWithRoles();
 
         if (isRoot) return allUsers;
 
