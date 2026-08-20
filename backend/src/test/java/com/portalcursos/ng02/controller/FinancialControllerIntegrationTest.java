@@ -120,7 +120,7 @@ public class FinancialControllerIntegrationTest {
                 .build();
 
         when(studentRepository.findByUserId(1L)).thenReturn(Optional.of(owner));
-        when(paymentRepository.findById(500L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.findByIdWithCreatorAndStudent(500L)).thenReturn(Optional.of(payment));
 
         mockMvc.perform(post("/api/finance/generate-pix/{paymentId}", 500L)
                 .with(authentication(authFor(1L, "aluno1")))

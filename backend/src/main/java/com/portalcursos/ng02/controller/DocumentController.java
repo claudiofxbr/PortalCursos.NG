@@ -16,6 +16,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 /**
  * Substitui o antigo resource handler estático de "/uploads/**" (que era
@@ -33,11 +34,10 @@ public class DocumentController {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
-    private static final String REPAIR_ROLES =
-            "hasAnyRole('ROOT_MASTER', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ACADEMICO', 'COORDENADOR', 'PROFESSOR')";
-    private static final String STUDENT_DOC_ROLES =
-            "hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'MATRICULA', 'ROOT_MASTER')";
-    private static final String STAFF_PHOTO_ROLES = "isAuthenticated()";
+    private static final Set<String> REPAIR_ROLES = Set.of(
+            "ROLE_ROOT_MASTER", "ROLE_ADMIN", "ROLE_SECRETARIA", "ROLE_FINANCEIRO", "ROLE_ACADEMICO", "ROLE_COORDENADOR", "ROLE_PROFESSOR");
+    private static final Set<String> STUDENT_DOC_ROLES = Set.of(
+            "ROLE_ADMIN", "ROLE_SECRETARIA", "ROLE_ACADEMICO", "ROLE_MATRICULA", "ROLE_ROOT_MASTER");
 
     private final StorageService storageService;
 
@@ -67,19 +67,15 @@ public class DocumentController {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        var expression = switch (category) {
+        if (category.equals("staff-photos") || category.equals("fotos-perfil")) {
+            return true; // qualquer usuário autenticado
+        }
+        Set<String> allowedRoles = switch (category) {
             case "repairs-main", "repairs-gallery", "repairs" -> REPAIR_ROLES;
             case "grad-students", "postgrad", "documents" -> STUDENT_DOC_ROLES;
-            case "staff-photos", "fotos-perfil" -> STAFF_PHOTO_ROLES;
-            default -> null;
+            default -> Set.of();
         };
-        if (expression == null) {
-            return false;
-        }
-        if (STAFF_PHOTO_ROLES.equals(expression)) {
-            return true;
-        }
-        return auth.getAuthorities().stream().anyMatch(a -> expression.contains(a.getAuthority()));
+        return auth.getAuthorities().stream().anyMatch(a -> allowedRoles.contains(a.getAuthority()));
     }
 
     private String extractRelativePath(jakarta.servlet.http.HttpServletRequest request) {

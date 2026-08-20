@@ -84,7 +84,7 @@ public class FinancialController {
     @PutMapping("/invoices/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
-        Payment payment = paymentRepository.findById(id)
+        Payment payment = paymentRepository.findByIdWithCreatorAndStudent(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
         payment.setAmount(request.getAmount());
@@ -192,7 +192,7 @@ public class FinancialController {
     @PostMapping("/generate-pix/{paymentId}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generatePix(@PathVariable @NonNull Long paymentId) {
-        Payment p = paymentRepository.findById(paymentId)
+        Payment p = paymentRepository.findByIdWithCreatorAndStudent(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar PIX"));
 
         if (!hasElevatedPrivileges() && !ownsPayment(p)) {
@@ -209,7 +209,7 @@ public class FinancialController {
     @PostMapping("/generate-boleto/{paymentId}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> generateBoleto(@PathVariable @NonNull Long paymentId) {
-        Payment p = paymentRepository.findById(paymentId)
+        Payment p = paymentRepository.findByIdWithCreatorAndStudent(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar boleto"));
 
         if (!hasElevatedPrivileges() && !ownsPayment(p)) {

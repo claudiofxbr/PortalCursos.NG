@@ -11,6 +11,7 @@ import org.hibernate.annotations.SQLDelete;
 
 import lombok.experimental.SuperBuilder;
 import lombok.EqualsAndHashCode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "staff_members")
@@ -39,5 +40,6 @@ public class StaffMember extends BaseAuditEntity {
     @OneToOne
     @MapsId
     @JoinColumn(name = "id")
+    @JsonIgnore
     private User user;
 }
