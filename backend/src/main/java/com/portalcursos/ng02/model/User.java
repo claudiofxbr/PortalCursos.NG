@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -54,4 +55,14 @@ public class User {
     private Set<Role> roles = new HashSet<>();
 
     private String fotoUrl;
+
+    /**
+     * Registro de consentimento LGPD/GDPR (Art. 8º LGPD / Art. 7 GDPR) — evidência de que o
+     * titular aceitou a Política de Privacidade vigente no momento do cadastro.
+     */
+    private Boolean privacyConsentAccepted;
+
+    private String privacyConsentVersion;
+
+    private LocalDateTime privacyConsentAt;
 }

@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserSessionRepository;
@@ -45,6 +46,7 @@ import com.portalcursos.ng02.model.StaffMember;
 @RequiredArgsConstructor
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String PRIVACY_POLICY_VERSION = "1.0";
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -369,6 +371,9 @@ public class AuthController {
                     .username(signUpRequest.getUsername())
                     .email(signUpRequest.getEmail())
                     .password(encoder.encode(signUpRequest.getPassword()))
+                    .privacyConsentAccepted(true)
+                    .privacyConsentVersion(PRIVACY_POLICY_VERSION)
+                    .privacyConsentAt(LocalDateTime.now())
                     .build();
 
             Set<String> strRoles = signUpRequest.getRole();

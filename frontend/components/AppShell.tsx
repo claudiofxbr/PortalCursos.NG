@@ -7,7 +7,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import ThemeSelector from './ThemeSelector';
 
 // Rotas que NÃO precisam de autenticação
-const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup'];
+const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup', '/privacidade'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const [isMounted, setIsMounted] = useState(false);

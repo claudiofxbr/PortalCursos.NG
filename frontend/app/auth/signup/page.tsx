@@ -13,6 +13,7 @@ export default function SignUpPage() {
     password: '',
     role: ['aluno']
   });
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +63,14 @@ export default function SignUpPage() {
       setLoading(false);
       return;
     }
+    if (!privacyConsentAccepted) {
+      setError("É necessário aceitar a Política de Privacidade para criar sua conta.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      await api.post('auth/signup', formData);
+      await api.post('auth/signup', { ...formData, privacyConsentAccepted });
       alert("✅ Conta criada com sucesso! Redirecionando para o login...");
       router.push('/auth/signin');
     } catch (err: any) {
@@ -146,11 +152,26 @@ export default function SignUpPage() {
             />
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="btn-primary" 
-            style={{ padding: '15px', marginTop: '1rem', opacity: loading ? 0.7 : 1 }}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            <input
+              type="checkbox"
+              checked={privacyConsentAccepted}
+              onChange={(e) => setPrivacyConsentAccepted(e.target.checked)}
+              style={{ marginTop: '3px' }}
+            />
+            <span>
+              Li e aceito a{' '}
+              <Link href="/privacidade" target="_blank" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                Política de Privacidade
+              </Link>.
+            </span>
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading || !privacyConsentAccepted}
+            className="btn-primary"
+            style={{ padding: '15px', marginTop: '1rem', opacity: (loading || !privacyConsentAccepted) ? 0.7 : 1 }}
           >
             {loading ? "Criando conta..." : "Criar Minha Conta"}
           </button>
