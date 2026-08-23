@@ -328,8 +328,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {} ({})",
-                signUpRequest.getUsername(), signUpRequest.getEmail());
+        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {}", signUpRequest.getUsername());
 
         Set<String> requestedRoles = signUpRequest.getRole();
         // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados

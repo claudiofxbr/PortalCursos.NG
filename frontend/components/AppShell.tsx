@@ -91,6 +91,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                             { href: '/roadmap', label: '🚀 Implementação', adminOnly: true },
                             { href: '/finance', label: '💰 Financeiro' },
                             { href: '/repairs', label: '🛠️ Infraestrutura' },
+                            { href: '/minha-conta', label: '🔐 Meus Dados' },
+                            { href: '/privacidade-solicitacoes', label: '📋 Solicitações de Exclusão', adminOnly: true },
                         ].filter(item => {
                             if (!item.adminOnly) return true;
                             const userRoles = user?.roles || [];
