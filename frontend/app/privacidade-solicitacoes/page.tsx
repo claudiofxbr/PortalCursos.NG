@@ -34,6 +34,7 @@ export default function PrivacyRequestsPage() {
     const [requests, setRequests] = useState<DeletionRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [busyId, setBusyId] = useState<number | null>(null);
+    const [executeMessage, setExecuteMessage] = useState<{ id: number; text: string; ok: boolean } | null>(null);
 
     const load = () => {
         setLoading(true);
@@ -45,12 +46,27 @@ export default function PrivacyRequestsPage() {
 
     useEffect(() => { load(); }, []);
 
-    const review = async (id: number, status: 'APPROVED' | 'REJECTED' | 'COMPLETED') => {
+    const review = async (id: number, status: 'APPROVED' | 'REJECTED') => {
         const notes = prompt('Observações da análise (opcional):') || '';
         setBusyId(id);
         try {
             await api.patch(`privacy/data-deletion-requests/${id}`, { status, notes });
             load();
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const execute = async (id: number) => {
+        if (!confirm('Confirma a eliminação definitiva? Se o prazo legal de guarda (20 anos acadêmico / 5 anos financeiro) ainda não tiver expirado, a operação será bloqueada automaticamente.')) return;
+        setBusyId(id);
+        setExecuteMessage(null);
+        try {
+            const res = await api.post(`privacy/data-deletion-requests/${id}/execute`);
+            setExecuteMessage({ id, text: res.data?.message || 'Eliminação executada.', ok: true });
+            load();
+        } catch (err: any) {
+            setExecuteMessage({ id, text: err.response?.data?.message || 'Não foi possível executar a eliminação.', ok: false });
         } finally {
             setBusyId(null);
         }
@@ -115,12 +131,17 @@ export default function PrivacyRequestsPage() {
                         <div style={{ marginTop: '1rem' }}>
                             <button
                                 disabled={busyId === req.id}
-                                onClick={() => review(req.id, 'COMPLETED')}
+                                onClick={() => execute(req.id)}
                                 className="btn-primary"
                                 style={{ padding: '8px 16px', fontSize: '0.85rem' }}
                             >
-                                Marcar como concluída (após excluir manualmente os dados)
+                                🔒 Executar eliminação definitiva
                             </button>
+                            {executeMessage?.id === req.id && (
+                                <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: executeMessage.ok ? '#2ecc71' : '#e67e22' }}>
+                                    {executeMessage.text}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>

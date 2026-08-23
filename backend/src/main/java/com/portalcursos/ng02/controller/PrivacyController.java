@@ -8,6 +8,7 @@ import com.portalcursos.ng02.repository.DataDeletionRequestRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
+import com.portalcursos.ng02.service.DataAnonymizationService;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ public class PrivacyController {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final DataDeletionRequestRepository deletionRequestRepository;
+    private final DataAnonymizationService anonymizationService;
 
     private User currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -129,6 +131,38 @@ public class PrivacyController {
 
         logger.info("[PRIVACY] Solicitação id={} revisada por {} -> {}", id, reviewer.getUsername(), body.status());
         return ResponseEntity.ok(request);
+    }
+
+    @PostMapping("/data-deletion-requests/{id}/execute")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
+    public ResponseEntity<?> executeDeletion(@PathVariable Long id) {
+        DataDeletionRequest request = deletionRequestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitação não encontrada."));
+
+        if (request.getStatus() != DataDeletionRequest.Status.APPROVED) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Só é possível executar a eliminação em solicitações já aprovadas."));
+        }
+
+        User targetUser = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário da solicitação não encontrado (pode já ter sido eliminado)."));
+
+        DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(targetUser);
+
+        if (!result.completed()) {
+            return ResponseEntity.status(409).body(new MessageResponse(
+                    result.reason() + " Elegível a partir de " + result.earliestEligibleDate() + "."));
+        }
+
+        request.setStatus(DataDeletionRequest.Status.COMPLETED);
+        String previousNotes = request.getReviewNotes();
+        request.setReviewNotes((previousNotes != null && !previousNotes.isBlank() ? previousNotes + " | " : "")
+                + "Anonimização executada automaticamente em " + LocalDateTime.now());
+        request.setReviewedAt(LocalDateTime.now());
+        deletionRequestRepository.save(request);
+
+        logger.info("[PRIVACY] Eliminação definitiva executada para solicitação id={} (usuário id={})", id, targetUser.getId());
+        return ResponseEntity.ok(new MessageResponse("Dados eliminados/anonimizados com sucesso."));
     }
 
     public record ReviewRequest(DataDeletionRequest.Status status, String notes) {}
