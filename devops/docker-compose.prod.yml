@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: portalcursos_db
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
-      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-portal_password}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD é obrigatório}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
