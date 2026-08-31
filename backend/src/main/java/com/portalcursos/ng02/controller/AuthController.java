@@ -410,7 +410,9 @@ public class AuthController {
             return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso."));
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro: " + e.getMessage()));
+            // Mensagem de IllegalArgumentException aqui é controlada (ex.: "Role desconhecida: X"),
+            // mas delega ao GlobalExceptionHandler via BusinessException para manter formato de erro consistente.
+            throw new com.portalcursos.ng02.exception.BusinessException(e.getMessage());
         } catch (Exception e) {
             logger.error("[AUTH] [SIGNUP-ERROR] Falha ao salvar usuário: ", e);
             return ResponseEntity

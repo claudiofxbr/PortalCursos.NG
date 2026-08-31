@@ -101,8 +101,8 @@ public class RepairController {
                 String photoPath = storageService.store(mainPhotoFile, "repairs-main");
                 ticket.setMainPhotoUrl(photoPath);
             } catch (Exception e) {
-                logger.error("[STORAGE-ERROR] Falha ao salvar foto principal: {}", e.getMessage());
-                return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar imagem: " + e.getMessage()));
+                logger.error("[STORAGE-ERROR] Falha ao salvar foto principal.", e);
+                throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar imagem. Tente novamente.");
             }
         }
 
@@ -126,8 +126,8 @@ public class RepairController {
             t.getPhotoUrls().add(photoPath);
             return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
         } catch (Exception e) {
-            logger.error("[STORAGE-ERROR] Falha ao adicionar foto à galeria: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar evidência: " + e.getMessage()));
+            logger.error("[STORAGE-ERROR] Falha ao adicionar foto à galeria.", e);
+            throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar evidência. Tente novamente.");
         }
     }
 

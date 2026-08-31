@@ -50,7 +50,9 @@ public class HealthController {
             status = dbIsReady ? "PARTIAL" : "BOOTING";
             message = dbIsReady ? "Oscilação temporária de rede Cloud" : "Iniciando Infraestrutura (Cold Start Neon)...";
             diagnostics.put("database", "OFFLINE_OR_BUSY");
-            diagnostics.put("db_error", e.getMessage());
+            // /api/health é público — não expor detalhe de erro de conexão (pode vazar
+            // trecho de connection string/host interno do banco). Detalhe só vai pro log.
+            log.warn("[HEALTH] Falha ao checar banco de dados.", e);
         }
 
         // Diagnósticos Supreme
