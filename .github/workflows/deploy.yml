@@ -3,6 +3,8 @@ name: CI/CD PortalCursos.NG
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -86,6 +88,7 @@ jobs:
   deploy:
     name: Deploy → VPS Hostinger
     needs: [test, security-scan]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
