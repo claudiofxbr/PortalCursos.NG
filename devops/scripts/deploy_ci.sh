@@ -21,7 +21,7 @@ fail() { echo "[$(date '+%H:%M:%S')] ERRO $*" >&2; exit 1; }
 log "=== FASE 1: Validacoes ==="
 [ -f "$ENV_FILE" ] || fail ".env nao encontrado em $ENV_FILE"
 
-for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL CORS_ALLOWED_ORIGINS APP_ROOT_PASSWORD APP_ADMIN_PASSWORD PORTAL_ACCESS_CODE; do
+for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL SPRING_DATASOURCE_PASSWORD CORS_ALLOWED_ORIGINS APP_ROOT_PASSWORD APP_ADMIN_PASSWORD PORTAL_ACCESS_CODE; do
     val=$(grep "^${VAR}=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true)
     [ -n "$val" ] || fail "Variavel critica $VAR nao definida no .env"
 done
@@ -41,6 +41,14 @@ docker network create "$EASYPANEL_NET" 2>/dev/null && ok "Rede $EASYPANEL_NET cr
 # ── 4. Build das imagens ─────────────────────────────────────────
 log "=== FASE 4: Build Docker ==="
 cd "$DEVOPS_DIR"
+
+# Guarda a imagem/tag anteriores de cada container para permitir rollback
+# se o health check da FASE 6 falhar (evita deixar producao fora do ar).
+PREV_BACKEND_IMAGE_ID=$(docker inspect -f '{{.Image}}' portalcursos_backend 2>/dev/null || echo "")
+PREV_BACKEND_IMAGE_TAG=$(docker inspect -f '{{.Config.Image}}' portalcursos_backend 2>/dev/null || echo "")
+PREV_FRONTEND_IMAGE_ID=$(docker inspect -f '{{.Image}}' portalcursos_frontend 2>/dev/null || echo "")
+PREV_FRONTEND_IMAGE_TAG=$(docker inspect -f '{{.Config.Image}}' portalcursos_frontend 2>/dev/null || echo "")
+
 log "Buildando imagens Docker..."
 $COMPOSE build backend frontend
 ok "Build concluido"
@@ -104,6 +112,55 @@ for i in $(seq 1 60); do
     fi
     sleep 2
 done
+
+if [ "$BACKEND_READY" = "false" ] || [ "$FRONTEND_READY" = "false" ]; then
+    warn "Health check falhou — Backend OK: $BACKEND_READY, Frontend OK: $FRONTEND_READY. Tentando rollback para a imagem anterior..."
+    # Reverte backend E frontend juntos, mesmo que so um dos dois tenha falhado no
+    # health check — evita deixar um par de versoes incompativel em producao
+    # (ex.: frontend novo fazendo requisicoes a um backend com contrato antigo).
+
+    ROLLBACK_OK=true
+    if [ -n "$PREV_BACKEND_IMAGE_ID" ] && [ -n "$PREV_BACKEND_IMAGE_TAG" ]; then
+        docker tag "$PREV_BACKEND_IMAGE_ID" "$PREV_BACKEND_IMAGE_TAG"
+        $COMPOSE up -d --force-recreate --no-deps backend
+        RB_BACKEND_READY=false
+        for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:8090/api/health > /dev/null 2>&1; then
+                RB_BACKEND_READY=true
+                break
+            fi
+            sleep 2
+        done
+        [ "$RB_BACKEND_READY" = "true" ] && ok "Rollback do backend OK" || { warn "Rollback do backend tambem falhou"; ROLLBACK_OK=false; }
+    else
+        warn "Sem imagem anterior de backend conhecida — rollback automatico nao e possivel"
+        ROLLBACK_OK=false
+    fi
+
+    if [ -n "$PREV_FRONTEND_IMAGE_ID" ] && [ -n "$PREV_FRONTEND_IMAGE_TAG" ]; then
+        docker tag "$PREV_FRONTEND_IMAGE_ID" "$PREV_FRONTEND_IMAGE_TAG"
+        $COMPOSE up -d --force-recreate --no-deps frontend
+        RB_FRONTEND_READY=false
+        for i in $(seq 1 60); do
+            CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:3010/portalcursos.ng 2>/dev/null || echo "000")
+            if [ "$CODE" = "200" ] || [ "$CODE" = "308" ] || [ "$CODE" = "302" ]; then
+                RB_FRONTEND_READY=true
+                break
+            fi
+            sleep 2
+        done
+        [ "$RB_FRONTEND_READY" = "true" ] && ok "Rollback do frontend OK" || { warn "Rollback do frontend tambem falhou"; ROLLBACK_OK=false; }
+    else
+        warn "Sem imagem anterior de frontend conhecida — rollback automatico nao e possivel"
+        ROLLBACK_OK=false
+    fi
+
+    if [ "$ROLLBACK_OK" = "true" ]; then
+        fail "Deploy da nova versao falhou no health check, mas o rollback para a versao anterior teve sucesso — producao permanece no ar com o codigo antigo. Corrija o problema e tente novamente."
+    else
+        fail "Deploy da nova versao falhou no health check E o rollback automatico tambem falhou — producao pode estar fora do ar. Intervencao manual urgente necessaria."
+    fi
+fi
 
 # ── 7. Reconectar a rede Traefik ─────────────────────────────────
 log "=== FASE 7: Conectar containers a rede Traefik ==="

@@ -112,9 +112,11 @@ public class UserService {
                 staffMemberRepository.saveAndFlush(staff);
                 logger.info("[V50.0] Ativação Institucional concluída para: {}", savedUser.getUsername());
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("[V50.0-ERROR] Falha na sincronização: {}", e.getMessage());
-            throw new BusinessException("Falha Crítica de Governança: Não foi possível ativar o perfil institucional. Operação cancelada. " + e.getMessage());
+            logger.error("[V50.0-ERROR] Falha na sincronização.", e);
+            throw new BusinessException("Falha Crítica de Governança: Não foi possível ativar o perfil institucional. Operação cancelada.");
         }
 
         return savedUser;

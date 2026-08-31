@@ -3,6 +3,8 @@ name: CI/CD PortalCursos.NG
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -61,12 +63,21 @@ jobs:
 
       # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
       # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o
-      # deploy aqui: um upgrade de Spring Boot/Tomcat/Jackson é um projeto à
-      # parte (risco de regressão, precisa de testes dedicados), não algo a
-      # resolver ad-hoc num gate de CI. Ver [[security-audit-jul2026-infra]]
-      # para o levantamento completo de CVEs de aplicação pendentes.
+      # deploy aqui: tentamos ampliar para 'os,library' em ago/2026 e o scan
+      # real acusou 37 vulnerabilidades só no backend (31 HIGH/6 CRITICAL,
+      # a maior parte exigindo upgrade de Jackson/Spring Boot) — upgrade de
+      # dependência core é um projeto à parte (risco de regressão, precisa de
+      # testes dedicados), não algo a resolver ad-hoc num gate de CI. Ver PR
+      # #25 para o levantamento completo de CVEs de aplicação pendentes
+      # (backlog a priorizar).
+      #
+      # Os dois scans (backend/frontend) sempre rodam, mesmo se um falhar —
+      # sem isso, o job parava no primeiro scan que falhasse e o outro nunca
+      # era executado, escondendo vulnerabilidades do segundo componente.
       - name: Trivy scan — backend (SO, CRITICAL/HIGH falha o build)
+        id: trivy-backend
         uses: aquasecurity/trivy-action@v0.24.0
+        continue-on-error: true
         with:
           image-ref: portalcursos-backend:scan
           vuln-type: 'os'
@@ -75,7 +86,9 @@ jobs:
           ignore-unfixed: true
 
       - name: Trivy scan — frontend (SO, CRITICAL/HIGH falha o build)
+        id: trivy-frontend
         uses: aquasecurity/trivy-action@v0.24.0
+        continue-on-error: true
         with:
           image-ref: portalcursos-frontend:scan
           vuln-type: 'os'
@@ -83,9 +96,16 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
+      - name: Falha o job se algum scan encontrou vulnerabilidade
+        if: steps.trivy-backend.outcome == 'failure' || steps.trivy-frontend.outcome == 'failure'
+        run: |
+          echo "❌ Trivy encontrou vulnerabilidades CRITICAL/HIGH — veja os passos de scan acima."
+          exit 1
+
   deploy:
     name: Deploy → VPS Hostinger
     needs: [test, security-scan]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

@@ -57,3 +57,10 @@ backend/uploads/
 *_key*
 *id_rsa*
 *ed25519*
+
+# Redis dump
+dump.rdb
+*.rdb
+
+# Arquivos de saída de teste manual (lixo, não deveriam ser versionados)
+test_env_out.txt

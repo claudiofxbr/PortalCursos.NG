@@ -34,23 +34,101 @@ if (Test-Path $verifyScript) {
     Write-Host "[!] Script verify-deploy.ps1 nao encontrado. Continuando..." -ForegroundColor Yellow
 }
 
-# 3. Pipeline de Sincronização Git (Commit & Push Automáticos)
+# 3. Pipeline de Sincronização Git (Commit seletivo + PR automático)
+#    A branch main agora exige PR com os checks do CI verdes (branch protection —
+#    push direto é rejeitado, inclusive para admin). Este passo também não faz mais
+#    "git add ." às cegas: só adiciona automaticamente arquivos dentro dos diretórios
+#    de código conhecidos, ou modificações em arquivos já rastreados. Um arquivo novo
+#    fora desses diretórios (ex.: um dump.rdb, log, temporário) fica de fora e é
+#    avisado em vez de comitado — foi assim que dump.rdb parou versionado no repo.
 Write-Host ""
 Write-Host ">>> [PASSO 2/4] Sincronizando alterações locais com o Git..." -ForegroundColor Yellow
-$gitStatus = git status --porcelain
-if ($gitStatus) {
-    Write-Host "    [!] Detectadas alterações locais pendentes. Comitando..." -ForegroundColor Yellow
-    git add .
-    git commit -m "OMEGA: Auto-sincronizacao de deploy Hostinger [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
+
+$allowedDirs = @("backend", "frontend", "devops", ".github", "docs", "legacy-sql-do-not-run")
+$statusLines = git status --porcelain | Where-Object { $_ -ne "" }
+$didCommit = $false
+if ($statusLines) {
+    $skipped = @()
+    foreach ($line in $statusLines) {
+        $code = $line.Substring(0, 2)
+        $filePath = $line.Substring(3).Trim().Trim('"')
+        $inAllowedDir = $false
+        foreach ($dir in $allowedDirs) {
+            if ($filePath -like "$dir/*") { $inAllowedDir = $true; break }
+        }
+        $isUntracked = ($code -eq "??")
+        if ($inAllowedDir -or -not $isUntracked) {
+            git add -- "$filePath"
+        } else {
+            $skipped += $filePath
+        }
+    }
+    if ($skipped.Count -gt 0) {
+        Write-Host "    [!] Arquivos novos fora do staging automático (adicione manualmente se forem intencionais):" -ForegroundColor Yellow
+        $skipped | ForEach-Object { Write-Host "        - $_" -ForegroundColor Yellow }
+    }
+    if (git diff --cached --name-only) {
+        Write-Host "    [!] Alterações elegíveis detectadas. Comitando..." -ForegroundColor Yellow
+        git commit -m "OMEGA: Auto-sincronizacao de deploy Hostinger [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]"
+        $didCommit = $true
+    } else {
+        Write-Host "    -> Nada elegível para commit automático." -ForegroundColor DarkYellow
+    }
 }
-Write-Host "    -> Enviando alterações para o repositório remoto (git push)..." -ForegroundColor DarkCyan
-try {
-    # Tenta dar push na branch atual de forma resiliente
-    $currentBranch = (git branch --show-current).Trim()
-    git push origin $currentBranch
+
+$originalBranch = (git branch --show-current).Trim()
+$syncBranch = $originalBranch
+
+if ($didCommit -or $originalBranch -eq "main") {
+    if ($originalBranch -eq "main") {
+        # main é protegida: push direto é rejeitado. Sincroniza via branch temporária + PR.
+        $syncBranch = "deploy/auto-sync-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Write-Host "    -> main é protegida (exige PR): criando branch temporária '$syncBranch'..." -ForegroundColor DarkCyan
+        git checkout -b $syncBranch | Out-Null
+    }
+
+    Write-Host "    -> Enviando '$syncBranch' para o repositório remoto (git push)..." -ForegroundColor DarkCyan
+    git push origin $syncBranch
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERRO CRÍTICO] Falha ao dar git push. Verifique credenciais SSH/HTTP do Git." -ForegroundColor Red
+        if ($syncBranch -ne $originalBranch) { git checkout $originalBranch | Out-Null }
+        exit 1
+    }
+
+    if ($syncBranch -ne "main") {
+        Write-Host "    -> Abrindo PR para main e habilitando merge automático (aguarda checks do CI)..." -ForegroundColor DarkCyan
+        $prUrl = gh pr create --base main --head $syncBranch --fill 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $prUrl) {
+            Write-Host "[ERRO CRÍTICO] Falha ao abrir PR via gh CLI. Rode 'gh auth status' para verificar o login." -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "    [OK] PR aberto: $prUrl" -ForegroundColor Green
+        gh pr merge $syncBranch --auto --squash | Out-Null
+
+        Write-Host "    -> Aguardando checks do CI e merge automático (até 30 min)..." -ForegroundColor DarkCyan
+        $merged = $false
+        for ($i = 0; $i -lt 90; $i++) {
+            Start-Sleep -Seconds 20
+            $prState = gh pr view $syncBranch --json state -q ".state" 2>$null
+            if ($prState -eq "MERGED") { $merged = $true; break }
+            if ($prState -eq "CLOSED") { break }
+        }
+
+        if (-not $merged) {
+            Write-Host "[ERRO CRÍTICO] PR não foi mergeado em main dentro do tempo limite (checks do CI podem ter falhado)." -ForegroundColor Red
+            Write-Host "    Verifique manualmente: $prUrl" -ForegroundColor Red
+            git checkout $originalBranch | Out-Null
+            exit 1
+        }
+        Write-Host "[OK] PR mergeado em main com sucesso!" -ForegroundColor Green
+
+        git checkout main | Out-Null
+        git pull origin main | Out-Null
+        if ($originalBranch -ne "main") { git branch -D $syncBranch | Out-Null }
+    }
     Write-Host "[OK] Código fonte atualizado com sucesso no repositório remoto!" -ForegroundColor Green
-} catch {
-    Write-Host "[AVISO] Falha ao dar git push automático. Certifique-se de configurar as credenciais SSH/HTTP do Git." -ForegroundColor Yellow
+} else {
+    Write-Host "    -> Nenhuma alteração local pendente. Prosseguindo com o deploy do que já está em origin/$originalBranch." -ForegroundColor DarkYellow
 }
 
 # 4. Acionamento Automático via SSH na VPS

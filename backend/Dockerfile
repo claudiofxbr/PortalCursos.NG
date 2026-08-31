@@ -11,9 +11,10 @@ RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine@sha256:02320dd4ce20e243dfb915c686089cf9315c763084fafbb12d5c9993aee18b57
 # apk upgrade: a imagem base ainda nao incorporou patches do Alpine upstream
-# para libexpat (CVE-2026-56131/56407/56408) e p11-kit/p11-kit-trust
-# (CVE-2026-2100) — corrigidas aqui em vez de esperar nova build do Temurin.
-RUN apk add --no-cache wget && apk upgrade --no-cache libexpat p11-kit p11-kit-trust && addgroup -S app && adduser -S app -G app
+# para libexpat (CVE-2026-56131/56407/56408), p11-kit/p11-kit-trust
+# (CVE-2026-2100), libssl3/libcrypto3 (CVE-2026-14456) e sqlite-libs
+# (CVE-2026-11822/11824) — corrigidas aqui em vez de esperar nova build do Temurin.
+RUN apk add --no-cache wget && apk upgrade --no-cache libexpat p11-kit p11-kit-trust libssl3 libcrypto3 sqlite-libs && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build --chown=app:app /app/target/portalcursos-backend.jar app.jar
 USER app
