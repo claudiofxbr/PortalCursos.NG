@@ -59,26 +59,26 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=https://xavierbr-vps.tech \
             --build-arg NEXT_PUBLIC_BASE_PATH=/portalcursos.ng
 
-      # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
-      # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o
-      # deploy aqui: um upgrade de Spring Boot/Tomcat/Jackson é um projeto à
-      # parte (risco de regressão, precisa de testes dedicados), não algo a
-      # resolver ad-hoc num gate de CI. Ver [[security-audit-jul2026-infra]]
-      # para o levantamento completo de CVEs de aplicação pendentes.
-      - name: Trivy scan — backend (SO, CRITICAL/HIGH falha o build)
+      # vuln-type: os,library — escaneia pacotes do SO (Alpine) e também as
+      # dependências de aplicação embutidas na imagem (jars do Maven, pacotes
+      # npm). Decisão de ago/2026: CVE CRITICAL/HIGH em dependência agora
+      # bloqueia o deploy, mesmo que exija upgrade de Spring Boot/Tomcat/
+      # Jackson/pacote npm — o time aceitou o risco de o build falhar até que
+      # essas dependências sejam atualizadas.
+      - name: Trivy scan — backend (SO + dependências, CRITICAL/HIGH falha o build)
         uses: aquasecurity/trivy-action@v0.24.0
         with:
           image-ref: portalcursos-backend:scan
-          vuln-type: 'os'
+          vuln-type: 'os,library'
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
 
-      - name: Trivy scan — frontend (SO, CRITICAL/HIGH falha o build)
+      - name: Trivy scan — frontend (SO + dependências, CRITICAL/HIGH falha o build)
         uses: aquasecurity/trivy-action@v0.24.0
         with:
           image-ref: portalcursos-frontend:scan
-          vuln-type: 'os'
+          vuln-type: 'os,library'
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
