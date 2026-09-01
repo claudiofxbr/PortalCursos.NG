@@ -20,18 +20,34 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
-        logger.info("[OMEGA-AUTH] Buscando credenciais para: {}", usernameOrEmail);
-        
+        logger.info("[OMEGA-AUTH] Buscando credenciais para: {}", maskIdentifier(usernameOrEmail));
+
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
                 .orElseThrow(() -> {
-                    logger.warn("[OMEGA-AUTH] Usuário não encontrado: {}", usernameOrEmail);
+                    logger.warn("[OMEGA-AUTH] Usuário não encontrado: {}", maskIdentifier(usernameOrEmail));
                     return new UsernameNotFoundException("User Not Found with username or email: " + usernameOrEmail);
                 });
 
-        logger.info("[OMEGA-AUTH] Usuário autenticado: {}. Papéis ativos: {}", user.getUsername(), user.getRoles().size());
-        
+        logger.info("[OMEGA-AUTH] Usuário autenticado: {}. Papéis ativos: {}", maskIdentifier(user.getUsername()), user.getRoles().size());
+
         return UserDetailsImpl.build(user);
+    }
+
+    /**
+     * Minimização de dados em log (LGPD art. 6º III / GDPR art. 5(1)(c)): evita registrar
+     * e-mail/username completos em texto plano nos logs de autenticação.
+     */
+    private static String maskIdentifier(String value) {
+        if (value == null || value.isBlank()) return value;
+        int at = value.indexOf('@');
+        if (at > 0) {
+            String local = value.substring(0, at);
+            String domain = value.substring(at);
+            String maskedLocal = local.length() <= 2 ? local.charAt(0) + "*" : local.substring(0, 2) + "***";
+            return maskedLocal + domain;
+        }
+        return value.length() <= 2 ? value.charAt(0) + "*" : value.substring(0, 2) + "***";
     }
 
 }

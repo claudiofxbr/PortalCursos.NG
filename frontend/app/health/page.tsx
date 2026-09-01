@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { API_BASE_URL, V_BUILD_ID, checkServerHealth } from '@/app/services/api';
+import api, { API_BASE_URL, V_BUILD_ID, checkServerHealth } from '@/app/services/api';
 
 /**
  * PortalCursos Diagnostics Center V18.1 - SIGMA
@@ -15,14 +15,6 @@ export default function HealthPage() {
     const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
-        // Escuta eventos de Cold Start do nosso motor API
-        const handleColdStart = (e: any) => {
-            setIsColdStart(true);
-            setRetryCount(e.detail?.attempt || 0);
-        };
-
-        window.addEventListener('COLD_START_RETRY', handleColdStart);
-
         const checkHealth = async (isManual = false) => {
             const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || '';
             
@@ -60,24 +52,25 @@ export default function HealthPage() {
 
         (window as any).RECHECK_HEALTH = () => checkHealth(true);
         checkHealth();
-
-        return () => window.removeEventListener('COLD_START_RETRY', handleColdStart);
     }, []);
 
     const nuclearPurge = async () => {
         if (typeof window !== 'undefined') {
-            const confirmPurge = window.confirm("A Purga Nuclear irá limpar todo o cache e cookies. Você precisará fazer login novamente. Prosseguir?");
+            const confirmPurge = window.confirm("A Purga Nuclear irá limpar todo o cache e encerrar sua sessão. Você precisará fazer login novamente. Prosseguir?");
             if (!confirmPurge) return;
 
             console.warn("[SIGMA-V18.1] Iniciando Purga Nuclear de Cache...");
-            
+
+            // Encerra a sessão via backend — o cookie de auth é HttpOnly e
+            // não pode ser removido diretamente via document.cookie.
+            try {
+                await api.post('auth/signout', {});
+            } catch (e) {
+                console.warn("[SIGMA-V18.1] Falha ao encerrar sessão no backend:", e);
+            }
+
             localStorage.clear();
             sessionStorage.clear();
-            
-            // Limpa Cookies
-            document.cookie.split(";").forEach(function(c) { 
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-            });
 
             // Limpa Cache API
             if (window.caches) {

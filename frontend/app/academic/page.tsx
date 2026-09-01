@@ -63,8 +63,12 @@ export default function GraduationPage() {
     const isLoading = gradService.loading;
 
     const loadStudents = async () => {
-        const data = await gradService.list();
-        setStudents(data);
+        try {
+            const data = await gradService.list();
+            setStudents(data);
+        } catch (e) {
+            // toast já emitido pelo useAuditCRUD
+        }
     };
 
     // Form State
@@ -405,7 +409,7 @@ export default function GraduationPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 {s.fotoMatricula ? (
                                                     <img 
-                                                        src={s.fotoMatricula.startsWith('http') ? s.fotoMatricula : `${BASE_URL}/uploads/${s.fotoMatricula}`} 
+                                                        src={s.fotoMatricula.startsWith('http') ? s.fotoMatricula : `${BASE_URL}/api/uploads/${s.fotoMatricula}`}
                                                         alt={s.fullName} 
                                                         style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
@@ -428,7 +432,7 @@ export default function GraduationPage() {
                                             <AuditStamp 
                                                 name={s.creatorName}
                                                 position={s.creatorPosition}
-                                                photoUrl={s.creatorPhotoUrl ? (s.creatorPhotoUrl.startsWith('http') ? s.creatorPhotoUrl : `${BASE_URL}/uploads/${s.creatorPhotoUrl}`) : undefined}
+                                                photoUrl={s.creatorPhotoUrl ? (s.creatorPhotoUrl.startsWith('http') ? s.creatorPhotoUrl : `${BASE_URL}/api/uploads/${s.creatorPhotoUrl}`) : undefined}
                                                 date={s.registrationDate}
                                             />
                                         </td>
@@ -442,7 +446,7 @@ export default function GraduationPage() {
                                                     s.documents.map((doc, idx) => (
                                                         <a 
                                                             key={doc.id}
-                                                            href={`${BASE_URL}/uploads/grad-students/${doc.filePath}`}
+                                                            href={`${BASE_URL}/api/uploads/${doc.filePath}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: doc.status === 'APPROVED' ? '#2ecc71' : '#f0a500' }}
@@ -557,7 +561,7 @@ export default function GraduationPage() {
                         <div style={{ display: 'flex', gap: '30px', marginBottom: '30px' }}>
                             <div style={{ width: '120px', height: '160px', border: '1px solid #ddd', overflow: 'hidden' }}>
                                 {viewingStudent.fotoMatricula && (
-                                    <img src={viewingStudent.fotoMatricula.startsWith('http') ? viewingStudent.fotoMatricula : `${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={viewingStudent.fotoMatricula.startsWith('http') ? viewingStudent.fotoMatricula : `${BASE_URL}/api/uploads/${viewingStudent.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 )}
                             </div>
                             <div style={{ flexGrow: 1 }}>
@@ -618,7 +622,7 @@ export default function GraduationPage() {
                             <div style={{ width: '220px', flexShrink: 0 }}>
                                 <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)', border: '2px solid var(--secondary-color)', marginBottom: '1.5rem' }}>
                                     {viewingStudent.fotoMatricula ? (
-                                        <img src={`${BASE_URL}/uploads/${viewingStudent.fotoMatricula}`} alt="Foto 3x4" style={{ width: '100%', height: '100%', objectPosition: 'center', objectFit: 'cover' }} />
+                                        <img src={`${BASE_URL}/api/uploads/${viewingStudent.fotoMatricula}`} alt="Foto 3x4" style={{ width: '100%', height: '100%', objectPosition: 'center', objectFit: 'cover' }} />
                                     ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}><User size={30} /></div>
                                     )}
@@ -659,7 +663,7 @@ export default function GraduationPage() {
                                                     onClick={() => handleGenerateFee(viewingStudent.id)}
                                                     style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
                                                 >
-                                                    💸 Gerar Taxa Matrícula
+                                                    💸 Gerar Taxa de Matrícula
                                                 </button>
                                                 <button 
                                                     onClick={handlePrintEnrollment}
@@ -689,7 +693,7 @@ export default function GraduationPage() {
                                                             </div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                            <a href={`${BASE_URL}/uploads/grad-students/${doc.filePath}`} target="_blank" rel="noreferrer" style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }} title="Ver Arquivo">
+                                                            <a href={`${BASE_URL}/api/uploads/${doc.filePath}`} target="_blank" rel="noreferrer" style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }} title="Ver Arquivo">
                                                                 <Upload size={14} style={{ transform: 'rotate(180deg)' }} />
                                                             </a>
                                                             <button 
@@ -720,7 +724,7 @@ export default function GraduationPage() {
                                     <AuditStamp 
                                         name={viewingStudent.creatorName}
                                         position={viewingStudent.creatorPosition}
-                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/uploads/${viewingStudent.creatorPhotoUrl}` : undefined}
+                                        photoUrl={viewingStudent.creatorPhotoUrl ? `${BASE_URL}/api/uploads/${viewingStudent.creatorPhotoUrl}` : undefined}
                                         date={viewingStudent.registrationDate}
                                     />
                                 </div>

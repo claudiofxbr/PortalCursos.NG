@@ -4,6 +4,7 @@ import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentDocumentRepository;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -97,13 +98,14 @@ public class PostgradStudentService {
     @Transactional
     public PostgradStudent update(Long id, PostgradStudent updatedData, MultipartFile foto3x4File) throws IOException {
         PostgradStudent student = studentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estudante não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Estudante não encontrado"));
 
         student.setFullName(updatedData.getFullName());
         student.setPhone(sanitizeNumber(updatedData.getPhone()));
         student.setAddress(updatedData.getAddress());
         student.setDesiredCourse(updatedData.getDesiredCourse());
         student.setEnrollmentStatus(updatedData.getEnrollmentStatus());
+        student.setCourse(updatedData.getCourse());
 
         if (foto3x4File != null && !foto3x4File.isEmpty()) {
             if (student.getFotoMatricula() != null) {
@@ -118,7 +120,10 @@ public class PostgradStudentService {
 
     @Transactional
     public void delete(Long id) {
-        studentRepository.findById(id).ifPresent(student -> studentRepository.delete(student));
+        studentRepository.findById(id).ifPresent(student -> {
+            student.setActive(false);
+            studentRepository.save(student);
+        });
     }
 
     private String sanitizeNumber(String value) {

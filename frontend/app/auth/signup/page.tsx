@@ -11,8 +11,9 @@ export default function SignUpPage() {
     username: '',
     email: '',
     password: '',
-    role: ['student'] // Role padrão
+    role: ['aluno']
   });
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,8 +47,30 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
 
+    // Validação cliente — espelha as constraints do SignupRequest
+    if (/\s/.test(formData.username)) {
+      setError("O nome de usuário não pode conter espaços.");
+      setLoading(false);
+      return;
+    }
+    if (formData.username.length < 3 || formData.username.length > 20) {
+      setError("O nome de usuário deve ter entre 3 e 20 caracteres.");
+      setLoading(false);
+      return;
+    }
+    if (formData.password.length < 6 || formData.password.length > 40) {
+      setError("A senha deve ter entre 6 e 40 caracteres.");
+      setLoading(false);
+      return;
+    }
+    if (!privacyConsentAccepted) {
+      setError("É necessário aceitar a Política de Privacidade para criar sua conta.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await api.post('auth/signup', formData);
+      await api.post('auth/signup', { ...formData, privacyConsentAccepted });
       alert("✅ Conta criada com sucesso! Redirecionando para o login...");
       router.push('/auth/signin');
     } catch (err: any) {
@@ -91,13 +114,15 @@ export default function SignUpPage() {
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>USUÁRIO</label>
             <input 
-              type="text" 
+              type="text"
               name="username"
               required
+              minLength={3}
+              maxLength={20}
               value={formData.username}
-              onChange={handleChange}
-              placeholder="nome_usuario" 
-              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }} 
+              onChange={(e) => setFormData({ ...formData, username: e.target.value.replace(/\s/g, '') })}
+              placeholder="nome_usuario (sem espaços)"
+              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }}
             />
           </div>
 
@@ -127,11 +152,26 @@ export default function SignUpPage() {
             />
           </div>
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="btn-primary" 
-            style={{ padding: '15px', marginTop: '1rem', opacity: loading ? 0.7 : 1 }}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            <input
+              type="checkbox"
+              checked={privacyConsentAccepted}
+              onChange={(e) => setPrivacyConsentAccepted(e.target.checked)}
+              style={{ marginTop: '3px' }}
+            />
+            <span>
+              Li e aceito a{' '}
+              <Link href="/privacidade" target="_blank" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                Política de Privacidade
+              </Link>.
+            </span>
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading || !privacyConsentAccepted}
+            className="btn-primary"
+            style={{ padding: '15px', marginTop: '1rem', opacity: (loading || !privacyConsentAccepted) ? 0.7 : 1 }}
           >
             {loading ? "Criando conta..." : "Criar Minha Conta"}
           </button>

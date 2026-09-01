@@ -11,13 +11,13 @@ export const AuditStamp: React.FC<AuditStampProps> = ({ name, position, photoUrl
     if (!name) return null;
 
     // Resolução robusta de URL com Fallback V37.6-ULTRA
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const getResolvedPhotoUrl = (url?: string) => {
-        const finalUrl = url && url.trim() !== "" ? url : "default-auditor.png";
-        
-        if (finalUrl.startsWith('http')) return finalUrl;
-        if (finalUrl.startsWith('/')) return `${BASE_URL}${finalUrl}`;
-        // Se for apenas o nome do arquivo (ex: default-auditor.png), aponta para uploads
-        return `${BASE_URL}/uploads/${finalUrl}`;
+        if (!url || url.trim() === "") return `${basePath}/default-auditor.png`; // asset estático do Next.js, sem auth
+        if (url.startsWith('http')) return url;
+        if (url.startsWith('/')) return `${BASE_URL}${url}`;
+        // Documento/foto do usuário: exige autenticação, servido via DocumentController
+        return `${BASE_URL}/api/uploads/${url}`;
     };
 
     const resolvedUrl = getResolvedPhotoUrl(photoUrl);
@@ -51,7 +51,10 @@ export const AuditStamp: React.FC<AuditStampProps> = ({ name, position, photoUrl
                         const parent = (e.target as HTMLImageElement).parentElement;
                         if (parent) {
                             parent.style.backgroundColor = '#3498db';
-                            parent.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:10px;font-weight:bold">${name.charAt(0)}</div>`;
+                            const fallback = document.createElement('div');
+                            fallback.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:10px;font-weight:bold';
+                            fallback.textContent = name.charAt(0);
+                            parent.appendChild(fallback);
                         }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}

@@ -6,6 +6,7 @@ import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.RepairRepository;
 import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StorageService;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.dto.MessageResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -100,8 +101,8 @@ public class RepairController {
                 String photoPath = storageService.store(mainPhotoFile, "repairs-main");
                 ticket.setMainPhotoUrl(photoPath);
             } catch (Exception e) {
-                logger.error("[STORAGE-ERROR] Falha ao salvar foto principal: {}", e.getMessage());
-                return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar imagem: " + e.getMessage()));
+                logger.error("[STORAGE-ERROR] Falha ao salvar foto principal.", e);
+                throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar imagem. Tente novamente.");
             }
         }
 
@@ -114,7 +115,7 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> uploadPhoto(@PathVariable @NonNull Long id, @RequestParam("file") MultipartFile file) {
         RepairTicket t = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
         
         if (t.getPhotoUrls().size() >= 4) {
             return ResponseEntity.badRequest().body(new MessageResponse("Limite de evidências visuais atingido (4 fotos)."));
@@ -125,8 +126,8 @@ public class RepairController {
             t.getPhotoUrls().add(photoPath);
             return ResponseEntity.ok(convertToDTO(repairRepository.save(t)));
         } catch (Exception e) {
-            logger.error("[STORAGE-ERROR] Falha ao adicionar foto à galeria: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new MessageResponse("Erro ao salvar evidência: " + e.getMessage()));
+            logger.error("[STORAGE-ERROR] Falha ao adicionar foto à galeria.", e);
+            throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar evidência. Tente novamente.");
         }
     }
 
@@ -135,12 +136,12 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> updateStatus(@PathVariable @NonNull Long id, @RequestParam("status") String status) {
         RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
 
         try {
             ticket.setStatus(RepairTicket.ERepairStatus.valueOf(status.toUpperCase()));
-            // Re-sincroniza auditor responsável pela alteração de status
-            auditService.injectCreator(ticket);
+            // O creator do ticket é sempre quem abriu o chamado — não deve ser
+            // sobrescrito por quem apenas altera o status posteriormente.
             return ResponseEntity.ok(convertToDTO(repairRepository.save(ticket)));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new MessageResponse("Status inválido."));
@@ -152,7 +153,7 @@ public class RepairController {
     @PreAuthorize(AUTHORIZED_ROLES)
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new RuntimeException("Chamado não localizado ou inativo."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
         
         // Limpeza de arquivos relacionados antes de deletar o registro
         if (ticket.getMainPhotoUrl() != null) {

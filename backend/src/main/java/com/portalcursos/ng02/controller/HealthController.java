@@ -1,7 +1,8 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.dto.HealthResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,8 +14,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api")
@@ -51,7 +50,9 @@ public class HealthController {
             status = dbIsReady ? "PARTIAL" : "BOOTING";
             message = dbIsReady ? "Oscilação temporária de rede Cloud" : "Iniciando Infraestrutura (Cold Start Neon)...";
             diagnostics.put("database", "OFFLINE_OR_BUSY");
-            diagnostics.put("db_error", e.getMessage());
+            // /api/health é público — não expor detalhe de erro de conexão (pode vazar
+            // trecho de connection string/host interno do banco). Detalhe só vai pro log.
+            log.warn("[HEALTH] Falha ao checar banco de dados.", e);
         }
 
         // Diagnósticos Supreme

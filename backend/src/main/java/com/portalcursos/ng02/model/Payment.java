@@ -42,15 +42,15 @@ public class Payment extends BaseAuditEntity {
 
     private String paymentCode; // URL do Boleto ou QR Code do Pix
 
+    /**
+     * Referencia tanto alunos de graduação quanto de pós — PostgradStudent é uma
+     * subclasse de Student (single-table inheritance), então uma única FK basta;
+     * {@link #academicLevel} indica qual dos dois é.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", referencedColumnName = "id")
     @JsonIgnore
     private Student student;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "postgrad_student_id", referencedColumnName = "id")
-    @JsonIgnore
-    private PostgradStudent postgradStudent;
 
     @Enumerated(EnumType.STRING)
     private EAcademicLevel academicLevel;

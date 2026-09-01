@@ -113,7 +113,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        const handleAuthRequired = () => setIsAuthModalOpen(true);
+        const handleAuthRequired = () => {
+            // Só abre o modal de re-login se o usuário já estava logado antes (lastUser conhecido).
+            // Caso contrário (primeira visita / sem sessão prévia), redireciona para a página de signin.
+            setLastUser(prev => {
+                if (prev) {
+                    setIsAuthModalOpen(true);
+                } else {
+                    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+                    if (typeof window !== 'undefined' &&
+                        !window.location.pathname.includes('/auth/signin') &&
+                        !window.location.pathname.includes('/auth/signup')) {
+                        window.location.href = `${basePath}/auth/signin`;
+                    }
+                }
+                return prev;
+            });
+        };
         window.addEventListener('AUTH_REQUIRED', handleAuthRequired);
         return () => window.removeEventListener('AUTH_REQUIRED', handleAuthRequired);
     }, []);

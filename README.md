@@ -1,27 +1,41 @@
-# PortalCursosNG
+# PortalCursos.NG
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
+Sistema de gestão acadêmica/administrativa (matrículas, financeiro, secretaria, manutenção predial etc.).
 
-## Development server
+## Stack
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- **Backend:** Java 17 + Spring Boot 3, Maven, PostgreSQL (Flyway para migrations).
+- **Frontend:** Next.js (React 19) + TypeScript, em `frontend/`.
+- **Deploy:** Docker Compose + Traefik em VPS Hostinger, orquestrado via GitHub Actions (`.github/workflows/`).
 
-## Code scaffolding
+## Desenvolvimento local
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+### Backend
 
-## Build
+```bash
+cd backend
+./mvnw spring-boot:run
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Rodar os testes:
 
-## Running unit tests
+```bash
+cd backend
+./mvnw clean verify
+```
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### Frontend
 
-## Running end-to-end tests
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Acesse `http://localhost:3000`.
 
-## Further help
+Build de produção: `npm run build` / `npm run start`. Lint: `npm run lint`.
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Deploy
+
+Fluxo de deploy documentado em `devops/scripts/deploy_ci.sh` (acionado pelo CI) e `deploy-hostinger.ps1` (script local auxiliar). Confirme com o responsável pelo projeto qual é o ambiente de produção atual antes de rodar qualquer script de deploy.

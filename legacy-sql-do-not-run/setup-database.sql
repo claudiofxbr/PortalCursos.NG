@@ -250,16 +250,17 @@ INSERT INTO roles (id, name) VALUES (7, 'ROLE_COORDENADOR') ON CONFLICT (id) DO 
 INSERT INTO roles (id, name) VALUES (8, 'ROLE_PROFESSOR') ON CONFLICT (id) DO NOTHING;
 INSERT INTO roles (id, name) VALUES (9, 'ROLE_ALUNO') ON CONFLICT (id) DO NOTHING;
 
--- 10. USUÁRIO ADMINISTRADOR PADRÃO (admin / admin123)
--- SENHA BCRYPT: admin123
-INSERT INTO users (username, email, password, active) 
-SELECT 'admin', 'admin@portalcursos.com.br', '$2a$10$8.UnVuG9UMJSuGPvstLmeuQC9s.nx.zGDzE7zC.4L8Cis0HAnqZ7G', true
+-- 10. USUÁRIO ADMINISTRADOR PADRÃO
+-- ATENÇÃO: não fixar senha/hash em texto plano aqui. O hash real é
+-- sincronizado no boot pelo DataLoader, a partir de APP_ADMIN_PASSWORD (.env).
+INSERT INTO users (username, email, password, active)
+SELECT 'admin', 'admin@portalcursos.com.br', '<definido pelo DataLoader via APP_ADMIN_PASSWORD>', true
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
 -- 11. USUÁRIO ROOT MASTER (TI/DESENVOLVIMENTO)
--- SENHA: qzWX312#!@ (Sincronizada via DataLoader no boot)
-INSERT INTO users (username, email, password, active) 
-SELECT 'rootmaster', 'ti@portalcursos.com', '$2a$12$52.S5lgBkOdRSBkGHRByIu43Lxq7c13FTjuwhE7dZemPDs.ck73D.', true
+-- ATENÇÃO: senha sincronizada via DataLoader no boot, a partir de APP_ROOT_PASSWORD (.env).
+INSERT INTO users (username, email, password, active)
+SELECT 'rootmaster', 'ti@portalcursos.com', '<definido pelo DataLoader via APP_ROOT_PASSWORD>', true
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'rootmaster');
 
 -- VINCULAR USUÁRIOS ÀS ROLES NECESSÁRIAS

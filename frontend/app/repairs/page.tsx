@@ -16,13 +16,13 @@ const statusMap: Record<string, { label: string, color: string }> = {
 /**
  * Resolve qualquer formato de URL de foto para uma URL absoluta exibível.
  * O StorageService salva como path relativo: "staff-photos/uuid.jpg".
- * O WebMvcConfig serve os arquivos em: GET /uploads/**
- * Padrão correto: ${BASE_URL}/uploads/${path}
+ * O DocumentController serve os arquivos (autenticado) em: GET /api/uploads/**
+ * Padrão correto: ${BASE_URL}/api/uploads/${path}
  */
 const resolvePhotoUrl = (baseUrl: string, url: string | null | undefined): string | null => {
   if (!url || url === 'default-auditor.png' || url.trim() === '') return null;
   if (url.startsWith('http') || url.startsWith('data:')) return url; // URL absoluta — usa direto
-  return `${baseUrl}/uploads/${url}`; // Path relativo do StorageService → URL completa
+  return `${baseUrl}/api/uploads/${url}`; // Path relativo do StorageService → URL completa
 };
 
 export default function RepairsPage() {
@@ -510,7 +510,7 @@ export default function RepairsPage() {
         if (rawCreatorPhoto && rawCreatorPhoto !== 'default-auditor.png' && rawCreatorPhoto.trim() !== '') {
           creatorPhotoSrc = rawCreatorPhoto.startsWith('http') || rawCreatorPhoto.startsWith('data:')
             ? rawCreatorPhoto
-            : `${BASE_URL}/uploads/${rawCreatorPhoto}`;
+            : `${BASE_URL}/api/uploads/${rawCreatorPhoto}`;
         }
         return (
           <div

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTheme } from "../app/context/ThemeContext";
 
 const ThemeSelector: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const themes = [
     { id: "light", name: "Claro", color: "#f4f7f6", textColor: "#1e293b", label: "Modo Claro" },
@@ -13,13 +14,33 @@ const ThemeSelector: React.FC = () => {
     { id: "blue", name: "Azul", color: "#0d123d", textColor: "#f1f5f9", label: "Azul Escuro" },
   ];
 
+  // Fecha ao clicar fora do componente (padrão dropdown por clique)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleSelectTheme = (id: string) => {
+    setTheme(id as any);
+    setIsOpen(false);
+  };
+
   return (
-    <div 
+    <div
       className="theme-curtain-container"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      ref={containerRef}
     >
-      <button className="theme-main-btn">
+      <button
+        type="button"
+        className="theme-main-btn"
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
         <span className="icon">🎨</span>
         <span className="text">Temas</span>
       </button>
@@ -28,7 +49,8 @@ const ThemeSelector: React.FC = () => {
         {themes.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTheme(t.id as any)}
+            type="button"
+            onClick={() => handleSelectTheme(t.id)}
             className={`theme-opt-btn ${theme === t.id ? "active" : ""}`}
             style={{ 
               backgroundColor: t.color, 

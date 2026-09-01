@@ -7,7 +7,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import ThemeSelector from './ThemeSelector';
 
 // Rotas que NÃO precisam de autenticação
-const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup'];
+const PUBLIC_ROUTES = ['/auth/signin', '/auth/signup', '/privacidade'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const [isMounted, setIsMounted] = useState(false);
@@ -91,6 +91,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                             { href: '/roadmap', label: '🚀 Implementação', adminOnly: true },
                             { href: '/finance', label: '💰 Financeiro' },
                             { href: '/repairs', label: '🛠️ Infraestrutura' },
+                            { href: '/minha-conta', label: '🔐 Meus Dados' },
+                            { href: '/privacidade-solicitacoes', label: '📋 Solicitações de Exclusão', adminOnly: true },
                         ].filter(item => {
                             if (!item.adminOnly) return true;
                             const userRoles = user?.roles || [];

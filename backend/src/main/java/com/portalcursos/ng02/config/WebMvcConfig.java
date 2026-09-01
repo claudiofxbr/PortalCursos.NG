@@ -1,20 +1,12 @@
 package com.portalcursos.ng02.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
-
-    @Value("${app.upload.dir}")
-    private String uploadDir;
 
     @Autowired
     private CorrelationIdInterceptor correlationIdInterceptor;
@@ -24,12 +16,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(correlationIdInterceptor);
     }
 
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path uploadPath = Paths.get(uploadDir);
-        String uploadAbsolutePath = uploadPath.toFile().getAbsolutePath();
-
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadAbsolutePath + "/");
-    }
+    // Resource handler estático de "/uploads/**" removido: arquivos agora são
+    // servidos via DocumentController (/api/uploads/**), que exige autenticação
+    // e valida a role do usuário por categoria antes de liberar o arquivo.
 }

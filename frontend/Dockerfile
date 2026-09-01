@@ -1,9 +1,9 @@
-FROM node:20-alpine AS deps
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -16,12 +16,16 @@ RUN npm run build
 # output: standalone (next.config.ts) gera .next/standalone com server.js
 # autocontido — já inclui next.config.js + apenas os node_modules necessários
 # em runtime, garantindo que basePath/assetPrefix sejam aplicados corretamente.
-FROM node:20-alpine AS runner
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS runner
+# apk upgrade: corrige CVE-2026-45447 (OpenSSL libcrypto3/libssl3) ainda nao
+# incorporada na imagem base node:20-alpine mais recente disponivel.
+RUN apk upgrade --no-cache libcrypto3 libssl3
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+USER node
 EXPOSE 3000
 ENV PORT=3000
 # server.js do standalone só escuta em localhost por padrão;

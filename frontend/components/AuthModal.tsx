@@ -19,7 +19,7 @@ export default function AuthModal() {
 
         try {
             const response = await api.post('auth/signin', {
-                username: lastUser || 'admin',
+                username: lastUser || '',
                 password: password
             });
 
@@ -74,7 +74,7 @@ export default function AuthModal() {
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', opacity: 0.6 }}>Usuário</label>
                         <input 
                             type="text" 
-                            value={lastUser || 'admin'} 
+                            value={lastUser || ''}
                             disabled 
                             style={{
                                 width: '100%',

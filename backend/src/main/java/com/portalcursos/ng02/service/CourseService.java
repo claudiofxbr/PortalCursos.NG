@@ -4,6 +4,8 @@ import com.portalcursos.ng02.model.Course;
 import com.portalcursos.ng02.model.EModalidade;
 import com.portalcursos.ng02.model.ENivelPosGraduacao;
 import com.portalcursos.ng02.repository.CourseRepository;
+import com.portalcursos.ng02.exception.BusinessException;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +25,7 @@ public class CourseService {
 
     public Course getCourseById(UUID id) {
         return courseRepository.findByIdActiveWithCreator(id)
-                .orElseThrow(() -> new RuntimeException("Curso não encontrado com id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado com id: " + id));
     }
 
     @Transactional
@@ -71,7 +73,7 @@ public class CourseService {
         // 1. Validação de Carga Horária (Gestão do MEC - Lato Sensu)
         if (course.getNivelPosGraduacao() == ENivelPosGraduacao.LATO_SENSU) {
             if (course.getCargaHorariaTotal() == null || course.getCargaHorariaTotal() < 360) {
-                throw new RuntimeException("Regra Gestão do MEC: Cursos Lato Sensu devem ter no mínimo 360 horas.");
+                throw new BusinessException("Regra Gestão do MEC: Cursos Lato Sensu devem ter no mínimo 360 horas.");
             }
         }
 
@@ -80,14 +82,14 @@ public class CourseService {
             // Simulação de verificação de credenciamento da IES no e-MEC
             boolean hasEADAccreditation = true; // Em um cenário real, consultaríamos um config ou API
             if (!hasEADAccreditation) {
-                throw new RuntimeException("A instituição não possui ato de credenciamento para EaD ativo no e-MEC.");
+                throw new BusinessException("A instituição não possui ato de credenciamento para EaD ativo no e-MEC.");
             }
         }
 
         // 3. Validação Stricto Sensu (CAPES / Sucupira)
         if (course.getNivelPosGraduacao() == ENivelPosGraduacao.STRICTO_SENSU) {
             if (course.getNumeroDocumentoCriacao() == null || course.getNumeroDocumentoCriacao().isEmpty()) {
-                throw new RuntimeException("Cursos Stricto Sensu exigem aprovação prévia na CAPES (Plataforma Sucupira).");
+                throw new BusinessException("Cursos Stricto Sensu exigem aprovação prévia na CAPES (Plataforma Sucupira).");
             }
         }
     }

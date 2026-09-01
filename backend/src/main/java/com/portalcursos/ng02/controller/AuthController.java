@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserSessionRepository;
@@ -45,6 +46,7 @@ import com.portalcursos.ng02.model.StaffMember;
 @RequiredArgsConstructor
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String PRIVACY_POLICY_VERSION = "1.0";
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -114,6 +116,29 @@ public class AuthController {
         response.addCookie(refresh);
     }
 
+    /**
+     * Extrai o IP real do cliente atrás do nginx (devops/scripts/nginx.conf).
+     * X-Real-IP é preferido: nginx o define via proxy_set_header (sobrescreve, não
+     * concatena), então não é falsificável pelo cliente. X-Forwarded-For usa
+     * $proxy_add_x_forwarded_for, que ANEXA ao valor recebido — um cliente malicioso
+     * pode enviar "X-Forwarded-For: 1.2.3.4" e nginx só adiciona o IP real depois
+     * dele; usar o primeiro valor (como antes) permitia falsificar o IP e burlar o
+     * bloqueio de força bruta. Por isso, se X-Real-IP faltar, usamos o ÚLTIMO valor
+     * da cadeia X-Forwarded-For (o único segmento que o nginx realmente controla).
+     */
+    private String extractClientIp(HttpServletRequest request) {
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            String[] parts = forwardedFor.split(",");
+            return parts[parts.length - 1].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
     /** Extrai o refresh token do cookie ou, como fallback, do body da requisição. */
     private String extractRefreshToken(HttpServletRequest request, String bodyToken) {
         if (request.getCookies() != null) {
@@ -134,10 +159,7 @@ public class AuthController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        String ipAddress = request.getHeader("X-Real-IP");
-        if (ipAddress == null || ipAddress.isEmpty()) {
-            ipAddress = request.getRemoteAddr();
-        }
+        String ipAddress = extractClientIp(request);
 
         logger.info("[AUTH API] [SIGNIN] Tentativa de login: {} de {}", loginRequest.getUsername(), ipAddress);
 
@@ -209,6 +231,16 @@ public class AuthController {
             HttpServletResponse response,
             @RequestBody(required = false) com.portalcursos.ng02.dto.TokenRefreshRequest body) {
 
+        String ipAddress = extractClientIp(request);
+        String rateLimitKey = "refresh:" + ipAddress;
+
+        if (loginAttemptService.isBlocked(rateLimitKey)) {
+            logger.warn("[SECURITY] Tentativa de refresh token bloqueada para IP: {}", ipAddress);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.LOCKED)
+                    .body(new MessageResponse("Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
+        }
+
         // Cookie tem prioridade; body é fallback para compatibilidade
         String bodyToken = (body != null) ? body.getRefreshToken() : null;
         String refreshToken = extractRefreshToken(request, bodyToken);
@@ -225,6 +257,7 @@ public class AuthController {
                         if (session.getExpiryDate().isBefore(Instant.now())) {
                             userSessionRepository.delete(session);
                             clearAuthCookies(response);
+                            loginAttemptService.loginFailed(rateLimitKey);
                             logger.warn("[AUTH] Refresh token expirado.");
                             return ResponseEntity.status(403).body(new MessageResponse("Sessão expirada. Faça login novamente."));
                         }
@@ -241,12 +274,14 @@ public class AuthController {
                         response.addCookie(buildAccessCookie(newAccessToken));
                         response.addCookie(buildRefreshCookie(newRefreshToken));
 
+                        loginAttemptService.loginSucceeded(rateLimitKey);
                         logger.info("[AUTH] Token renovado para: {}", user.getUsername());
                         // Retorna apenas confirmação — tokens viajam via cookie
                         return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
                     })
                     .orElseGet(() -> {
                         clearAuthCookies(response);
+                        loginAttemptService.loginFailed(rateLimitKey);
                         logger.warn("[AUTH] Refresh token não encontrado.");
                         return ResponseEntity.status(403).body(new MessageResponse("Sessão inválida. Faça login novamente."));
                     });
@@ -310,15 +345,33 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {} ({})",
-                signUpRequest.getUsername(), signUpRequest.getEmail());
+    public ResponseEntity<?> registerUser(
+            @Valid @RequestBody SignupRequest signUpRequest,
+            HttpServletRequest request) {
+        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {}", signUpRequest.getUsername());
+
+        String ipAddress = extractClientIp(request);
+        String rateLimitKey = "signup:" + ipAddress;
+
+        if (loginAttemptService.isBlocked(rateLimitKey)) {
+            logger.warn("[SECURITY] Tentativa de registro bloqueada para IP: {}", ipAddress);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.LOCKED)
+                    .body(new MessageResponse("Muitas tentativas de registro. Tente novamente em 15 minutos."));
+        }
+        // Conta a tentativa independentemente do resultado — o próprio volume de
+        // signups (mesmo bem-sucedidos) é o vetor de abuso que queremos limitar.
+        loginAttemptService.loginFailed(rateLimitKey);
 
         Set<String> requestedRoles = signUpRequest.getRole();
+        // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados
         boolean isRequestingPrivilegedRoles = requestedRoles != null && requestedRoles.stream()
-                .anyMatch(role -> role.equalsIgnoreCase("admin")
-                        || role.equalsIgnoreCase("staff")
-                        || role.equalsIgnoreCase("teacher"));
+                .anyMatch(role -> {
+                    String r = role.toUpperCase();
+                    return !r.equals("ALUNO") && !r.equals("CANDIDATO")
+                            && !r.equals("STUDENT") && !r.equals("ROLE_STUDENT")
+                            && !r.equals("ROLE_ALUNO") && !r.equals("ROLE_CANDIDATO");
+                });
 
         if (isRequestingPrivilegedRoles) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -350,6 +403,9 @@ public class AuthController {
                     .username(signUpRequest.getUsername())
                     .email(signUpRequest.getEmail())
                     .password(encoder.encode(signUpRequest.getPassword()))
+                    .privacyConsentAccepted(true)
+                    .privacyConsentVersion(PRIVACY_POLICY_VERSION)
+                    .privacyConsentAt(LocalDateTime.now())
                     .build();
 
             Set<String> strRoles = signUpRequest.getRole();
@@ -359,18 +415,25 @@ public class AuthController {
                 roles.add(roleRepository.findByName(Role.ERole.ROLE_ALUNO)
                         .orElseThrow(() -> new RuntimeException("ROLE_ALUNO não encontrado.")));
             } else {
-                strRoles.forEach(role -> {
-                    switch (role.toLowerCase()) {
-                        case "admin" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("ROLE_ADMIN não encontrado.")));
-                        case "staff" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_SECRETARIA)
-                                .orElseThrow(() -> new RuntimeException("ROLE_SECRETARIA não encontrado.")));
-                        case "teacher" -> roles.add(roleRepository.findByName(Role.ERole.ROLE_PROFESSOR)
-                                .orElseThrow(() -> new RuntimeException("ROLE_PROFESSOR não encontrado.")));
-                        default -> roles.add(roleRepository.findByName(Role.ERole.ROLE_ALUNO)
-                                .orElseThrow(() -> new RuntimeException("ROLE_ALUNO não encontrado.")));
-                    }
-                });
+                for (String role : strRoles) {
+                    Role.ERole targetRole = switch (role.toLowerCase()) {
+                        case "admin" -> Role.ERole.ROLE_ADMIN;
+                        case "root_master", "rootmaster" -> Role.ERole.ROLE_ROOT_MASTER;
+                        case "staff", "secretaria" -> Role.ERole.ROLE_SECRETARIA;
+                        case "financeiro" -> Role.ERole.ROLE_FINANCEIRO;
+                        case "academico" -> Role.ERole.ROLE_ACADEMICO;
+                        case "matricula" -> Role.ERole.ROLE_MATRICULA;
+                        case "coordenador" -> Role.ERole.ROLE_COORDENADOR;
+                        case "teacher", "professor" -> Role.ERole.ROLE_PROFESSOR;
+                        case "monitor" -> Role.ERole.ROLE_MONITOR;
+                        case "bibliotecario" -> Role.ERole.ROLE_BIBLIOTECARIO;
+                        case "aluno", "student" -> Role.ERole.ROLE_ALUNO;
+                        case "candidato" -> Role.ERole.ROLE_CANDIDATO;
+                        default -> throw new IllegalArgumentException("Role desconhecida: " + role);
+                    };
+                    roles.add(roleRepository.findByName(targetRole)
+                            .orElseThrow(() -> new RuntimeException(targetRole + " não encontrado.")));
+                }
             }
 
             user.setRoles(roles);
@@ -379,6 +442,10 @@ public class AuthController {
             logger.info("[AUTH] [SIGNUP-SUCCESS] Usuário {} registrado.", signUpRequest.getUsername());
             return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso."));
 
+        } catch (IllegalArgumentException e) {
+            // Mensagem de IllegalArgumentException aqui é controlada (ex.: "Role desconhecida: X"),
+            // mas delega ao GlobalExceptionHandler via BusinessException para manter formato de erro consistente.
+            throw new com.portalcursos.ng02.exception.BusinessException(e.getMessage());
         } catch (Exception e) {
             logger.error("[AUTH] [SIGNUP-ERROR] Falha ao salvar usuário: ", e);
             return ResponseEntity

@@ -2,13 +2,18 @@ package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.exception.BusinessException;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +33,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StaffMemberRepository staffMemberRepository;
+    private final StudentRepository studentRepository;
     private final AuthorityHierarchyService authorityService;
     private final PasswordEncoder encoder;
 
@@ -40,7 +46,7 @@ public class UserService {
         boolean isRoot = authorityService.isRoot(currentUser);
         int currentLevel = authorityService.getMaxLevel(currentUser);
 
-        List<User> allUsers = userRepository.findAll();
+        List<User> allUsers = userRepository.findAllWithRoles();
 
         if (isRoot) return allUsers;
 
@@ -90,7 +96,7 @@ public class UserService {
 
             if (isStaff) {
                 if (fullName == null || fullName.isBlank()) {
-                    throw new RuntimeException("Dados Incompletos: Colaboradores exigem Nome Completo para ativação institucional.");
+                    throw new BusinessException("Dados Incompletos: Colaboradores exigem Nome Completo para ativação institucional.");
                 }
 
                 StaffMember staff = staffMemberRepository.findById(savedUser.getId())
@@ -106,9 +112,11 @@ public class UserService {
                 staffMemberRepository.saveAndFlush(staff);
                 logger.info("[V50.0] Ativação Institucional concluída para: {}", savedUser.getUsername());
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            logger.error("[V50.0-ERROR] Falha na sincronização: {}", e.getMessage());
-            throw new RuntimeException("Falha Crítica de Governança: Não foi possível ativar o perfil institucional. Operação cancelada. " + e.getMessage());
+            logger.error("[V50.0-ERROR] Falha na sincronização.", e);
+            throw new BusinessException("Falha Crítica de Governança: Não foi possível ativar o perfil institucional. Operação cancelada.");
         }
 
         return savedUser;
@@ -118,14 +126,25 @@ public class UserService {
     public void deleteUser(Long id) {
         User operator = authorityService.getCurrentUser();
         User target = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         // Validação de Hierarquia Inviolável
         authorityService.validateAuthority(operator, target);
 
         if (target.getId().equals(operator.getId())) {
-            throw new RuntimeException("Proteção de Perfil: Você não pode remover sua própria conta.");
+            throw new AccessDeniedException("Proteção de Perfil: Você não pode remover sua própria conta.");
         }
+
+        // Desativa registros institucionais/acadêmicos vinculados antes de remover a conta de login,
+        // evitando StaffMember/Student "fantasma" (ativo, mas sem usuário para autenticar).
+        staffMemberRepository.findByIdAndActiveTrue(id).ifPresent(staff -> {
+            staff.setActive(false);
+            staffMemberRepository.save(staff);
+        });
+        studentRepository.findByUserId(id).ifPresent(student -> {
+            student.setActive(false);
+            studentRepository.save(student);
+        });
 
         userRepository.deleteById(id);
         logger.info("[V50.0] Usuário deletado por autoridade superior: {}", target.getUsername());
@@ -135,7 +154,7 @@ public class UserService {
     public User updateUserRoles(Long id, Set<String> strRoles) {
         User operator = authorityService.getCurrentUser();
         User target = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         // 1. Validar autoridade sobre o alvo
         authorityService.validateAuthority(operator, target);

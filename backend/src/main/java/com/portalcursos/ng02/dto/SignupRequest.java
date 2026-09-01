@@ -1,5 +1,6 @@
 package com.portalcursos.ng02.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,4 +24,7 @@ public class SignupRequest {
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;
+
+    @AssertTrue(message = "É necessário aceitar a Política de Privacidade para criar uma conta.")
+    private boolean privacyConsentAccepted;
 }

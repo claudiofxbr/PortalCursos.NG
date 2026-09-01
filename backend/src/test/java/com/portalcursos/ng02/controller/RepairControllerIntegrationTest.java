@@ -8,6 +8,7 @@ import com.portalcursos.ng02.model.RepairTicket;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.repository.RepairRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -44,6 +46,9 @@ public class RepairControllerIntegrationTest {
 
     @MockBean
     private StaffMemberRepository staffMemberRepository;
+
+    @MockBean
+    private StorageService storageService;
 
     private RepairTicket activeTicket;
     private RepairTicket ticketWithInactiveCreator;
@@ -114,5 +119,29 @@ public class RepairControllerIntegrationTest {
         mockMvc.perform(get("/api/repairs")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
+    }
+    // Regressão: falha de storage no upload não deve vazar detalhes internos
+    // (path de arquivo, stacktrace) na resposta ao cliente.
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testCreateTicketStoragoFailureDoesNotLeakInternalDetails() throws Exception {
+        when(storageService.store(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new java.io.IOException(
+                        "Falha ao escrever em C:\\Users\\VeKTI-01\\Desktop\\uploads\\repairs-main\\segredo-interno.png: Disco cheio"));
+
+        MockMultipartFile photo = new MockMultipartFile(
+                "mainPhotoFile", "foto.png", "image/png", "conteudo-fake".getBytes());
+
+        mockMvc.perform(multipart("/api/repairs")
+                .file(photo)
+                .param("title", "Falha simulada de storage")
+                .param("description", "Teste de vazamento de detalhes internos")
+                .param("location", "Bloco Teste"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro ao salvar imagem. Tente novamente."))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("C:\\Users"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Disco cheio"))));
     }
 }

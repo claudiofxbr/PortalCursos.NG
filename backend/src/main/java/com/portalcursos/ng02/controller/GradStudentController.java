@@ -3,6 +3,7 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.StudentService;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -72,6 +73,9 @@ public class GradStudentController {
             return ResponseEntity.badRequest().body(new MessageResponse("CPF já cadastrado em nossa base de dados."));
         }
 
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(currentCourse)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado: " + currentCourse));
+
         Student student = Student.builder()
                 .fullName(fullName)
                 .email(email)
@@ -79,7 +83,7 @@ public class GradStudentController {
                 .phone(phone)
                 .dateOfBirth(dateOfBirth)
                 .address(address)
-                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
+                .course(course)
                 .nacionalidade(nacionalidade)
                 .estadoCivil(estadoCivil)
                 .sexo(sexo)
@@ -130,11 +134,14 @@ public class GradStudentController {
             @RequestParam("enrollmentStatus") String enrollmentStatus,
             @RequestParam(value = "foto3x4", required = false) MultipartFile foto3x4
     ) throws java.io.IOException {
+        com.portalcursos.ng02.model.Course course = courseRepository.findByDenominacaoCurso(currentCourse)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado: " + currentCourse));
+
         Student student = Student.builder()
                 .fullName(fullName)
                 .phone(phone)
                 .address(address)
-                .course(courseRepository.findByDenominacaoCurso(currentCourse).orElse(null))
+                .course(course)
                 .enrollmentStatus(enrollmentStatus)
                 .build();
 
@@ -146,7 +153,7 @@ public class GradStudentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam("status") String status) throws java.io.IOException {
         Student student = studentService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Aluno não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado."));
         
         student.setEnrollmentStatus(status);
         auditService.injectCreator(student);
@@ -157,7 +164,7 @@ public class GradStudentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteStudent(@PathVariable Long id) {
         Student student = studentService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Aluno não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado."));
         
         studentService.delete(id);
         return ResponseEntity.ok(new MessageResponse("Aluno desativado com sucesso."));

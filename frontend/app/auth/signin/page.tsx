@@ -18,19 +18,6 @@ export default function SignInPage() {
   const [retryStatus, setRetryStatus] = useState<string | null>(null);
   const [retryProgress, setRetryProgress] = useState(0);
 
-  // Monitor de Cold Start Retentativas (V15 OMEGA)
-  useEffect(() => {
-    const handleRetry = (e: any) => {
-      const { attempt, maxRetries } = e.detail;
-      const progress = (attempt / maxRetries) * 100;
-      setRetryProgress(progress);
-      setRetryStatus(`🚀 Despertando Nuvem... ${Math.round(progress)}%`);
-    };
-
-    window.addEventListener('COLD_START_RETRY' as any, handleRetry);
-    return () => window.removeEventListener('COLD_START_RETRY' as any, handleRetry);
-  }, []);
-
   // --- MECANISMO DE CONVERGÊNCIA V11.7 ---
   useEffect(() => {
     // A sincronização principal agora é feita pelo VersionGuard no RootLayout.
@@ -84,20 +71,15 @@ export default function SignInPage() {
       console.error("[AUTH DEBUG] Erro no Login:", err);
       
       let msg = err.message || "Não foi possível conectar ao sistema.";
-      
-      // Tratamento especial para erro de rede / Cold Start
-      if (err.isNetworkError) {
-          if (err.isColdStart) {
-              msg = "🚀 O servidor está acordando... Por favor, aguarde 30 segundos e tente entrar novamente. (Ambiente Cloud)";
-          } else {
-              msg = "🔌 Erro de Conexão Local: O Backend Spring Boot não parece estar rodando na porta 8080.";
-          }
-      } else if (err.response) {
+
+      if (err.response) {
         const status = err.response.status;
         const serverMsg = err.response.data?.message || err.response.data?.error;
         
         if (status === 401) {
           msg = "Usuário ou senha incorretos. Tente novamente.";
+        } else if (status === 423) {
+          msg = serverMsg || "Acesso temporariamente bloqueado por excesso de tentativas. Aguarde 15 minutos e tente novamente.";
         } else if (status === 403) {
           msg = "Acesso Negado. Você não tem permissão para entrar.";
         } else if (status === 404) {

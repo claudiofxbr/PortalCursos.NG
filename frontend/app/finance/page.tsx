@@ -5,6 +5,7 @@ import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useAuditCRUD } from '../hooks/useAuditCRUD';
 import { AuditStamp } from '../components/AuditStamp';
+import { PixQrCode } from '../components/PixQrCode';
 import { toast } from 'sonner';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
@@ -108,8 +109,9 @@ export default function FinancePage() {
           const endpoint = method === 'PIX' ? `/finance/generate-pix/${id}` : `/finance/generate-boleto/${id}`;
           const res = await api.post(endpoint);
           setShowPaymentModal({ ...res.data, method });
-      } catch (err) {
-          alert("Erro ao processar pagamento.");
+      } catch (err: any) {
+          const msg = err?.response?.data?.message || `Não foi possível gerar o ${method === 'PIX' ? 'código Pix' : 'boleto'}. Tente novamente.`;
+          alert(msg);
       }
   };
 
@@ -273,7 +275,7 @@ export default function FinancePage() {
               <AuditStamp 
                   name={invoice.creatorName} 
                   position={invoice.creatorPosition} 
-                  photoUrl={invoice.creatorPhotoUrl ? (invoice.creatorPhotoUrl.startsWith('http') ? invoice.creatorPhotoUrl : `${BASE_URL}/uploads/${invoice.creatorPhotoUrl}`) : undefined}
+                  photoUrl={invoice.creatorPhotoUrl ? (invoice.creatorPhotoUrl.startsWith('http') ? invoice.creatorPhotoUrl : `${BASE_URL}/api/uploads/${invoice.creatorPhotoUrl}`) : undefined}
                   date={invoice.createdAt}
               />
             </div>
@@ -345,7 +347,7 @@ export default function FinancePage() {
                           flexShrink: 0
                       }}>
                           {user?.fotoUrl ? (
-                              <img src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/uploads/${user.fotoUrl}`} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={user.fotoUrl.startsWith('http') ? user.fotoUrl : `${BASE_URL}/api/uploads/${user.fotoUrl}`} alt="Emissor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👤</div>
                           )}
@@ -379,7 +381,7 @@ export default function FinancePage() {
                           flexShrink: 0
                       }}>
                           {selectedStudent?.fotoUrl ? (
-                              <img src={selectedStudent.fotoUrl.startsWith('http') ? selectedStudent.fotoUrl : `${BASE_URL}/uploads/${selectedStudent.fotoUrl}`} alt="Aluno" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={selectedStudent.fotoUrl.startsWith('http') ? selectedStudent.fotoUrl : `${BASE_URL}/api/uploads/${selectedStudent.fotoUrl}`} alt="Aluno" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎓</div>
                           )}
@@ -469,11 +471,11 @@ export default function FinancePage() {
                    {showPaymentModal.method === 'PIX' ? (
                        <div>
                            <div style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                               {/* Simulação de QR Code */}
-                               <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(showPaymentModal.paymentCode)}`} alt="Pix QR Code" style={{ borderRadius: '8px' }} />
+                               {/* Simulação de QR Code — gerado no cliente, sem enviar dados financeiros a terceiros */}
+                               <PixQrCode data={showPaymentModal.paymentCode} />
                            </div>
                            <p style={{ fontSize: '0.7rem', color: '#888', marginBottom: '1rem', wordBreak: 'break-all' }}>{showPaymentModal.paymentCode}</p>
-                           <button onClick={() => { navigator.clipboard.writeText(showPaymentModal.paymentCode); alert("Pixel Copiado!"); }} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>Copiar Chave Pix</button>
+                           <button onClick={() => { navigator.clipboard.writeText(showPaymentModal.paymentCode); alert("Chave Pix copiada!"); }} className="btn-primary" style={{ width: '100%', marginBottom: '10px' }}>Copiar Chave Pix</button>
                        </div>
                    ) : (
                        <div>
