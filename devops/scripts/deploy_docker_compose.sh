@@ -94,9 +94,20 @@ else
     echo -e "${YELLOW}⚠️  Aviso: Não foi possível configurar o UFW (binário não localizado). Ignorando firewall para evitar travar o deploy.${NC}"
 fi
 
-# 6. Build e Inicialização coordenada com Docker Compose
+# 6. Build e Inicialização coordenada com Docker Compose (com health check e rollback)
 echo -e "${YELLOW}🏗️  Subindo Pilha de Containers (Postgres, Backend e Frontend)...${NC}"
 cd "$DEVOPS_DIR"
+
+# docker-compose.prod.yml declara "easypanel" como rede externa obrigatória —
+# precisa existir antes do primeiro "docker compose up" ou o comando falha.
+docker network create easypanel 2>/dev/null && echo -e "${GREEN}✅ Rede easypanel criada.${NC}" || echo -e "${GREEN}✅ Rede easypanel já existe.${NC}"
+
+# Guarda a imagem anterior de backend/frontend para permitir rollback automático
+# se o health check abaixo falhar (mesmo padrão de robustez usado em deploy_ci.sh).
+PREV_BACKEND_IMAGE_ID=$(docker inspect -f '{{.Image}}' portalcursos_backend 2>/dev/null || echo "")
+PREV_BACKEND_IMAGE_TAG=$(docker inspect -f '{{.Config.Image}}' portalcursos_backend 2>/dev/null || echo "")
+PREV_FRONTEND_IMAGE_ID=$(docker inspect -f '{{.Image}}' portalcursos_frontend 2>/dev/null || echo "")
+PREV_FRONTEND_IMAGE_TAG=$(docker inspect -f '{{.Config.Image}}' portalcursos_frontend 2>/dev/null || echo "")
 
 echo -e "${YELLOW}🧹 Removendo conflitos de containers antigos no daemon do Docker...${NC}"
 for container in portalcursos_postgres portalcursos_backend portalcursos_frontend; do
@@ -110,11 +121,16 @@ done
 # Limpa o estado e remove órfãos
 docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
-# Reconstrói a pilha e inicializa forçando a recriação limpa (limpa cache corrompido do Docker)
+# Reconstrói a pilha (limpa cache corrompido do Docker)
 docker compose -f docker-compose.prod.yml build --no-cache
-docker compose -f docker-compose.prod.yml up -d --force-recreate
 
-echo -e "${GREEN}✅ Pilha de containers inicializada com sucesso.${NC}"
+echo -e "${YELLOW}🐘 Subindo PostgreSQL...${NC}"
+docker compose -f docker-compose.prod.yml up -d postgres
+
+echo -e "${YELLOW}🚀 Subindo backend e frontend...${NC}"
+docker compose -f docker-compose.prod.yml up -d --force-recreate --no-deps backend
+docker compose -f docker-compose.prod.yml up -d --force-recreate --no-deps frontend
+
 docker compose -f docker-compose.prod.yml ps
 
 # Liberação de Portas (Estratégia 2 - OMEGA HARDENING)
@@ -136,80 +152,111 @@ if [ -n "$conflicting_ids" ]; then
     done
 fi
 
-# 7. Configuração do Proxy Reverso Nginx no Host
-echo -e "${YELLOW}🌐 Configurando Proxy Reverso Nginx...${NC}"
-if [ -f "$SCRIPTS_DIR/nginx.conf" ]; then
-    sudo cp "$SCRIPTS_DIR/nginx.conf" /etc/nginx/sites-available/portalcursos
-    
-    # Ajustar caminhos de uploads caso necessário no nginx.conf
-    sudo sed -i 's|alias /var/www/portalcursos/backend/uploads;|alias /var/www/portalcursos/uploads;|g' /etc/nginx/sites-available/portalcursos
-
-    # Ativar o site no Nginx
-    sudo ln -sf /etc/nginx/sites-available/portalcursos /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default || true
-    
-    # Validar as diretivas de forma protegida contra falhas (resiliência contra colisões de porta/EasyPanel)
-    if sudo nginx -t &>/dev/null; then
-        if sudo systemctl reload nginx &>/dev/null; then
-            echo -e "${GREEN}✅ Proxy Reverso Nginx ativo e direcionado para os containers.${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Aviso: Falha ao recarregar o Nginx. Verifique se o EasyPanel ou outro serviço ocupa as portas 80/443.${NC}"
-        fi
-    else
-        echo -e "${RED}⚠️  Aviso: Configuração do Nginx possui erros de sintaxe ou as portas estão em conflito. A aplicação continuará acessível diretamente na porta 3010.${NC}"
+# 7. Health check com timeout e rollback automático em caso de falha
+echo -e "${YELLOW}⏳ Aguardando containers ficarem saudáveis...${NC}"
+BACKEND_READY=false
+for i in $(seq 1 45); do
+    if curl -sf http://127.0.0.1:8090/api/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Backend saudável (${i}x2s).${NC}"
+        BACKEND_READY=true
+        break
     fi
-else
-    echo -e "${RED}⚠️  Aviso: nginx.conf não encontrado em $SCRIPTS_DIR/nginx.conf. Nginx não configurado.${NC}"
+    sleep 2
+done
+if [ "$BACKEND_READY" = "false" ]; then
+    echo -e "${RED}⚠️  Backend não respondeu em 90s — logs:${NC}"
+    docker logs portalcursos_backend --tail 30 2>&1 | sed 's/^/  /'
 fi
 
-# 8. Instalar e configurar SSL (Let's Encrypt / Certbot)
-echo -e "${YELLOW}🔐 Configurando segurança SSL/HTTPS automatizada...${NC}"
+FRONTEND_READY=false
+for i in $(seq 1 60); do
+    CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:3010/portalcursos.ng 2>/dev/null || echo "000")
+    if [ "$CODE" = "200" ] || [ "$CODE" = "308" ] || [ "$CODE" = "302" ]; then
+        echo -e "${GREEN}✅ Frontend respondendo HTTP $CODE (${i}x2s).${NC}"
+        FRONTEND_READY=true
+        break
+    fi
+    sleep 2
+done
+if [ "$FRONTEND_READY" = "false" ]; then
+    echo -e "${RED}⚠️  Frontend não respondeu em 120s — logs:${NC}"
+    docker logs portalcursos_frontend --tail 30 2>&1 | sed 's/^/  /'
+fi
 
-# Lê domínio e e-mail do .env (já carregado acima)
-DOMAIN_NAME=$(echo "${DOMAIN_NAME:-}" | tr -d '\r ')
-EMAIL_ADDRESS=$(echo "${EMAIL_ADDRESS:-}" | tr -d '\r ')
-if [ -z "$DOMAIN_NAME" ]; then DOMAIN_NAME="xavierbr-vps.tech"; fi
-if [ -z "$EMAIL_ADDRESS" ]; then EMAIL_ADDRESS="claudiofxbr@gmail.com"; fi
+if [ "$BACKEND_READY" = "false" ] || [ "$FRONTEND_READY" = "false" ]; then
+    echo -e "${RED}⚠️  Health check falhou — Backend OK: $BACKEND_READY, Frontend OK: $FRONTEND_READY. Tentando rollback para a imagem anterior...${NC}"
 
-if [[ "$DOMAIN_NAME" == "localhost" || "$DOMAIN_NAME" == "127.0.0.1" ]]; then
-    echo -e "${YELLOW}⚠️  Domínio local detectado. Pulando SSL Let's Encrypt.${NC}"
-else
-    echo -e "${BLUE}📜 Domínio alvo: $DOMAIN_NAME${NC}"
-    sudo apt-get install -y certbot python3-certbot-nginx -qq
-
-    # Criar certificado autoassinado temporário para que o Nginx inicie
-    # (necessário pois o nginx.conf já referencia os caminhos de cert)
-    if [ ! -f "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" ]; then
-        echo -e "${YELLOW}⚠️  Certificado não encontrado. Criando autoassinado temporário...${NC}"
-        sudo mkdir -p "/etc/letsencrypt/live/$DOMAIN_NAME/"
-        sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
-            -keyout "/etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem" \
-            -out  "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" \
-            -subj "/CN=$DOMAIN_NAME" 2>/dev/null
-        echo -e "${GREEN}✅ Certificado temporário criado. O Nginx pode iniciar.${NC}"
+    ROLLBACK_OK=true
+    if [ -n "$PREV_BACKEND_IMAGE_ID" ] && [ -n "$PREV_BACKEND_IMAGE_TAG" ]; then
+        docker tag "$PREV_BACKEND_IMAGE_ID" "$PREV_BACKEND_IMAGE_TAG"
+        docker compose -f docker-compose.prod.yml up -d --force-recreate --no-deps backend
+        RB_BACKEND_READY=false
+        for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:8090/api/health > /dev/null 2>&1; then RB_BACKEND_READY=true; break; fi
+            sleep 2
+        done
+        [ "$RB_BACKEND_READY" = "true" ] && echo -e "${GREEN}✅ Rollback do backend OK.${NC}" || { echo -e "${RED}❌ Rollback do backend também falhou.${NC}"; ROLLBACK_OK=false; }
+    else
+        echo -e "${YELLOW}⚠️  Sem imagem anterior de backend conhecida — rollback automático não é possível.${NC}"
+        ROLLBACK_OK=false
     fi
 
-    # Garantir que o nginx.conf usa o domínio correto
-    sudo sed -i "s|server_name .*;|server_name $DOMAIN_NAME www.$DOMAIN_NAME;|g" \
-        /etc/nginx/sites-available/portalcursos 2>/dev/null || true
-    sudo sed -i "s|/etc/letsencrypt/live/[^/]*/|/etc/letsencrypt/live/$DOMAIN_NAME/|g" \
-        /etc/nginx/sites-available/portalcursos 2>/dev/null || true
+    if [ -n "$PREV_FRONTEND_IMAGE_ID" ] && [ -n "$PREV_FRONTEND_IMAGE_TAG" ]; then
+        docker tag "$PREV_FRONTEND_IMAGE_ID" "$PREV_FRONTEND_IMAGE_TAG"
+        docker compose -f docker-compose.prod.yml up -d --force-recreate --no-deps frontend
+        RB_FRONTEND_READY=false
+        for i in $(seq 1 60); do
+            CODE=$(curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:3010/portalcursos.ng 2>/dev/null || echo "000")
+            if [ "$CODE" = "200" ] || [ "$CODE" = "308" ] || [ "$CODE" = "302" ]; then RB_FRONTEND_READY=true; break; fi
+            sleep 2
+        done
+        [ "$RB_FRONTEND_READY" = "true" ] && echo -e "${GREEN}✅ Rollback do frontend OK.${NC}" || { echo -e "${RED}❌ Rollback do frontend também falhou.${NC}"; ROLLBACK_OK=false; }
+    else
+        echo -e "${YELLOW}⚠️  Sem imagem anterior de frontend conhecida — rollback automático não é possível.${NC}"
+        ROLLBACK_OK=false
+    fi
 
-    sudo systemctl reload nginx 2>/dev/null || sudo systemctl restart nginx || true
+    if [ "$ROLLBACK_OK" = "true" ]; then
+        echo -e "${RED}❌ Deploy da nova versão falhou no health check, mas o rollback para a versão anterior teve sucesso — produção permanece no ar com o código antigo. Corrija o problema e tente novamente.${NC}"
+        exit 1
+    else
+        echo -e "${RED}❌ Deploy da nova versão falhou no health check E o rollback automático também falhou — produção pode estar fora do ar. Intervenção manual urgente necessária.${NC}"
+        exit 1
+    fi
+fi
 
-    # Emitir certificado real Let's Encrypt
-    echo -e "${BLUE}📜 Solicitando certificado Let's Encrypt...${NC}"
-    sudo certbot --nginx \
-        -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" \
-        --agree-tos -m "$EMAIL_ADDRESS" \
-        --non-interactive --redirect 2>&1 || {
-        echo -e "${YELLOW}⚠️  SSL Let's Encrypt não obtido. Causas comuns:${NC}"
-        echo -e "${YELLOW}    1. DNS A de '$DOMAIN_NAME' não aponta para este IP.${NC}"
-        echo -e "${YELLOW}    2. Porta 80 bloqueada ou ocupada.${NC}"
-        echo -e "${YELLOW}    3. Rate limit do Let's Encrypt (5 emissões/semana).${NC}"
-        echo -e "${YELLOW}    A aplicação continuará rodando com certificado temporário.${NC}"
-        echo -e "${YELLOW}    Use: ./manage-vps.ps1 → opção 3 para instalar SSL depois.${NC}"
-    }
+echo -e "${GREEN}✅ Pilha de containers saudável e inicializada com sucesso.${NC}"
+
+# 8. Conectar containers à rede Traefik (EasyPanel) e recarregar
+# A arquitetura de produção usa Traefik (gerenciado pelo EasyPanel) como único
+# proxy de borda — a configuração manual de Nginx/Certbot que existia aqui foi
+# removida porque conflita com as portas 80/443 do Traefik. Evidência: (1)
+# devops/scripts/fix_502.sh para e desabilita o Nginx explicitamente sempre que
+# o encontra ativo, com o comentário "Nginx NAO e usado — Traefik e o unico
+# proxy de borda"; (2) devops/scripts/setup_server.sh documenta que o setup da
+# VPS "NAO instala Java, Node, Nginx ou pm2 — tudo roda em containers Docker" e
+# que "o Traefik e gerenciado pelo EasyPanel"; (3) devops/docker-compose.prod.yml
+# já define todo o roteamento e TLS via labels Traefik (certresolver=letsencrypt),
+# sem depender de nginx.conf; (4) deploy_ci.sh e deploy_vps.sh (os outros dois
+# scripts de deploy do projeto) seguem esse mesmo padrão só-Traefik, sem Nginx.
+echo -e "${YELLOW}🌐 Conectando containers à rede Traefik (easypanel)...${NC}"
+for container in portalcursos_backend portalcursos_frontend; do
+    already=$(docker inspect "$container" \
+        --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+        | tr ' ' '\n' | grep -c "^easypanel$" || true)
+    if [ "${already:-0}" -eq 0 ]; then
+        docker network connect easypanel "$container" && echo -e "${GREEN}✅ $container -> rede easypanel${NC}"
+    else
+        echo -e "${GREEN}✅ $container já está na rede easypanel${NC}"
+    fi
+done
+
+TRAEFIK_CONTAINER=$(docker ps --filter name=easypanel-traefik -q 2>/dev/null | head -1 || true)
+if [ -n "$TRAEFIK_CONTAINER" ]; then
+    docker kill --signal=SIGHUP "$TRAEFIK_CONTAINER"
+    echo -e "${GREEN}✅ Traefik recarregado (SIGHUP).${NC}"
+else
+    echo -e "${YELLOW}⚠️  Container Traefik não encontrado — reload ignorado.${NC}"
 fi
 
 echo -e "${GREEN}====================================================${NC}"
