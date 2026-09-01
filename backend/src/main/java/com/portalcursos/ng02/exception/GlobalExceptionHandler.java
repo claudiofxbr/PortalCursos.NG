@@ -162,13 +162,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> handleConstraintViolation(ConstraintViolationException ex, WebRequest request) {
+        // Não expor ex.getMessage() bruto: inclui nome de classe/pacote e path da entidade
+        // (ex.: "com.portalcursos.ng02.model.User.email: não pode ser nulo"). Detalhe fica só no log.
         logger.warn("[VALIDATION-ERROR] Falha de validação de dados: {}", ex.getMessage());
-        
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validation Error");
-        body.put("message", "Dados inválidos: " + ex.getMessage());
+        body.put("message", "Dados inválidos. Verifique os campos obrigatórios.");
         body.put("path", request.getDescription(false).replace("uri=", ""));
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
