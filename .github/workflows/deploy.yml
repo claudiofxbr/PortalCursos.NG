@@ -76,7 +76,7 @@ jobs:
       # era executado, escondendo vulnerabilidades do segundo componente.
       - name: Trivy scan — backend (SO, CRITICAL/HIGH falha o build)
         id: trivy-backend
-        uses: aquasecurity/trivy-action@v0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         continue-on-error: true
         with:
           image-ref: portalcursos-backend:scan
@@ -87,7 +87,7 @@ jobs:
 
       - name: Trivy scan — frontend (SO, CRITICAL/HIGH falha o build)
         id: trivy-frontend
-        uses: aquasecurity/trivy-action@v0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         continue-on-error: true
         with:
           image-ref: portalcursos-frontend:scan
