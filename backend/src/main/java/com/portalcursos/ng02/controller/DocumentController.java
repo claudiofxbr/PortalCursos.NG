@@ -79,9 +79,16 @@ public class DocumentController {
     }
 
     private String extractRelativePath(jakarta.servlet.http.HttpServletRequest request) {
+        // PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE não remove o prefixo do mapeamento quando o
+        // padrão é "/**" — é preciso extrair a porção que casou com o "**" via AntPathMatcher,
+        // senão o path fica sempre igual ao path completo e firstSegment() resolve para "".
+        String bestMatchingPattern = (String) request.getAttribute(
+                org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         String path = (String) request.getAttribute(
                 org.springframework.web.servlet.HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
-        return UriUtils.decode(path, StandardCharsets.UTF_8);
+        String extracted = new org.springframework.util.AntPathMatcher()
+                .extractPathWithinPattern(bestMatchingPattern, path);
+        return UriUtils.decode(extracted, StandardCharsets.UTF_8);
     }
 
     private String firstSegment(String relativePath) {
