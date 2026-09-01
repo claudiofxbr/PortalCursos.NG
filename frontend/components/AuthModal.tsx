@@ -29,7 +29,14 @@ export default function AuthModal() {
             setPassword('');
         } catch (err: any) {
             console.error("[AUTH MODAL] Erro no re-login:", err);
-            setError("Senha incorreta ou erro no servidor.");
+            // Distingue falha de rede/DNS (sem response) de credenciais erradas
+            // (401/403 do backend), para o usuário saber se deve checar a
+            // senha ou a própria conexão.
+            if (!err?.response) {
+                setError("Falha de conexão. Verifique sua internet e tente novamente.");
+            } else {
+                setError("Senha incorreta ou erro no servidor.");
+            }
         } finally {
             setLoading(false);
         }
