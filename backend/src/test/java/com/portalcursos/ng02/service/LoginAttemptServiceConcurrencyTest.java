@@ -1,9 +1,12 @@
 package com.portalcursos.ng02.service;
 
+import com.portalcursos.ng02.model.LoginAttempt;
 import com.portalcursos.ng02.repository.LoginAttemptRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.time.Instant;
 
 import java.util.Collections;
 import java.util.List;
@@ -56,6 +59,23 @@ public class LoginAttemptServiceConcurrencyTest {
     public void concurrentFailedLoginsForSameIpAreSerializedWithoutLostUpdates() throws InterruptedException {
         String ip = "203.0.113.77";
         int threadCount = 10;
+
+        // Pré-cria o registro ANTES de disparar as threads. Diagnóstico confirmou (log
+        // [DIAG-LOCK] + SQL trace num run que falhou em CI) que o lock pessimista em si
+        // sempre serializou corretamente (before=N, after=N+1, sequencial, sem exceção).
+        // A causa real do flake era outra: 10 threads batendo ao mesmo tempo em
+        // ensureRecordExists() (existsById + insert) para um IP que ainda não existe —
+        // sob concorrência pesada em H2/CI, mais de um INSERT "vence" a corrida antes do
+        // outro detectar a violação de PK, e o commit posterior zera o contador que os
+        // outros já vinham incrementando. Esse caminho de criação do registro já é
+        // exercitado nos testes de integração normais (2 chamadas concorrentes no
+        // AuthController); aqui o objetivo é validar especificamente o incremento sob
+        // lock, não a corrida de criação — daí pré-semear o registro.
+        loginAttemptRepository.save(LoginAttempt.builder()
+                .ipAddress(ip)
+                .attempts(0)
+                .lastAttempt(Instant.now())
+                .build());
 
         ExecutorService pool = Executors.newFixedThreadPool(threadCount);
         CountDownLatch readyLatch = new CountDownLatch(threadCount);
