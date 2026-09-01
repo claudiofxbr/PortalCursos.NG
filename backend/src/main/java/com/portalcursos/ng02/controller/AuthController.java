@@ -117,19 +117,24 @@ public class AuthController {
     }
 
     /**
-     * Extrai o IP real do cliente atrás do Traefik. Traefik popula X-Forwarded-For
-     * (não X-Real-IP, que é convenção do nginx) — por isso ele vem primeiro.
-     * X-Forwarded-For pode conter uma cadeia "cliente, proxy1, proxy2"; o IP original
-     * do cliente é sempre o primeiro da lista.
+     * Extrai o IP real do cliente atrás do nginx (devops/scripts/nginx.conf).
+     * X-Real-IP é preferido: nginx o define via proxy_set_header (sobrescreve, não
+     * concatena), então não é falsificável pelo cliente. X-Forwarded-For usa
+     * $proxy_add_x_forwarded_for, que ANEXA ao valor recebido — um cliente malicioso
+     * pode enviar "X-Forwarded-For: 1.2.3.4" e nginx só adiciona o IP real depois
+     * dele; usar o primeiro valor (como antes) permitia falsificar o IP e burlar o
+     * bloqueio de força bruta. Por isso, se X-Real-IP faltar, usamos o ÚLTIMO valor
+     * da cadeia X-Forwarded-For (o único segmento que o nginx realmente controla).
      */
     private String extractClientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isEmpty()) {
-            return forwardedFor.split(",")[0].trim();
-        }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isEmpty()) {
             return realIp;
+        }
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            String[] parts = forwardedFor.split(",");
+            return parts[parts.length - 1].trim();
         }
         return request.getRemoteAddr();
     }
@@ -226,6 +231,16 @@ public class AuthController {
             HttpServletResponse response,
             @RequestBody(required = false) com.portalcursos.ng02.dto.TokenRefreshRequest body) {
 
+        String ipAddress = extractClientIp(request);
+        String rateLimitKey = "refresh:" + ipAddress;
+
+        if (loginAttemptService.isBlocked(rateLimitKey)) {
+            logger.warn("[SECURITY] Tentativa de refresh token bloqueada para IP: {}", ipAddress);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.LOCKED)
+                    .body(new MessageResponse("Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
+        }
+
         // Cookie tem prioridade; body é fallback para compatibilidade
         String bodyToken = (body != null) ? body.getRefreshToken() : null;
         String refreshToken = extractRefreshToken(request, bodyToken);
@@ -242,6 +257,7 @@ public class AuthController {
                         if (session.getExpiryDate().isBefore(Instant.now())) {
                             userSessionRepository.delete(session);
                             clearAuthCookies(response);
+                            loginAttemptService.loginFailed(rateLimitKey);
                             logger.warn("[AUTH] Refresh token expirado.");
                             return ResponseEntity.status(403).body(new MessageResponse("Sessão expirada. Faça login novamente."));
                         }
@@ -258,12 +274,14 @@ public class AuthController {
                         response.addCookie(buildAccessCookie(newAccessToken));
                         response.addCookie(buildRefreshCookie(newRefreshToken));
 
+                        loginAttemptService.loginSucceeded(rateLimitKey);
                         logger.info("[AUTH] Token renovado para: {}", user.getUsername());
                         // Retorna apenas confirmação — tokens viajam via cookie
                         return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
                     })
                     .orElseGet(() -> {
                         clearAuthCookies(response);
+                        loginAttemptService.loginFailed(rateLimitKey);
                         logger.warn("[AUTH] Refresh token não encontrado.");
                         return ResponseEntity.status(403).body(new MessageResponse("Sessão inválida. Faça login novamente."));
                     });
@@ -327,8 +345,23 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    public ResponseEntity<?> registerUser(
+            @Valid @RequestBody SignupRequest signUpRequest,
+            HttpServletRequest request) {
         logger.info("[AUTH] [SIGNUP] Tentativa de registro: {}", signUpRequest.getUsername());
+
+        String ipAddress = extractClientIp(request);
+        String rateLimitKey = "signup:" + ipAddress;
+
+        if (loginAttemptService.isBlocked(rateLimitKey)) {
+            logger.warn("[SECURITY] Tentativa de registro bloqueada para IP: {}", ipAddress);
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.LOCKED)
+                    .body(new MessageResponse("Muitas tentativas de registro. Tente novamente em 15 minutos."));
+        }
+        // Conta a tentativa independentemente do resultado — o próprio volume de
+        // signups (mesmo bem-sucedidos) é o vetor de abuso que queremos limitar.
+        loginAttemptService.loginFailed(rateLimitKey);
 
         Set<String> requestedRoles = signUpRequest.getRole();
         // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados

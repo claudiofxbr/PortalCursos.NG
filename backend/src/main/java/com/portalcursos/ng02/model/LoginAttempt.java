@@ -17,7 +17,7 @@ import java.time.Instant;
 public class LoginAttempt {
 
     @Id
-    @Column(name = "ip_address", length = 45)
+    @Column(name = "ip_address", length = 64)
     private String ipAddress;
 
     @Column(nullable = false)
