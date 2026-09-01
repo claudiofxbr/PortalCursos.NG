@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,6 +33,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.flyway.enabled=false",
+    // O pool de producao (application.properties) e propositalmente pequeno (5, dimensionado
+    // para o Neon). Esse teste dispara 10 chamadas verdadeiramente simultaneas so para provar
+    // que o lock pessimista serializa corretamente — nao e um teste de dimensionamento de pool,
+    // entao usamos um pool maior aqui para isolar a variavel sob teste (lock) da contencao de
+    // conexao, que teria um efeito de confusao (mascarando lost updates com timeouts de pool).
+    "spring.datasource.hikari.maximum-pool-size=20",
     "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
     "APP_JWT_EXPIRATION=900000",
     "APP_ROOT_PASSWORD=TestRootPass123!",
@@ -52,6 +61,10 @@ public class LoginAttemptServiceConcurrencyTest {
         CountDownLatch readyLatch = new CountDownLatch(threadCount);
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        // Sem isso, uma excecao dentro do Runnable (ex.: timeout de conexao sob CI mais lento)
+        // e engolida silenciosamente pelo ExecutorService — o doneLatch.countDown() do finally
+        // mascara a falha e o teste passa a medir um contador subestimado sem saber por que.
+        List<Throwable> failures = new CopyOnWriteArrayList<>();
 
         for (int i = 0; i < threadCount; i++) {
             pool.submit(() -> {
@@ -59,18 +72,21 @@ public class LoginAttemptServiceConcurrencyTest {
                 try {
                     startLatch.await();
                     loginAttemptService.loginFailed(ip);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                } catch (Throwable t) {
+                    failures.add(t);
                 } finally {
                     doneLatch.countDown();
                 }
             });
         }
 
-        readyLatch.await(10, TimeUnit.SECONDS);
+        assertTrue(readyLatch.await(10, TimeUnit.SECONDS), "Timeout aguardando as threads ficarem prontas");
         startLatch.countDown(); // libera todas as threads ao mesmo tempo
         assertTrue(doneLatch.await(30, TimeUnit.SECONDS), "Timeout aguardando as tentativas concorrentes");
         pool.shutdown();
+
+        assertTrue(failures.isEmpty(),
+                "Nenhuma thread deveria falhar; falhas: " + failures);
 
         var record = loginAttemptRepository.findById(ip).orElse(null);
         assertNotNull(record, "Registro de tentativas deveria existir após as falhas de login");
