@@ -39,6 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     // entao usamos um pool maior aqui para isolar a variavel sob teste (lock) da contencao de
     // conexao, que teria um efeito de confusao (mascarando lost updates com timeouts de pool).
     "spring.datasource.hikari.maximum-pool-size=20",
+    // DIAGNÓSTICO TEMPORÁRIO: confirma no log do CI se o SELECT gerado por findByIpForUpdate
+    // realmente inclui "for update" e captura os parâmetros/timing reais das transações
+    // concorrentes. Remover junto com o log [DIAG-LOCK] em LoginAttemptService após a causa
+    // raiz do flake ser confirmada.
+    "logging.level.org.hibernate.SQL=DEBUG",
+    "logging.level.org.hibernate.orm.jdbc.bind=TRACE",
     "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
     "APP_JWT_EXPIRATION=900000",
     "APP_ROOT_PASSWORD=TestRootPass123!",
