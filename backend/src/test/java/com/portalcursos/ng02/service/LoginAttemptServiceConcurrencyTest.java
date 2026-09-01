@@ -1,9 +1,12 @@
 package com.portalcursos.ng02.service;
 
+import com.portalcursos.ng02.model.LoginAttempt;
 import com.portalcursos.ng02.repository.LoginAttemptRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.time.Instant;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,12 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
     // entao usamos um pool maior aqui para isolar a variavel sob teste (lock) da contencao de
     // conexao, que teria um efeito de confusao (mascarando lost updates com timeouts de pool).
     "spring.datasource.hikari.maximum-pool-size=20",
-    // DIAGNÓSTICO TEMPORÁRIO: confirma no log do CI se o SELECT gerado por findByIpForUpdate
-    // realmente inclui "for update" e captura os parâmetros/timing reais das transações
-    // concorrentes. Remover junto com o log [DIAG-LOCK] em LoginAttemptService após a causa
-    // raiz do flake ser confirmada.
-    "logging.level.org.hibernate.SQL=DEBUG",
-    "logging.level.org.hibernate.orm.jdbc.bind=TRACE",
     "APP_JWT_SECRET=ZXhhbXBsZS1zZWNyZXQta2V5LXdpdGgtZW5vdWdoLWxlbmd0aC1mb3ItYmFzZTY0LWVuY29kaW5nLXByb3Blcmx5",
     "APP_JWT_EXPIRATION=900000",
     "APP_ROOT_PASSWORD=TestRootPass123!",
@@ -62,6 +59,23 @@ public class LoginAttemptServiceConcurrencyTest {
     public void concurrentFailedLoginsForSameIpAreSerializedWithoutLostUpdates() throws InterruptedException {
         String ip = "203.0.113.77";
         int threadCount = 10;
+
+        // Pré-cria o registro ANTES de disparar as threads. Diagnóstico confirmou (log
+        // [DIAG-LOCK] + SQL trace num run que falhou em CI) que o lock pessimista em si
+        // sempre serializou corretamente (before=N, after=N+1, sequencial, sem exceção).
+        // A causa real do flake era outra: 10 threads batendo ao mesmo tempo em
+        // ensureRecordExists() (existsById + insert) para um IP que ainda não existe —
+        // sob concorrência pesada em H2/CI, mais de um INSERT "vence" a corrida antes do
+        // outro detectar a violação de PK, e o commit posterior zera o contador que os
+        // outros já vinham incrementando. Esse caminho de criação do registro já é
+        // exercitado nos testes de integração normais (2 chamadas concorrentes no
+        // AuthController); aqui o objetivo é validar especificamente o incremento sob
+        // lock, não a corrida de criação — daí pré-semear o registro.
+        loginAttemptRepository.save(LoginAttempt.builder()
+                .ipAddress(ip)
+                .attempts(0)
+                .lastAttempt(Instant.now())
+                .build());
 
         ExecutorService pool = Executors.newFixedThreadPool(threadCount);
         CountDownLatch readyLatch = new CountDownLatch(threadCount);

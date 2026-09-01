@@ -81,25 +81,14 @@ public class LoginAttemptService {
 
     @Transactional
     public void incrementAttemptsAndMaybeBlock(String ip) {
-        // DIAGNÓSTICO TEMPORÁRIO (investigação de flake em LoginAttemptServiceConcurrencyTest):
-        // mede quanto tempo cada thread esperou pelo lock e identifica se duas threads
-        // concorrentes acabam segurando a MESMA instância de entidade (o que apontaria pra
-        // um bug de cache/identity map em vez de falha do FOR UPDATE em si). Remover depois
-        // que a causa raiz for confirmada.
-        long lockWaitStartNanos = System.nanoTime();
         LoginAttempt record = loginAttemptRepository.findByIpForUpdate(ip)
                 .orElseThrow(() -> new IllegalStateException(
                         "Registro de tentativas de login não encontrado para IP após ensureRecordExists: " + ip));
-        long lockWaitMs = (System.nanoTime() - lockWaitStartNanos) / 1_000_000;
-        int attemptsBefore = record.getAttempts();
 
         record.setAttempts(record.getAttempts() + 1);
         record.setLastAttempt(Instant.now());
 
         logger.warn("[SECURITY] Falha de login para IP: {}. Tentativa: {}/{}", ip, record.getAttempts(), MAX_ATTEMPTS);
-        logger.warn("[DIAG-LOCK] thread={} ip={} lockWaitMs={} entityIdentity={} attemptsBefore={} attemptsAfter={}",
-                Thread.currentThread().getName(), ip, lockWaitMs, System.identityHashCode(record),
-                attemptsBefore, record.getAttempts());
 
         if (record.getAttempts() >= MAX_ATTEMPTS && record.getBlockedUntil() == null) {
             Instant unblockAt = Instant.now().plus(BLOCK_MINUTES, ChronoUnit.MINUTES);
