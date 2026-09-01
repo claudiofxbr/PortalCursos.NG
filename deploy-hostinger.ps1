@@ -16,11 +16,16 @@ Write-Host ""
 $envFile = Join-Path $PSScriptRoot ".env"
 $vpsIp = "69.62.87.38" # IP padrão da VPS
 $domain = "portalcursos.ng" # Domínio padrão
+# Usuário SSH da VPS: prioriza a variável de ambiente HOSTINGER_USER (mesmo secret
+# usado no workflow de CI), cai para o .env local, e só por último usa "root" como
+# fallback — antes o script ignorava esse secret e sempre usava root hardcoded.
+$vpsUser = if ($env:HOSTINGER_USER) { $env:HOSTINGER_USER } else { "root" }
 
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
         if ($_ -match "^DOMAIN_NAME=(?<val>.*)$") { $domain = $matches.val.Trim() }
         if ($_ -match "^VPS_IP=(?<val>.*)$") { $vpsIp = $matches.val.Trim() }
+        if ($_ -match "^HOSTINGER_USER=(?<val>.*)$" -and -not $env:HOSTINGER_USER) { $vpsUser = $matches.val.Trim() }
     }
 }
 
@@ -138,11 +143,11 @@ Write-Host "    -> Criando diretório base e aplicando chown na VPS..." -Foregro
 
 try {
     # Garante que a pasta base exista na VPS
-    ssh -o StrictHostKeyChecking=no root@$vpsIp "sudo mkdir -p /var/www/portalcursos && sudo chown -R root:root /var/www/portalcursos"
-    
+    ssh -o StrictHostKeyChecking=accept-new "$vpsUser@$vpsIp" "sudo mkdir -p /var/www/portalcursos && sudo chown -R root:root /var/www/portalcursos"
+
     # Transfere o arquivo .env local de forma segura via SCP para a VPS
     Write-Host "    -> Transferindo arquivo .env local via SCP..." -ForegroundColor DarkCyan
-    scp -o StrictHostKeyChecking=no "$envFile" "root@${vpsIp}:/var/www/portalcursos/.env"
+    scp -o StrictHostKeyChecking=accept-new "$envFile" "${vpsUser}@${vpsIp}:/var/www/portalcursos/.env"
     Write-Host "    [OK] Arquivo .env sincronizado com a VPS!" -ForegroundColor Green
     
     # Executa o orquestrador completo
@@ -163,7 +168,7 @@ try {
                   "chmod +x devops/scripts/deploy_docker_compose.sh && " +
                   "./devops/scripts/deploy_docker_compose.sh"
 
-    ssh -o StrictHostKeyChecking=no root@$vpsIp $sshCommand
+    ssh -o StrictHostKeyChecking=accept-new "$vpsUser@$vpsIp" $sshCommand
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERRO CRÍTICO] Deploy na VPS falhou (exit code $LASTEXITCODE). Veja a saida do SSH acima para detalhes." -ForegroundColor Red
         exit 1
