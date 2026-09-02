@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Build & Test
+  test-backend:
+    name: Build & Test — Backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -27,10 +27,24 @@ jobs:
         working-directory: backend
         run: ./mvnw -B clean verify
 
+  # Independente de test-backend — roda em paralelo em outro runner. Antes os
+  # dois estavam sequenciais no mesmo job (build backend terminava antes do
+  # frontend começar), sem motivo: um não depende do artefato do outro.
+  test-frontend:
+    name: Build & Test — Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # node-version sincronizado com a imagem de produção (frontend/Dockerfile);
+      # antes o CI validava em Node 20 enquanto o Dockerfile já usava Node 24 —
+      # o CI não testava a mesma versão que ia pro deploy.
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -43,9 +57,24 @@ jobs:
           npm ci
           npm run build
 
-  security-scan:
-    name: Scan de Vulnerabilidades (Trivy)
-    needs: test
+  # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
+  # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o
+  # deploy aqui: tentamos ampliar para 'os,library' em ago/2026 e o scan
+  # real acusou 37 vulnerabilidades só no backend (31 HIGH/6 CRITICAL,
+  # a maior parte exigindo upgrade de Jackson/Spring Boot) — upgrade de
+  # dependência core é um projeto à parte (risco de regressão, precisa de
+  # testes dedicados), não algo a resolver ad-hoc num gate de CI. Ver PR
+  # #25 para o levantamento completo de CVEs de aplicação pendentes
+  # (backlog a priorizar). Vale para os dois jobs de scan abaixo.
+  #
+  # backend e frontend viraram jobs de scan separados: antes rodavam em série
+  # dentro de um job só, com continue-on-error manual pra garantir que os dois
+  # scans rodassem mesmo se um falhasse. Como jobs independentes, o GitHub
+  # Actions já roda os dois em paralelo e cada um falha (ou não) por conta
+  # própria, sem precisar desse truque.
+  security-scan-backend:
+    name: Scan de Vulnerabilidades (Trivy) — Backend
+    needs: test-backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -55,29 +84,8 @@ jobs:
       - name: Build imagem backend
         run: docker build -t portalcursos-backend:scan -f backend/Dockerfile backend
 
-      - name: Build imagem frontend
-        run: |
-          docker build -t portalcursos-frontend:scan -f frontend/Dockerfile frontend \
-            --build-arg NEXT_PUBLIC_API_URL=https://xavierbr-vps.tech \
-            --build-arg NEXT_PUBLIC_BASE_PATH=/portalcursos.ng
-
-      # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
-      # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o
-      # deploy aqui: tentamos ampliar para 'os,library' em ago/2026 e o scan
-      # real acusou 37 vulnerabilidades só no backend (31 HIGH/6 CRITICAL,
-      # a maior parte exigindo upgrade de Jackson/Spring Boot) — upgrade de
-      # dependência core é um projeto à parte (risco de regressão, precisa de
-      # testes dedicados), não algo a resolver ad-hoc num gate de CI. Ver PR
-      # #25 para o levantamento completo de CVEs de aplicação pendentes
-      # (backlog a priorizar).
-      #
-      # Os dois scans (backend/frontend) sempre rodam, mesmo se um falhar —
-      # sem isso, o job parava no primeiro scan que falhasse e o outro nunca
-      # era executado, escondendo vulnerabilidades do segundo componente.
       - name: Trivy scan — backend (SO, CRITICAL/HIGH falha o build)
-        id: trivy-backend
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           image-ref: portalcursos-backend:scan
           vuln-type: 'os'
@@ -85,10 +93,23 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
+  security-scan-frontend:
+    name: Scan de Vulnerabilidades (Trivy) — Frontend
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build imagem frontend
+        run: |
+          docker build -t portalcursos-frontend:scan -f frontend/Dockerfile frontend \
+            --build-arg NEXT_PUBLIC_API_URL=https://xavierbr-vps.tech \
+            --build-arg NEXT_PUBLIC_BASE_PATH=/portalcursos.ng
+
       - name: Trivy scan — frontend (SO, CRITICAL/HIGH falha o build)
-        id: trivy-frontend
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           image-ref: portalcursos-frontend:scan
           vuln-type: 'os'
@@ -96,15 +117,9 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-      - name: Falha o job se algum scan encontrou vulnerabilidade
-        if: steps.trivy-backend.outcome == 'failure' || steps.trivy-frontend.outcome == 'failure'
-        run: |
-          echo "❌ Trivy encontrou vulnerabilidades CRITICAL/HIGH — veja os passos de scan acima."
-          exit 1
-
   deploy:
     name: Deploy → VPS Hostinger
-    needs: [test, security-scan]
+    needs: [security-scan-backend, security-scan-frontend]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
