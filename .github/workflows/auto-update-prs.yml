@@ -22,6 +22,9 @@ jobs:
       - name: Atualiza cada PR aberto que está atrás da main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh precisa saber o repo-alvo sem um checkout local (não fazemos
+          # checkout aqui — este job só chama a API, não precisa do código).
+          GH_REPO: ${{ github.repository }}
         run: |
           set -e
           prs=$(gh pr list --base main --state open --json number,mergeStateStatus \
