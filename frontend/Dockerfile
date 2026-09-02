@@ -1,9 +1,9 @@
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS deps
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -16,9 +16,9 @@ RUN npm run build
 # output: standalone (next.config.ts) gera .next/standalone com server.js
 # autocontido — já inclui next.config.js + apenas os node_modules necessários
 # em runtime, garantindo que basePath/assetPrefix sejam aplicados corretamente.
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS runner
-# apk upgrade: corrige CVE-2026-45447 (OpenSSL libcrypto3/libssl3) ainda nao
-# incorporada na imagem base node:20-alpine mais recente disponivel.
+FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf AS runner
+# apk upgrade: aplica os patches mais recentes do Alpine antes do runtime —
+# higiene defensiva contínua, independente de CVE específico conhecido no momento.
 RUN apk upgrade --no-cache libcrypto3 libssl3
 WORKDIR /app
 ENV NODE_ENV=production
