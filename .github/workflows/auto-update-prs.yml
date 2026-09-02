@@ -1,0 +1,38 @@
+name: Auto-update PR branches
+
+# Toda vez que main avança (merge ou push direto), os PRs abertos que exigem
+# branch atualizado (branch protection) ficam BEHIND — e o auto-merge nativo
+# do GitHub NÃO atualiza a branch sozinho, só espera. Sem isso, cada merge
+# trava o próximo PR até alguém rodar `gh pr update-branch` manualmente
+# (aconteceu 8+ vezes numa única sessão de revisão de PRs do Dependabot).
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-branches:
+    name: Atualiza branches de PRs abertos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Atualiza cada PR aberto que está atrás da main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          prs=$(gh pr list --base main --state open --json number,mergeStateStatus \
+            --jq '.[] | select(.mergeStateStatus == "BEHIND") | .number')
+
+          if [ -z "$prs" ]; then
+            echo "Nenhum PR atrás da main — nada a fazer."
+            exit 0
+          fi
+
+          for n in $prs; do
+            echo "Atualizando PR #$n..."
+            gh pr update-branch "$n" || echo "⚠️  PR #$n não pôde ser atualizado (provável conflito real — precisa de intervenção manual)."
+          done
