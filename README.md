@@ -44,7 +44,7 @@ Fluxo de deploy documentado em `devops/scripts/deploy_ci.sh` (acionado pelo CI) 
 
 Painel: https://claude.ai/code/artifact/5571a2a0-087b-4ff3-9cbe-15d76b05564e (doc `status/current`).
 
-**O que é automático (sem intervenção manual):** o workflow [`torre-controle-status.yml`](.github/workflows/torre-controle-status.yml) roda a cada conclusão de qualquer outro workflow do repo (mais um fallback a cada 6h e disparo manual) e regrava `docs/torre-de-controle/status.json` com:
+**O que é automático (sem intervenção manual):** o workflow [`torre-controle-status.yml`](.github/workflows/torre-controle-status.yml) roda a cada conclusão de qualquer outro workflow do repo (mais um fallback a cada 6h e disparo manual) e regrava `docs/torre-de-controle/status.json` **na branch `torre-controle-data`** (não em `main` — `main` é protegida, exige PR + status checks, e não aceita push direto de bot) com:
 - **Inclusão automática de processo novo**: descobre os workflows ativos via `gh api .../actions/workflows` — um `.yml` novo aparece sozinho no próximo ciclo, sem editar nada aqui.
 - **Atualização de registros existentes**: reconsulta o último run de cada workflow a cada disparo.
 - **Notificação de encerramento**: o próprio evento `workflow_run: completed` é o gatilho — o status reflete sucesso/falha assim que o processo termina.
