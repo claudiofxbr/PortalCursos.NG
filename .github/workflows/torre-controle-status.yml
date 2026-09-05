@@ -1,7 +1,8 @@
 name: Torre de Controle — status automático
 
-# Mantém docs/torre-de-controle/status.json como fonte da verdade dos processos
-# do repo, sem intervenção manual. Dispara:
+# Mantém docs/torre-de-controle/status.json (na branch torre-controle-data —
+# main é protegida e não aceita push direto de bot) como fonte da verdade dos
+# processos do repo, sem intervenção manual. Dispara:
 #   - quando qualquer outro workflow do repo termina (inclusão/atualização/
 #     encerramento automáticos, sem precisar listar workflows por nome aqui);
 #   - a cada 6h, como rede de segurança caso um workflow_run não seja entregue
@@ -100,15 +101,35 @@ jobs:
               updatedAt: $now
             }' > "$OUT"
 
-          # `git diff` sozinho não enxerga arquivo novo/não rastreado (1ª execução) — stage
-          # antes de comparar cobre tanto o arquivo novo quanto uma edição em um já existente.
-          git add "$OUT"
-          echo "changed=$(git diff --cached --quiet -- "$OUT" && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          cp "$OUT" /tmp/torre-controle-status.json
 
-      - name: Commita se houve mudança
-        if: steps.generate.outputs.changed == 'true'
+      - name: Publica em branch dedicada (main é protegida — não aceita push direto)
+        env:
+          DATA_BRANCH: torre-controle-data
         run: |
+          set -euo pipefail
           git config user.name "torre-controle-bot"
           git config user.email "actions@users.noreply.github.com"
-          git commit -m "chore(torre-controle): atualiza status automático [skip ci]"
-          git push
+
+          # Branch separada e sem proteção — só este arquivo, histórico descartável.
+          # main exige PR + status checks, e não é isso que este job quer disputar
+          # a cada conclusão de workflow.
+          git fetch origin "$DATA_BRANCH" 2>/dev/null || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$DATA_BRANCH"; then
+            git checkout -B "$DATA_BRANCH" "origin/$DATA_BRANCH"
+          else
+            git checkout --orphan "$DATA_BRANCH"
+            git rm -rf . > /dev/null 2>&1 || true
+          fi
+
+          mkdir -p docs/torre-de-controle
+          cp /tmp/torre-controle-status.json docs/torre-de-controle/status.json
+          git add docs/torre-de-controle/status.json
+
+          if git diff --cached --quiet -- docs/torre-de-controle/status.json; then
+            echo "Sem mudança de conteúdo — nada a publicar."
+            exit 0
+          fi
+
+          git commit -m "chore(torre-controle): atualiza status automático"
+          git push origin "HEAD:refs/heads/$DATA_BRANCH"
