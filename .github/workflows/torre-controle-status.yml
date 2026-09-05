@@ -100,13 +100,15 @@ jobs:
               updatedAt: $now
             }' > "$OUT"
 
-          echo "changed=$(git diff --quiet -- "$OUT" && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          # `git diff` sozinho não enxerga arquivo novo/não rastreado (1ª execução) — stage
+          # antes de comparar cobre tanto o arquivo novo quanto uma edição em um já existente.
+          git add "$OUT"
+          echo "changed=$(git diff --cached --quiet -- "$OUT" && echo false || echo true)" >> "$GITHUB_OUTPUT"
 
       - name: Commita se houve mudança
         if: steps.generate.outputs.changed == 'true'
         run: |
           git config user.name "torre-controle-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/torre-de-controle/status.json
           git commit -m "chore(torre-controle): atualiza status automático [skip ci]"
           git push
