@@ -1,0 +1,112 @@
+name: Torre de Controle — status automático
+
+# Mantém docs/torre-de-controle/status.json como fonte da verdade dos processos
+# do repo, sem intervenção manual. Dispara:
+#   - quando qualquer outro workflow do repo termina (inclusão/atualização/
+#     encerramento automáticos, sem precisar listar workflows por nome aqui);
+#   - a cada 6h, como rede de segurança caso um workflow_run não seja entregue
+#     (falha conhecida e documentada do GitHub Actions em picos de carga);
+#   - manualmente (workflow_dispatch), para forçar uma atualização sob demanda.
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: torre-controle-status
+  cancel-in-progress: false
+
+jobs:
+  update-status:
+    if: github.event.workflow_run.name != 'Torre de Controle — status automático'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Gera docs/torre-de-controle/status.json
+        id: generate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p docs/torre-de-controle
+          OUT=docs/torre-de-controle/status.json
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          # --- workflows ativos (auto-descoberta — qualquer .yml novo aparece sozinho) ---
+          workflows_json=$(gh api "repos/${REPO}/actions/workflows" --jq '[.workflows[] | select(.state=="active")]')
+
+          auto_entries="[]"
+          while IFS= read -r wf; do
+            id=$(echo "$wf" | jq -r .id)
+            name=$(echo "$wf" | jq -r .name)
+            [ "$name" = "Torre de Controle — status automático" ] && continue
+            run=$(gh api "repos/${REPO}/actions/workflows/${id}/runs?per_page=1&branch=main" --jq '.workflow_runs[0] // empty')
+            if [ -z "$run" ]; then continue; fi
+            status=$(echo "$run" | jq -r '.status')
+            conclusion=$(echo "$run" | jq -r '.conclusion // empty')
+            sha=$(echo "$run" | jq -r '.head_sha[0:7]')
+            if [ "$status" = "in_progress" ] || [ "$status" = "queued" ]; then st="running"
+            elif [ "$conclusion" = "success" ]; then st="active"
+            elif [ "$conclusion" = "failure" ]; then st="failed"
+            else st="active"; fi
+            slug=$(echo "$name" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9-')
+            entry=$(jq -n --arg id "auto-${slug}" --arg label "$name" \
+              --arg detail "último run em main: ${conclusion:-$status} (commit ${sha})" \
+              --arg status "$st" \
+              '{category:"auto", id:$id, label:$label, detail:$detail, status:$status}')
+            auto_entries=$(echo "$auto_entries" | jq --argjson e "$entry" '. + [$e]')
+          done < <(echo "$workflows_json" | jq -c '.[]')
+
+          # Dependabot não é um workflow do Actions (não tem execuções/conclusion) —
+          # exceção documentada: entra fixo como ativo, sem sinal de encerramento automático.
+          auto_entries=$(echo "$auto_entries" | jq '. + [{category:"auto", id:"auto-dependabot", label:"Dependabot", detail:"checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente", status:"active"}]')
+
+          # --- fila: PRs abertos (auto-descoberta — qualquer PR novo aparece sozinho) ---
+          prs_json=$(gh pr list --repo "$REPO" --state open --json number,title,mergeable,statusCheckRollup,createdAt)
+          queue_entries=$(echo "$prs_json" | jq '[.[] | {
+            category: "queue",
+            id: ("pr" + (.number|tostring) + "-monitor"),
+            label: ("#" + (.number|tostring) + " — " + .title),
+            detail: (
+              (if .mergeable == "CONFLICTING" then "CONFLITANTE com main. " else "" end) +
+              (
+                ([.statusCheckRollup[]?.conclusion // empty] | map(select(. != "")) ) as $c |
+                if ($c | any(. == "FAILURE")) then "CI com falha — requer investigação antes de mesclar."
+                elif ($c | length) == 0 then "sem checks reportados ainda."
+                else "CI ok." end
+              )
+            ),
+            status: "queued"
+          }]')
+
+          jq -n --argjson auto "$auto_entries" --argjson queue "$queue_entries" --arg now "$NOW" '
+            {
+              categories: {auto:"Processos automáticos recorrentes", deploy:"Deploy / CI ativo", meta:"Trabalho em andamento", queue:"Fila de análise das majors"},
+              statusLabels: {active:"ativo, recorrente", done:"concluído", failed:"falhou", queued:"na fila", running:"rodando"},
+              generatedBy: "workflow torre-controle-status.yml — automático, sem intervenção manual",
+              processes: ($auto + $queue),
+              updatedAt: $now
+            }' > "$OUT"
+
+          echo "changed=$(git diff --quiet -- "$OUT" && echo false || echo true)" >> "$GITHUB_OUTPUT"
+
+      - name: Commita se houve mudança
+        if: steps.generate.outputs.changed == 'true'
+        run: |
+          git config user.name "torre-controle-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/torre-de-controle/status.json
+          git commit -m "chore(torre-controle): atualiza status automático [skip ci]"
+          git push
