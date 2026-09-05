@@ -1,0 +1,61 @@
+{
+  "categories": {
+    "auto": "Processos automáticos recorrentes",
+    "deploy": "Deploy / CI ativo",
+    "meta": "Trabalho em andamento",
+    "queue": "Fila de análise das majors"
+  },
+  "statusLabels": {
+    "active": "ativo, recorrente",
+    "done": "concluído",
+    "failed": "falhou",
+    "queued": "na fila",
+    "running": "rodando"
+  },
+  "generatedBy": "workflow torre-controle-status.yml — automático, sem intervenção manual",
+  "processes": [
+    {
+      "category": "auto",
+      "id": "auto-auto-update-pr-branches",
+      "label": "Auto-update PR branches",
+      "detail": "último run em main: success (commit 6969709)",
+      "status": "active"
+    },
+    {
+      "category": "auto",
+      "id": "auto-cicd-portalcursosng",
+      "label": "CI/CD PortalCursos.NG",
+      "detail": "último run em main: in_progress (commit 6969709)",
+      "status": "running"
+    },
+    {
+      "category": "auto",
+      "id": "auto-dependabot-updates",
+      "label": "Dependabot Updates",
+      "detail": "último run em main: success (commit 9d37bce)",
+      "status": "active"
+    },
+    {
+      "category": "auto",
+      "id": "auto-dependabot",
+      "label": "Dependabot",
+      "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
+      "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr23-monitor",
+      "label": "#23 — chore(deps): bump react-dom and @types/react-dom in /frontend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr20-monitor",
+      "label": "#20 — chore(deps-dev): bump typescript from 5.9.3 to 7.0.2 in /frontend",
+      "detail": "CONFLITANTE com main. sem checks reportados ainda.",
+      "status": "queued"
+    }
+  ],
+  "updatedAt": "2026-09-05T14:36:45Z"
+}
