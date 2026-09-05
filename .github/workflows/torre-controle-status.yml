@@ -114,6 +114,12 @@ jobs:
           # Branch separada e sem proteção — só este arquivo, histórico descartável.
           # main exige PR + status checks, e não é isso que este job quer disputar
           # a cada conclusão de workflow.
+          #
+          # O arquivo gerado no passo anterior fica não-rastreado no checkout de
+          # main — remove antes de trocar de branch, senão o checkout abaixo
+          # aborta com "untracked working tree files would be overwritten".
+          rm -rf docs/torre-de-controle
+
           git fetch origin "$DATA_BRANCH" 2>/dev/null || true
           if git show-ref --verify --quiet "refs/remotes/origin/$DATA_BRANCH"; then
             git checkout -B "$DATA_BRANCH" "origin/$DATA_BRANCH"
