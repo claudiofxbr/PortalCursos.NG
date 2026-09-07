@@ -32,7 +32,7 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 9d37bce)",
+      "detail": "último run em main: success (commit 9da346c)",
       "status": "active"
     },
     {
@@ -41,6 +41,34 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr47-monitor",
+      "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr46-monitor",
+      "label": "#46 — chore(deps): bump actions/checkout from 4 to 7",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr45-monitor",
+      "label": "#45 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.0.0 to 13.5.0 in /backend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr44-monitor",
+      "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
     },
     {
       "category": "queue",
@@ -57,5 +85,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-07T11:09:25Z"
+  "updatedAt": "2026-09-07T11:55:10Z"
 }
