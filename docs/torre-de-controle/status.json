@@ -44,6 +44,27 @@
     },
     {
       "category": "queue",
+      "id": "pr50-monitor",
+      "label": "#50 — chore(deps-dev): bump autoprefixer from 10.5.0 to 10.5.4 in /frontend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr49-monitor",
+      "label": "#49 — chore(deps): bump org.springframework.boot:spring-boot-starter-parent from 4.1.0 to 4.1.1 in /backend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr48-monitor",
+      "label": "#48 — chore(deps): bump org.flywaydb:flyway-core from 13.0.0 to 13.5.0 in /backend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr47-monitor",
       "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
       "detail": "sem checks reportados ainda.",
@@ -85,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-07T11:55:10Z"
+  "updatedAt": "2026-09-07T11:55:24Z"
 }
