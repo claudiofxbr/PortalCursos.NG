@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr51-monitor",
+      "label": "#51 — chore(deps): bump lucide-react from 1.37.0 to 1.41.0 in /frontend",
+      "detail": "sem checks reportados ainda.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr50-monitor",
       "label": "#50 — chore(deps-dev): bump autoprefixer from 10.5.0 to 10.5.4 in /frontend",
       "detail": "sem checks reportados ainda.",
@@ -81,14 +88,14 @@
       "category": "queue",
       "id": "pr45-monitor",
       "label": "#45 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.0.0 to 13.5.0 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr44-monitor",
       "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -106,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-07T11:55:24Z"
+  "updatedAt": "2026-09-07T11:55:37Z"
 }
