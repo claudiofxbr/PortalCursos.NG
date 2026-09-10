@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.dto.StudentListDTO;
+import com.portalcursos.ng02.dto.StudentDetailDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,9 @@ public class GradStudentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllGradStudents() {
         log.info("[AUTH-GUARD] Listando alunos de graduação.");
-        List<Student> students = studentService.findAll();
+        List<StudentListDTO> students = studentService.findAll().stream()
+                .map(StudentListDTO::from)
+                .toList();
         return ResponseEntity.ok(students);
     }
 
@@ -112,14 +116,14 @@ public class GradStudentController {
         otherDocs.add(new StudentService.DocEntry(autodeclaracaoRacialFile, EDocumentType.AUTODECLARACAO_RACIAL));
 
         Student enrolled = studentService.enroll(student, foto3x4, otherDocs);
-        return ResponseEntity.ok(enrolled);
+        return ResponseEntity.ok(StudentDetailDTO.from(enrolled));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
-    public ResponseEntity<Student> getStudent(@PathVariable Long id) {
+    public ResponseEntity<?> getStudent(@PathVariable Long id) {
         return studentService.findById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(s -> ResponseEntity.ok(StudentDetailDTO.from(s)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -146,7 +150,7 @@ public class GradStudentController {
                 .build();
 
         auditService.injectCreator(student);
-        return ResponseEntity.ok(studentService.update(id, student, foto3x4));
+        return ResponseEntity.ok(StudentDetailDTO.from(studentService.update(id, student, foto3x4)));
     }
 
     @PatchMapping("/{id}/status")
@@ -157,7 +161,7 @@ public class GradStudentController {
         
         student.setEnrollmentStatus(status);
         auditService.injectCreator(student);
-        return ResponseEntity.ok(studentService.update(id, student, null));
+        return ResponseEntity.ok(StudentDetailDTO.from(studentService.update(id, student, null)));
     }
 
     @DeleteMapping("/{id}")

@@ -6,6 +6,8 @@ import com.portalcursos.ng02.service.PostgradStudentService;
 import com.portalcursos.ng02.repository.CourseRepository;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.dto.StudentListDTO;
+import com.portalcursos.ng02.dto.StudentDetailDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +32,9 @@ public class PostgradStudentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> listAll() {
         log.info("[AUTH-GUARD] Usuário autorizado carregando lista de alunos de pós-graduação.");
-        List<PostgradStudent> students = studentService.findAll();
+        List<StudentListDTO> students = studentService.findAll().stream()
+                .map(StudentListDTO::from)
+                .toList();
         return ResponseEntity.ok(students);
     }
 
@@ -38,7 +42,7 @@ public class PostgradStudentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> findById(@PathVariable Long id) {
         return studentService.findById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(s -> ResponseEntity.ok(StudentDetailDTO.from(s)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -85,7 +89,7 @@ public class PostgradStudentController {
         auditService.injectCreator(student);
 
         PostgradStudent finalSaved = studentService.create(student, diplomaFile, rgCpfFile, proofOfAddressFile, academicTranscriptFile, foto3x4File);
-        return ResponseEntity.ok(finalSaved);
+        return ResponseEntity.ok(StudentDetailDTO.from(finalSaved));
     }
 
     @PutMapping("/{id}")
@@ -111,7 +115,7 @@ public class PostgradStudentController {
                 .orElseThrow(() -> new ResourceNotFoundException("Curso não encontrado: " + desiredCourse));
         student.setCourse(course);
         auditService.injectCreator(student);
-        return ResponseEntity.ok(studentService.update(id, student, foto3x4File));
+        return ResponseEntity.ok(StudentDetailDTO.from(studentService.update(id, student, foto3x4File)));
     }
 
     @PatchMapping("/{id}/status")
@@ -121,7 +125,7 @@ public class PostgradStudentController {
             try {
                 student.setEnrollmentStatus(status);
                 auditService.injectCreator(student);
-                return ResponseEntity.ok(studentService.update(id, student, null));
+                return ResponseEntity.ok(StudentDetailDTO.from(studentService.update(id, student, null)));
             } catch (java.io.IOException e) {
                 throw new RuntimeException("Erro ao atualizar status: falha de I/O", e);
             }
