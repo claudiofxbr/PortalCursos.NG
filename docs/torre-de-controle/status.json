@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a632b00)",
+      "detail": "último run em main: success (commit 88cc552)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit a632b00)",
+      "detail": "último run em main: in_progress (commit 88cc552)",
       "status": "running"
     },
     {
@@ -41,14 +41,7 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr23-monitor",
-      "label": "#23 — chore(deps): bump react-dom and @types/react-dom in /frontend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T13:26:40Z"
+  "updatedAt": "2026-09-10T13:41:30Z"
 }
