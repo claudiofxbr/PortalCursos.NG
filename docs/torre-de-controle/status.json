@@ -32,7 +32,7 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit ca8c482)",
+      "detail": "último run em main: success (commit d4ccfe1)",
       "status": "active"
     },
     {
@@ -67,28 +67,28 @@
       "category": "queue",
       "id": "pr48-monitor",
       "label": "#48 — chore(deps): bump org.flywaydb:flyway-core from 13.0.0 to 13.5.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr47-monitor",
       "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr45-monitor",
       "label": "#45 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.0.0 to 13.5.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr44-monitor",
       "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -99,5 +99,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:53:10Z"
+  "updatedAt": "2026-09-10T12:54:42Z"
 }
