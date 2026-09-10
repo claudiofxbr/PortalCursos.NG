@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a4bf6cf)",
+      "detail": "último run em main: success (commit ca8c482)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit a4bf6cf)",
+      "detail": "último run em main: in_progress (commit ca8c482)",
       "status": "running"
     },
     {
@@ -53,21 +53,21 @@
       "category": "queue",
       "id": "pr54-monitor",
       "label": "#54 — chore(deps): bump axios from 1.16.1 to 1.20.0 in /frontend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr52-monitor",
       "label": "#52 — chore(deps): bump next from 16.3.3 to 16.3.4 in /frontend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr49-monitor",
       "label": "#49 — chore(deps): bump org.springframework.boot:spring-boot-starter-parent from 4.1.0 to 4.1.1 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -86,23 +86,16 @@
     },
     {
       "category": "queue",
-      "id": "pr46-monitor",
-      "label": "#46 — chore(deps): bump actions/checkout from 4 to 7",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr45-monitor",
       "label": "#45 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.0.0 to 13.5.0 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr44-monitor",
       "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -113,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:24:58Z"
+  "updatedAt": "2026-09-10T12:26:58Z"
 }
