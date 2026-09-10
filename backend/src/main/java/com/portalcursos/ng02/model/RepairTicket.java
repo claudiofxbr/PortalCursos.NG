@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "repair_tickets")
@@ -20,6 +21,7 @@ import org.hibernate.annotations.SQLDelete;
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE repair_tickets SET active = false WHERE id = ?")
+@SQLRestriction("active = true")
 @EqualsAndHashCode(callSuper=true)
 public class RepairTicket extends BaseAuditEntity {
     @Id

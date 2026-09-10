@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "courses")
@@ -21,6 +22,7 @@ import org.hibernate.annotations.SQLDelete;
 @SuperBuilder
 @EqualsAndHashCode(callSuper=true)
 @SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
+@SQLRestriction("active = true")
 public class Course extends BaseAuditEntity {
 
     @Id

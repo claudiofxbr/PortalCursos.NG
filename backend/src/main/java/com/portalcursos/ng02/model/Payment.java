@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "payments")
@@ -23,6 +24,7 @@ import org.hibernate.annotations.SQLDelete;
 @SuperBuilder
 @EqualsAndHashCode(callSuper=true)
 @SQLDelete(sql = "UPDATE payments SET active = false WHERE id = ?")
+@SQLRestriction("active = true")
 public class Payment extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

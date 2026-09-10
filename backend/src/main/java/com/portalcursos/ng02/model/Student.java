@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -23,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE students SET active = false WHERE id = ?")
+@SQLRestriction("active = true")
 @EqualsAndHashCode(callSuper=true)
 public class Student extends BaseAuditEntity {
     @Id
