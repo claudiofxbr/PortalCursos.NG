@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit eb8cd66)",
+      "detail": "último run em main: success (commit 03529a0)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit eb8cd66)",
+      "detail": "último run em main: in_progress (commit 03529a0)",
       "status": "running"
     },
     {
@@ -51,13 +51,6 @@
     },
     {
       "category": "queue",
-      "id": "pr54-monitor",
-      "label": "#54 — chore(deps): bump axios from 1.16.1 to 1.20.0 in /frontend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr52-monitor",
       "label": "#52 — chore(deps): bump next from 16.3.3 to 16.3.4 in /frontend",
       "detail": "CI ok.",
@@ -71,5 +64,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T13:10:55Z"
+  "updatedAt": "2026-09-10T13:19:54Z"
 }
