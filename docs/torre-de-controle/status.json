@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 15da03d)",
+      "detail": "último run em main: success (commit a632b00)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit 15da03d)",
+      "detail": "último run em main: in_progress (commit a632b00)",
       "status": "running"
     },
     {
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr55-monitor",
-      "label": "#55 — chore(deps-dev): bump autoprefixer from 10.5.0 to 10.5.5 in /frontend",
-      "detail": "sem checks reportados ainda.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr23-monitor",
       "label": "#23 — chore(deps): bump react-dom and @types/react-dom in /frontend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T13:23:40Z"
+  "updatedAt": "2026-09-10T13:26:40Z"
 }
