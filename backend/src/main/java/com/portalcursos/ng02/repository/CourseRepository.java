@@ -20,6 +20,9 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     @Query("SELECT c FROM Course c LEFT JOIN FETCH c.creator WHERE c.id = :id AND c.active = true")
     Optional<Course> findByIdActiveWithCreator(@Param("id") UUID id);
 
-    Optional<Course> findByDenominacaoCurso(String denominacaoCurso);
+    // active = true explícito: sem @SQLRestriction na entidade, a matrícula não
+    // pode cair num curso soft-deleted.
+    @Query("SELECT c FROM Course c WHERE c.denominacaoCurso = :denominacaoCurso AND c.active = true")
+    Optional<Course> findByDenominacaoCurso(@Param("denominacaoCurso") String denominacaoCurso);
 }
 

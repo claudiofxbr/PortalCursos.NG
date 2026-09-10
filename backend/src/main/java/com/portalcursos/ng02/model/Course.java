@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "courses")
@@ -22,7 +21,10 @@ import org.hibernate.annotations.SQLRestriction;
 @SuperBuilder
 @EqualsAndHashCode(callSuper=true)
 @SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
-@SQLRestriction("active = true")
+// Sem @SQLRestriction: Course é entidade de referência apontada por FKs de
+// registros históricos (Student.course). Esconder cursos inativos globalmente
+// fazia student.getCourse() lançar EntityNotFoundException. O filtro active=true
+// é aplicado explicitamente nas queries de catálogo (CourseRepository).
 public class Course extends BaseAuditEntity {
 
     @Id
