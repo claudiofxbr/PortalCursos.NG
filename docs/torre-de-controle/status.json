@@ -32,8 +32,8 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: in_progress (commit ca8c482)",
-      "status": "running"
+      "detail": "último run em main: success (commit ca8c482)",
+      "status": "active"
     },
     {
       "category": "auto",
@@ -53,7 +53,7 @@
       "category": "queue",
       "id": "pr54-monitor",
       "label": "#54 — chore(deps): bump axios from 1.16.1 to 1.20.0 in /frontend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -88,14 +88,14 @@
       "category": "queue",
       "id": "pr45-monitor",
       "label": "#45 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.0.0 to 13.5.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr44-monitor",
       "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -106,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:50:46Z"
+  "updatedAt": "2026-09-10T12:50:58Z"
 }
