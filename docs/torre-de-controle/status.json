@@ -74,21 +74,21 @@
       "category": "queue",
       "id": "pr48-monitor",
       "label": "#48 — chore(deps): bump org.flywaydb:flyway-core from 13.0.0 to 13.5.0 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr47-monitor",
       "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr46-monitor",
       "label": "#46 — chore(deps): bump actions/checkout from 4 to 7",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -113,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:24:44Z"
+  "updatedAt": "2026-09-10T12:24:58Z"
 }
