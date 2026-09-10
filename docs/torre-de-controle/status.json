@@ -60,7 +60,7 @@
       "category": "queue",
       "id": "pr52-monitor",
       "label": "#52 — chore(deps): bump next from 16.3.3 to 16.3.4 in /frontend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -106,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:50:58Z"
+  "updatedAt": "2026-09-10T12:51:11Z"
 }
