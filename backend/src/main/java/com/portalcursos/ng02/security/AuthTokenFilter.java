@@ -76,7 +76,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     
-                    logger.info("[FILTER SUCCESS] Usuário '{}' autenticado. Path: {} [{}] Roles: {}", 
+                    logger.debug("[FILTER SUCCESS] Usuário '{}' autenticado. Path: {} [{}] Roles: {}",
                         username, servletPath, method, authentication.getAuthorities());
                 } else {
                     logger.warn("[FILTER WARN] Token JWT inválido para path: {}", servletPath);
