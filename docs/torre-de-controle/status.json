@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 022bb13)",
+      "detail": "último run em main: success (commit 067d6f1)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit 022bb13)",
+      "detail": "último run em main: in_progress (commit 067d6f1)",
       "status": "running"
     },
     {
@@ -65,16 +65,9 @@
     },
     {
       "category": "queue",
-      "id": "pr47-monitor",
-      "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
-      "detail": "sem checks reportados ainda.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr44-monitor",
       "label": "#44 — chore(deps): bump org.postgresql:postgresql from 42.7.4 to 42.7.13 in /backend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -85,5 +78,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T13:03:26Z"
+  "updatedAt": "2026-09-10T13:06:20Z"
 }
