@@ -67,7 +67,7 @@ public class PrivacyController {
         account.put("privacyConsentAt", user.getPrivacyConsentAt());
         data.put("account", account);
 
-        studentRepository.findByUserId(user.getId()).ifPresent(student -> {
+        studentRepository.findByUserIdIncludingInactive(user.getId()).ifPresent(student -> {
             Map<String, Object> academic = new LinkedHashMap<>();
             academic.put("registrationNumber", student.getRegistrationNumber());
             academic.put("fullName", student.getFullName());

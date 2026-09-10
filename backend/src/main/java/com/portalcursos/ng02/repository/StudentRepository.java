@@ -14,6 +14,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     Optional<Student> findByUserId(Long userId);
     Optional<Student> findByIdAndActiveTrue(Long id);
 
+    /**
+     * Ignora o filtro global {@code @SQLRestriction("active = true")}: fluxos de privacidade/LGPD
+     * (anonimização e direito de acesso) precisam enxergar o aluno mesmo já soft-deleted.
+     * {@code SELECT *} garante que a coluna discriminadora venha para o mapeamento SINGLE_TABLE.
+     */
+    @org.springframework.data.jpa.repository.Query(value = "SELECT * FROM students WHERE user_id = :userId", nativeQuery = true)
+    Optional<Student> findByUserIdIncludingInactive(@org.springframework.data.repository.query.Param("userId") Long userId);
+
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.course LEFT JOIN FETCH s.creator LEFT JOIN FETCH s.documents WHERE s.active = true AND TYPE(s) = Student")
     java.util.List<Student> findAllWithCourseAndCreator();
 
