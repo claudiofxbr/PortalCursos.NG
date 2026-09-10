@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 88cc552)",
+      "detail": "último run em main: success (commit 2e2ce6e)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 88cc552)",
+      "detail": "último run em main: success (commit 2e2ce6e)",
       "status": "active"
     },
     {
@@ -41,7 +41,14 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr59-monitor",
+      "label": "#59 — chore(vps): remove PostgreSQL local ocioso do deploy de produção",
+      "detail": "CI ok.",
+      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T20:16:03Z"
+  "updatedAt": "2026-09-10T21:02:23Z"
 }
