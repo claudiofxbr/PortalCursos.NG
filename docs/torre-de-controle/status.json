@@ -18,22 +18,22 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 9da346c)",
+      "detail": "último run em main: success (commit 89cefd7)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: failure (commit 9da346c)",
-      "status": "failed"
+      "detail": "último run em main: in_progress (commit 89cefd7)",
+      "status": "running"
     },
     {
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 9da346c)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit 89cefd7)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -111,14 +111,7 @@
       "label": "#23 — chore(deps): bump react-dom and @types/react-dom in /frontend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr20-monitor",
-      "label": "#20 — chore(deps-dev): bump typescript from 5.9.3 to 7.0.2 in /frontend",
-      "detail": "CONFLITANTE com main. sem checks reportados ainda.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T10:19:11Z"
+  "updatedAt": "2026-09-10T12:11:39Z"
 }
