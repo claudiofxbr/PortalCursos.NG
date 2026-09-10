@@ -49,9 +49,11 @@ public class Payment extends BaseAuditEntity {
      * subclasse de Student (single-table inheritance), então uma única FK basta;
      * {@link #academicLevel} indica qual dos dois é.
      */
-    // O aluno pode ter sido soft-deleted (@SQLRestriction em Student). @NotFound
-    // IGNORE faz getStudent() devolver null em vez de lançar EntityNotFoundException
-    // — os call-sites (ex.: FinancialController.ownsStudentRecord) já checam != null.
+    // Student mantém @SQLRestriction (soft-delete real). @NotFound(IGNORE) faz
+    // getStudent() devolver null em vez de lançar EntityNotFoundException quando o
+    // aluno foi desativado — FinancialController.ownsStudentRecord já checa != null.
+    // Isso força a associação a EAGER; as queries de listagem do PaymentRepository
+    // fazem LEFT JOIN FETCH p.student para não gerar N+1.
     @ManyToOne(fetch = FetchType.LAZY)
     @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     @JoinColumn(name = "student_id", referencedColumnName = "id")

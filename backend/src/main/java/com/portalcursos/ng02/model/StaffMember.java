@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 import lombok.experimental.SuperBuilder;
 import lombok.EqualsAndHashCode;
@@ -21,7 +20,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @AllArgsConstructor
 @SuperBuilder
 @SQLDelete(sql = "UPDATE staff_members SET active = false WHERE id = ?")
-@SQLRestriction("active = true")
+// Sem @SQLRestriction: StaffMember é apontado como `creator` por todo registro
+// auditado (BaseAuditEntity). Esconder staff inativo globalmente fazia
+// getCreatorName() lançar EntityNotFoundException ao serializar registros de um
+// colaborador desligado. Listagens de staff filtram active=true explicitamente
+// (StaffMemberRepository.findAllByActiveTrue / findByIdAndActiveTrue).
 @EqualsAndHashCode(callSuper=true)
 public class StaffMember extends BaseAuditEntity {
     @Id

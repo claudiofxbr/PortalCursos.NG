@@ -48,11 +48,7 @@ public class Student extends BaseAuditEntity {
     private String dateOfBirth;
     private String address;
 
-    // O curso pode ter sido soft-deleted (@SQLRestriction em Course). @NotFound
-    // IGNORE faz getCourse() devolver null em vez de lançar EntityNotFoundException
-    // ao serializar/consultar um aluno cujo curso foi desativado.
     @ManyToOne(fetch = FetchType.LAZY)
-    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     @JoinColumn(name = "course_id")
     private Course course;
 

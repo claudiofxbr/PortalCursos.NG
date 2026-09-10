@@ -312,7 +312,7 @@ public class AuthController {
 
         String position = "";
         String fotoUrl = "";
-        Optional<StaffMember> staff = staffMemberRepository.findById(userDetails.getId());
+        Optional<StaffMember> staff = staffMemberRepository.findByIdAndActiveTrue(userDetails.getId());
         if (staff.isPresent()) {
             position = staff.get().getPosition();
             fotoUrl = staff.get().getFotoUrl();
