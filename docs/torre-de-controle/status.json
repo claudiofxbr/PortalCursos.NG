@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit f1c6308)",
+      "detail": "último run em main: success (commit 386335a)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit f1c6308)",
+      "detail": "último run em main: success (commit 386335a)",
       "status": "active"
     },
     {
@@ -41,14 +41,7 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr62-monitor",
-      "label": "#62 — feat(deploy): blue-green opcional para eliminar a janela de 502",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T22:35:34Z"
+  "updatedAt": "2026-09-10T22:41:06Z"
 }
