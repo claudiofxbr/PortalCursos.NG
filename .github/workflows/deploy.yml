@@ -117,6 +117,28 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
+  # Job SÓ INFORMATIVO: varre dependências Java do backend (pom.xml) por CVEs
+  # HIGH/CRITICAL. NÃO-BLOQUEANTE (continue-on-error + exit-code 0) e fora da
+  # cadeia de needs do deploy — existe backlog conhecido de CVEs de aplicação
+  # (ver PR #25), então aqui é só visibilidade, não gate.
+  security-scan-deps-backend:
+    name: Scan de Dependências (Trivy) — Backend (informativo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Trivy scan — dependências backend (não-bloqueante)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: './backend'
+          scanners: 'vuln'
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
   deploy:
     name: Deploy → VPS Hostinger
     needs: [security-scan-backend, security-scan-frontend]
