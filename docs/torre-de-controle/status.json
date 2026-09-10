@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 2f26b73)",
+      "detail": "último run em main: success (commit 2e4c041)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 2f26b73)",
+      "detail": "último run em main: success (commit 2e4c041)",
       "status": "active"
     },
     {
@@ -41,14 +41,7 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr60-monitor",
-      "label": "#60 — Auditoria — backlog P2/P3: soft-delete em associações + PII em logs",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T21:51:19Z"
+  "updatedAt": "2026-09-10T21:59:25Z"
 }
