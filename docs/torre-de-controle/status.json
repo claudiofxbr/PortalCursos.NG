@@ -41,7 +41,14 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr61-monitor",
+      "label": "#61 — refactor: remove EAGER forçado pelo @NotFound (segue PR #60)",
+      "detail": "CI ok.",
+      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T21:59:25Z"
+  "updatedAt": "2026-09-10T22:10:03Z"
 }
