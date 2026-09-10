@@ -17,6 +17,11 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    ignore:
+      # TS 7.0 e a reescrita nativa (major duplo a partir do 5.x); so subir manualmente,
+      # com verificacao do build do Next. Patches/minors do 5.x continuam liberados.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/backend"

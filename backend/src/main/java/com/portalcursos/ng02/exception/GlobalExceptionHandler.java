@@ -221,14 +221,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.dao.DataAccessException.class)
     public ResponseEntity<?> handleDatabaseException(org.springframework.dao.DataAccessException ex, WebRequest request) {
-        logger.error("[SUPREME-ERROR] Falha de persistência no banco: ", ex);
+        // Detalhe de infraestrutura (provedor, protocolo interno) fica só no log — expor isso
+        // ao cliente ajuda um atacante não autenticado a mapear a stack por trás da API.
+        logger.error("[SUPREME-ERROR] Falha de persistência no banco (Neon Cloud / Protocolo V30.9-SUPREME): ", ex);
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", new Date());
         body.put("status", HttpStatus.SERVICE_UNAVAILABLE.value());
         body.put("error", "Service Unavailable");
-        body.put("message", "O banco de dados (Neon Cloud) está indisponível ou em Cold Start. O Protocolo V30.9-SUPREME está tentando restabelecer a conexão.");
+        body.put("message", "O serviço está temporariamente indisponível. Tente novamente em instantes.");
         body.put("path", request.getDescription(false));
-        body.put("hint", "Aguarde alguns segundos para o aquecimento automático da infraestrutura.");
+        body.put("hint", "Aguarde alguns segundos e tente novamente.");
 
         return new ResponseEntity<>(body, HttpStatus.SERVICE_UNAVAILABLE);
     }

@@ -14,9 +14,9 @@ import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.service.StorageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -45,22 +45,22 @@ public class GradStudentControllerIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private StudentRepository studentRepository;
 
-    @MockBean
+    @MockitoBean
     private StudentDocumentRepository studentDocumentRepository;
 
-    @MockBean
+    @MockitoBean
     private PaymentRepository paymentRepository;
 
-    @MockBean
+    @MockitoBean
     private StorageService storageService;
 
-    @MockBean
+    @MockitoBean
     private CourseRepository courseRepository;
 
-    @MockBean
+    @MockitoBean
     private StaffMemberRepository staffMemberRepository;
 
     @Test
