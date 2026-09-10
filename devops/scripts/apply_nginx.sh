@@ -6,12 +6,22 @@
 CONF_FILE="/etc/nginx/sites-available/portalcursos"
 LINK_FILE="/etc/nginx/sites-enabled/portalcursos"
 SOURCE_CONF="$(pwd)/devops/scripts/nginx.conf"
+UPSTREAM_SRC="$(pwd)/devops/scripts/portalcursos-upstream.conf"
+UPSTREAM_DST="/etc/nginx/conf.d/portalcursos-upstream.conf"
 
 echo "🔧 Aplicando configuração Nginx para portalcursos.ng..."
 
 if [ ! -f "$SOURCE_CONF" ]; then
     echo "❌ Erro: Arquivo de configuração não encontrado em $SOURCE_CONF"
     exit 1
+fi
+
+# 0. Instalar o include dos upstreams (portalcursos_api / portalcursos_web).
+#    Só cria se não existir — em DEPLOY_STRATEGY=blue-green o deploy_ci.sh é o
+#    dono deste arquivo e o reescreve a cada deploy; não sobrescrever aqui.
+if [ ! -f "$UPSTREAM_DST" ]; then
+    echo "📌 Instalando upstreams do nginx em $UPSTREAM_DST"
+    sudo cp "$UPSTREAM_SRC" "$UPSTREAM_DST"
 fi
 
 # 1. Copiar para sites-available
