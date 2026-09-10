@@ -57,7 +57,7 @@ public class DataAnonymizationService {
 
     @Transactional
     public AnonymizationResult anonymize(User user) {
-        Optional<Student> studentOpt = studentRepository.findByUserId(user.getId());
+        Optional<Student> studentOpt = studentRepository.findByUserIdIncludingInactive(user.getId());
 
         if (studentOpt.isPresent()) {
             Student student = studentOpt.get();
@@ -82,7 +82,7 @@ public class DataAnonymizationService {
                 : (student.getCreatedAt() != null ? student.getCreatedAt().toLocalDate() : LocalDate.now());
         LocalDate academicEligible = academicReference.plusYears(ACADEMIC_RETENTION_YEARS);
 
-        List<Payment> payments = paymentRepository.findByStudentId(student.getId());
+        List<Payment> payments = paymentRepository.findByStudentIdIncludingInactive(student.getId());
         LocalDate financialEligible = payments.stream()
                 .filter(p -> p.getDueDate() != null)
                 .map(p -> p.getDueDate().plusYears(FINANCIAL_RETENTION_YEARS))

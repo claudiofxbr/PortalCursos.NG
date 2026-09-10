@@ -99,8 +99,9 @@ public class UserService {
                     throw new BusinessException("Dados Incompletos: Colaboradores exigem Nome Completo para ativação institucional.");
                 }
 
-                StaffMember staff = staffMemberRepository.findById(savedUser.getId())
-                        .orElse(new StaffMember());
+                // inclui linha inativa (PK = id do user): reativar em vez de INSERT duplicado
+                StaffMember staff = staffMemberRepository.findByIdIncludingInactive(savedUser.getId())
+                        .orElseGet(StaffMember::new);
                 
                 staff.setUser(savedUser);
                 staff.setFullName(fullName.trim());
@@ -187,8 +188,9 @@ public class UserService {
             });
 
             if (isStaff) {
-                StaffMember staff = staffMemberRepository.findById(user.getId())
-                        .orElse(new StaffMember());
+                // inclui linha inativa (PK = id do user): reativar em vez de INSERT duplicado
+                StaffMember staff = staffMemberRepository.findByIdIncludingInactive(user.getId())
+                        .orElseGet(StaffMember::new);
                 
                 staff.setUser(user);
                 if (staff.getFullName() == null) staff.setFullName(user.getUsername().toUpperCase());

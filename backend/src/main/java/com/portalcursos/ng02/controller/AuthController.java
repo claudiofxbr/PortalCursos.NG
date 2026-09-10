@@ -139,6 +139,14 @@ public class AuthController {
         return request.getRemoteAddr();
     }
 
+    /** Mascara o identificador do usuário nos logs (mantém os 2 primeiros chars). */
+    private String maskUsername(String username) {
+        if (username == null || username.isEmpty()) {
+            return "***";
+        }
+        return username.length() <= 2 ? "***" : username.substring(0, 2) + "***";
+    }
+
     /** Extrai o refresh token do cookie ou, como fallback, do body da requisição. */
     private String extractRefreshToken(HttpServletRequest request, String bodyToken) {
         if (request.getCookies() != null) {
@@ -161,7 +169,7 @@ public class AuthController {
 
         String ipAddress = extractClientIp(request);
 
-        logger.info("[AUTH API] [SIGNIN] Tentativa de login: {} de {}", loginRequest.getUsername(), ipAddress);
+        logger.info("[AUTH API] [SIGNIN] Tentativa de login: {}", maskUsername(loginRequest.getUsername()));
 
         if (loginAttemptService.isBlocked(ipAddress)) {
             logger.warn("[SECURITY] Tentativa de login bloqueada para IP: {}", ipAddress);
@@ -203,7 +211,7 @@ public class AuthController {
                     .map(item -> item.getAuthority())
                     .collect(Collectors.toList());
 
-            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso.", loginRequest.getUsername());
+            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso.", maskUsername(loginRequest.getUsername()));
 
             // Retorna apenas dados de perfil — tokens viajam exclusivamente via cookie
             return ResponseEntity.ok(new com.portalcursos.ng02.dto.JwtResponse(
@@ -212,12 +220,12 @@ public class AuthController {
 
         } catch (org.springframework.security.core.AuthenticationException e) {
             loginAttemptService.loginFailed(ipAddress);
-            logger.error("[AUTH API] [FAILURE] Falha na autenticação para {}: {}", loginRequest.getUsername(), e.getMessage());
+            logger.warn("[AUTH API] [FAILURE] Falha na autenticação para {}: {}", maskUsername(loginRequest.getUsername()), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Erro de Autenticação: Usuário ou senha inválidos."));
         } catch (Exception e) {
-            logger.error("[AUTH API] [ERROR] Erro inesperado no login para {}: {}", loginRequest.getUsername(), e.getMessage());
+            logger.error("[AUTH API] [ERROR] Erro inesperado no login para {}: {}", maskUsername(loginRequest.getUsername()), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Erro interno no servidor de autenticação."));

@@ -13,4 +13,11 @@ public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> 
 
     @Query("SELECT s FROM StaffMember s LEFT JOIN FETCH s.creator WHERE s.id = :id AND s.active = true")
     java.util.Optional<StaffMember> findByIdAndActiveTrue(@Param("id") Long id);
+
+    /**
+     * Ignora o filtro global {@code @SQLRestriction("active = true")}: a reativação de colaborador
+     * precisa reusar a linha inativa existente (PK = id do user) em vez de tentar novo INSERT.
+     */
+    @Query(value = "SELECT * FROM staff_members WHERE id = :id", nativeQuery = true)
+    java.util.Optional<StaffMember> findByIdIncludingInactive(@Param("id") Long id);
 }

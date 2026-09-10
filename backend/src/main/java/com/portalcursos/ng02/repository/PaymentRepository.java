@@ -13,6 +13,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.creator WHERE p.student.id = :studentId")
     List<Payment> findByStudentId(@Param("studentId") Long studentId);
 
+    /**
+     * Ignora o filtro global {@code @SQLRestriction("active = true")}: o cálculo do prazo legal
+     * de guarda (LGPD) precisa considerar pagamentos soft-deleted para não subestimar a retenção.
+     */
+    @Query(value = "SELECT * FROM payments WHERE student_id = :studentId", nativeQuery = true)
+    List<Payment> findByStudentIdIncludingInactive(@Param("studentId") Long studentId);
+
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.creator WHERE p.academicLevel = :academicLevel")
     List<Payment> findByAcademicLevel(@Param("academicLevel") EAcademicLevel academicLevel);
 

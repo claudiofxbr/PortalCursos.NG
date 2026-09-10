@@ -103,6 +103,15 @@ public class FinancialControllerIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testGetInvoicesByLevelInvalidLevelReturns400() throws Exception {
+        mockMvc.perform(get("/api/finance/invoices/INEXISTENTE").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Nível acadêmico inválido: INEXISTENTE"));
+    }
+
+    @Test
     @WithMockUser(username = "aluno", roles = {"ALUNO"})
     public void testGetStudentPaymentsForbiddenWhenNotOwner() throws Exception {
         // Aluno autenticado sem vínculo com o studentId solicitado (não é ownership nem tem privilégio elevado)

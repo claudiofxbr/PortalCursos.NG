@@ -60,7 +60,7 @@ public class DataAnonymizationServiceTest {
 
     @Test
     public void anonymizeWithoutStudentRecordOnlyAnonymizesUser() {
-        when(studentRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(studentRepository.findByUserIdIncludingInactive(1L)).thenReturn(Optional.empty());
 
         DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(baseUser);
 
@@ -82,8 +82,8 @@ public class DataAnonymizationServiceTest {
                 .documents(new ArrayList<>())
                 .build();
 
-        when(studentRepository.findByUserId(1L)).thenReturn(Optional.of(recentStudent));
-        when(paymentRepository.findByStudentId(10L)).thenReturn(List.of());
+        when(studentRepository.findByUserIdIncludingInactive(1L)).thenReturn(Optional.of(recentStudent));
+        when(paymentRepository.findByStudentIdIncludingInactive(10L)).thenReturn(List.of());
 
         DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(baseUser);
 
@@ -110,8 +110,8 @@ public class DataAnonymizationServiceTest {
                 .dueDate(LocalDate.now().minusYears(1))
                 .build();
 
-        when(studentRepository.findByUserId(1L)).thenReturn(Optional.of(student));
-        when(paymentRepository.findByStudentId(11L)).thenReturn(List.of(recentPayment));
+        when(studentRepository.findByUserIdIncludingInactive(1L)).thenReturn(Optional.of(student));
+        when(paymentRepository.findByStudentIdIncludingInactive(11L)).thenReturn(List.of(recentPayment));
 
         DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(baseUser);
 
@@ -137,8 +137,8 @@ public class DataAnonymizationServiceTest {
                 .fotoMatricula("uploads/students/11/foto.jpg")
                 .build();
 
-        when(studentRepository.findByUserId(1L)).thenReturn(Optional.of(student));
-        when(paymentRepository.findByStudentId(11L)).thenReturn(List.of());
+        when(studentRepository.findByUserIdIncludingInactive(1L)).thenReturn(Optional.of(student));
+        when(paymentRepository.findByStudentIdIncludingInactive(11L)).thenReturn(List.of());
 
         DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(baseUser);
 
@@ -158,6 +158,32 @@ public class DataAnonymizationServiceTest {
         verify(studentRepository, times(1)).save(student);
 
         assertTrue(baseUser.getUsername().startsWith("usuario-anonimizado-"));
+        verify(userRepository, times(1)).save(baseUser);
+    }
+
+    @Test
+    public void anonymizeReachesInactiveStudentViaIncludingInactiveLookup() {
+        // Regressão: com @SQLRestriction("active = true"), um aluno já soft-deleted era
+        // invisível ao fluxo LGPD e a request era marcada COMPLETED sem apagar a PII.
+        Student inactiveStudent = Student.builder()
+                .id(12L)
+                .fullName("Aluno Inativo")
+                .cpf("333.333.333-33")
+                .phone("71988888888")
+                .updatedAt(LocalDateTime.now().minusYears(25))
+                .documents(new ArrayList<>())
+                .active(false)
+                .build();
+
+        when(studentRepository.findByUserIdIncludingInactive(1L)).thenReturn(Optional.of(inactiveStudent));
+        when(paymentRepository.findByStudentIdIncludingInactive(12L)).thenReturn(List.of());
+
+        DataAnonymizationService.AnonymizationResult result = anonymizationService.anonymize(baseUser);
+
+        assertTrue(result.completed());
+        assertEquals("000.000.000-00", inactiveStudent.getCpf());
+        assertNull(inactiveStudent.getPhone());
+        verify(studentRepository, times(1)).save(inactiveStudent);
         verify(userRepository, times(1)).save(baseUser);
     }
 }
