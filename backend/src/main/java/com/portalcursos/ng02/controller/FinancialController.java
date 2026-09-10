@@ -6,6 +6,7 @@ import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
+import com.portalcursos.ng02.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,7 @@ public class FinancialController {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
-        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
+        EAcademicLevel academicLevel = parseAcademicLevel(level);
         List<Payment> invoices = paymentRepository.findByAcademicLevelAndStatusIn(
             academicLevel,
             java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)
@@ -47,7 +48,7 @@ public class FinancialController {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
-        EAcademicLevel academicLevel = EAcademicLevel.valueOf(level.toUpperCase());
+        EAcademicLevel academicLevel = parseAcademicLevel(level);
         List<Payment> history = paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
         return ResponseEntity.ok(history);
     }
@@ -140,6 +141,15 @@ public class FinancialController {
                 .body(new MessageResponse("Acesso negado: Você só pode visualizar seus próprios dados financeiros."));
         }
         return ResponseEntity.ok(paymentRepository.findByStudentId(studentId));
+    }
+
+    /** Converte o parâmetro de rota em {@link EAcademicLevel}, traduzindo valor inválido em HTTP 400. */
+    private EAcademicLevel parseAcademicLevel(String level) {
+        try {
+            return EAcademicLevel.valueOf(level.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("Nível acadêmico inválido: " + level);
+        }
     }
 
     /** true se o usuário autenticado tem role operacional/administrativa (não é um ALUNO comum). */
