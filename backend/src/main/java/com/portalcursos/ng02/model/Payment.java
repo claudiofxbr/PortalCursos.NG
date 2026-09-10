@@ -49,7 +49,11 @@ public class Payment extends BaseAuditEntity {
      * subclasse de Student (single-table inheritance), então uma única FK basta;
      * {@link #academicLevel} indica qual dos dois é.
      */
+    // O aluno pode ter sido soft-deleted (@SQLRestriction em Student). @NotFound
+    // IGNORE faz getStudent() devolver null em vez de lançar EntityNotFoundException
+    // — os call-sites (ex.: FinancialController.ownsStudentRecord) já checam != null.
     @ManyToOne(fetch = FetchType.LAZY)
+    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     @JoinColumn(name = "student_id", referencedColumnName = "id")
     @JsonIgnore
     private Student student;

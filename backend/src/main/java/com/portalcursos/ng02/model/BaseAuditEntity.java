@@ -41,7 +41,13 @@ public abstract class BaseAuditEntity {
     @Column(nullable = false)
     protected boolean active = true;
 
+    // creator aponta para um StaffMember que pode ter sido desativado
+    // (@SQLRestriction("active = true") em StaffMember). Sem @NotFound, acessar
+    // creator.getFullName() em getCreatorName() lançaria EntityNotFoundException
+    // ao serializar qualquer registro histórico criado por um staff hoje inativo.
+    // IGNORE devolve null — que é o que getCreatorName()/getCreatorPosition() já tratam.
     @ManyToOne(fetch = FetchType.LAZY)
+    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     @JoinColumn(name = "creator_id")
     protected StaffMember creator;
 
