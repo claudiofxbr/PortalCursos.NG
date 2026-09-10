@@ -53,25 +53,9 @@ log "Buildando imagens Docker..."
 $COMPOSE build backend frontend
 ok "Build concluido"
 
-# ── 5. Deploy na ordem correta: postgres → backend → frontend ─────
+# ── 5. Deploy na ordem correta: backend → frontend ───────────────
+# O banco é o Neon (externo); não há PostgreSQL local para subir.
 log "=== FASE 5: Deploy na ordem correta ==="
-
-log "Subindo PostgreSQL..."
-$COMPOSE up -d postgres
-
-log "Aguardando PostgreSQL ficar saudavel (max 60s)..."
-PG_READY=false
-for i in $(seq 1 30); do
-    if $COMPOSE exec -T postgres pg_isready -U "${SPRING_DATASOURCE_USERNAME:-portal_admin}" -d portalcursos_db > /dev/null 2>&1; then
-        ok "PostgreSQL saudavel"
-        PG_READY=true
-        break
-    fi
-    sleep 2
-done
-if [ "$PG_READY" = "false" ]; then
-    warn "PostgreSQL nao respondeu em 60s — continuando mesmo assim (Neon externo pode estar em uso)"
-fi
 
 log "Subindo backend..."
 $COMPOSE up -d --force-recreate --no-deps backend

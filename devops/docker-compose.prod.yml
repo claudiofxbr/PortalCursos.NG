@@ -1,22 +1,7 @@
+# Nota: o app usa exclusivamente o Neon (SPRING_DATASOURCE_URL aponta para
+# ep-*.sa-east-1.aws.neon.tech). O antigo serviço `postgres` local foi removido
+# por estar ocioso em produção (0 conexões) e apenas consumir RAM da VPS.
 services:
-  postgres:
-    image: postgres:15-alpine@sha256:3d0f7584ed7d04e27fa050d6683a74746608faf21f202be78460d679cc56461f
-    container_name: portalcursos_postgres
-    restart: always
-    environment:
-      POSTGRES_DB: portalcursos_db
-      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-portal_admin}
-      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD é obrigatório}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - portal_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME:-portal_admin} -d portalcursos_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ../backend
@@ -159,7 +144,5 @@ networks:
     external: true
 
 volumes:
-  pgdata:
-    driver: local
   uploads_data:
     driver: local
