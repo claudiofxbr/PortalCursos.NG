@@ -40,7 +40,9 @@ public class HealthController {
             jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             latency = System.currentTimeMillis() - startTime;
             diagnostics.put("database", "CONNECTED");
-            
+
+            checkMigrations(diagnostics);
+
             if (!dbIsReady) {
                 // Sincronização em curso
                 status = "SYNCHRONIZING";
@@ -75,5 +77,30 @@ public class HealthController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Reporta o estado do Flyway em diagnostics (visibilidade — não altera o status
+     * do health). Falha silenciosa: se a tabela não existir ou a query der erro, o
+     * health continua respondendo normalmente com migrations = "UNKNOWN".
+     */
+    private void checkMigrations(Map<String, Object> diagnostics) {
+        try {
+            Integer failed = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM flyway_schema_history WHERE success = false", Integer.class);
+            String latestVersion = jdbcTemplate.queryForObject(
+                    "SELECT version FROM flyway_schema_history WHERE success = true AND version IS NOT NULL "
+                            + "ORDER BY installed_rank DESC LIMIT 1", String.class);
+
+            diagnostics.put("migrations", (failed != null && failed > 0) ? "FAILED" : "OK");
+            diagnostics.put("migrations_latest", latestVersion);
+            if (failed != null && failed > 0) {
+                diagnostics.put("migrations_failed", failed);
+                log.error("[HEALTH] {} migração(ões) Flyway com success=false na flyway_schema_history.", failed);
+            }
+        } catch (Exception e) {
+            diagnostics.put("migrations", "UNKNOWN");
+            log.warn("[HEALTH] Não foi possível ler flyway_schema_history.", e);
+        }
     }
 }
