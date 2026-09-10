@@ -25,8 +25,8 @@
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit f1c6308)",
-      "status": "running"
+      "detail": "último run em main: success (commit f1c6308)",
+      "status": "active"
     },
     {
       "category": "auto",
@@ -43,5 +43,5 @@
       "status": "active"
     }
   ],
-  "updatedAt": "2026-09-10T22:16:44Z"
+  "updatedAt": "2026-09-10T22:17:24Z"
 }
