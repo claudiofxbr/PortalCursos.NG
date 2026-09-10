@@ -41,7 +41,14 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr64-monitor",
+      "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
+      "detail": "CI ok.",
+      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T23:21:18Z"
+  "updatedAt": "2026-09-10T23:38:57Z"
 }
