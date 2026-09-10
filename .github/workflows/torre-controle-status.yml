@@ -3,14 +3,15 @@ name: Torre de Controle — status automático
 # Mantém docs/torre-de-controle/status.json (na branch torre-controle-data —
 # main é protegida e não aceita push direto de bot) como fonte da verdade dos
 # processos do repo, sem intervenção manual. Dispara:
-#   - quando qualquer outro workflow do repo termina (inclusão/atualização/
-#     encerramento automáticos, sem precisar listar workflows por nome aqui);
+#   - quando o workflow "CI/CD PortalCursos.NG" termina (inclusão/atualização/
+#     encerramento automáticos); gatilho restrito a esse workflow por nome para
+#     não acordar este job a cada conclusão de qualquer workflow do repo;
 #   - a cada 6h, como rede de segurança caso um workflow_run não seja entregue
 #     (falha conhecida e documentada do GitHub Actions em picos de carga);
 #   - manualmente (workflow_dispatch), para forçar uma atualização sob demanda.
 on:
   workflow_run:
-    workflows: ["*"]
+    workflows: ["CI/CD PortalCursos.NG"]
     types: [completed]
   schedule:
     - cron: "0 */6 * * *"
@@ -46,14 +47,17 @@ jobs:
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           # --- workflows ativos (auto-descoberta — qualquer .yml novo aparece sozinho) ---
-          workflows_json=$(gh api "repos/${REPO}/actions/workflows" --jq '[.workflows[] | select(.state=="active")]')
+          # gh api pode falhar por rate-limit/instabilidade; fallback preserva
+          # JSON válido ([] = nenhum workflow) para o loop/jq seguinte não quebrar.
+          workflows_json=$(gh api "repos/${REPO}/actions/workflows" --jq '[.workflows[] | select(.state=="active")]' 2>/dev/null || echo '[]')
+          [ -n "$workflows_json" ] || workflows_json='[]'
 
           auto_entries="[]"
           while IFS= read -r wf; do
             id=$(echo "$wf" | jq -r .id)
             name=$(echo "$wf" | jq -r .name)
             [ "$name" = "Torre de Controle — status automático" ] && continue
-            run=$(gh api "repos/${REPO}/actions/workflows/${id}/runs?per_page=1&branch=main" --jq '.workflow_runs[0] // empty')
+            run=$(gh api "repos/${REPO}/actions/workflows/${id}/runs?per_page=1&branch=main" --jq '.workflow_runs[0] // empty' 2>/dev/null || echo '')
             if [ -z "$run" ]; then continue; fi
             status=$(echo "$run" | jq -r '.status')
             conclusion=$(echo "$run" | jq -r '.conclusion // empty')
@@ -75,7 +79,9 @@ jobs:
           auto_entries=$(echo "$auto_entries" | jq '. + [{category:"auto", id:"auto-dependabot", label:"Dependabot", detail:"checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente", status:"active"}]')
 
           # --- fila: PRs abertos (auto-descoberta — qualquer PR novo aparece sozinho) ---
-          prs_json=$(gh pr list --repo "$REPO" --state open --json number,title,mergeable,statusCheckRollup,createdAt)
+          # fallback com JSON válido ([] = nenhum PR) se a API falhar por rate-limit.
+          prs_json=$(gh pr list --repo "$REPO" --state open --json number,title,mergeable,statusCheckRollup,createdAt 2>/dev/null || echo '[]')
+          [ -n "$prs_json" ] || prs_json='[]'
           queue_entries=$(echo "$prs_json" | jq '[.[] | {
             category: "queue",
             id: ("pr" + (.number|tostring) + "-monitor"),
