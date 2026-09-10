@@ -68,14 +68,17 @@ api.interceptors.response.use(
         const { response, config } = error;
         const status = response?.status;
 
-        // Cold start / rede indisponível — retry com backoff exponencial
-        if (!response || status === 502 || status === 503 || status === 504 || error.code === 'ECONNABORTED') {
+        // Cold start / rede indisponível — retry com backoff exponencial.
+        // Só re-tenta métodos idempotentes (GET/HEAD) para evitar requisições duplicadas.
+        const method = (config?.method || 'get').toLowerCase();
+        const isIdempotent = method === 'get' || method === 'head';
+        if (isIdempotent && (!response || status === 502 || status === 503 || status === 504 || error.code === 'ECONNABORTED')) {
             config._retryCount = config._retryCount || 0;
-            const maxRetries = 15;
+            const maxRetries = 3;
 
             if (config._retryCount < maxRetries) {
                 config._retryCount++;
-                const delay = Math.min(2000 * Math.pow(1.4, config._retryCount), 30000);
+                const delay = Math.min(2000 * Math.pow(1.4, config._retryCount), 9000);
 
                 if (typeof window !== 'undefined') {
                     const s = (window as any).PC_STATUS;
