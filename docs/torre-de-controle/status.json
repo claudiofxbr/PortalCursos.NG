@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr65-monitor",
+      "label": "#65 — feat(students): DTOs para os endpoints de aluno (achado 1.2)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
       "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T23:38:57Z"
+  "updatedAt": "2026-09-10T23:48:51Z"
 }
