@@ -25,15 +25,15 @@
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: in_progress (commit ca8c482)",
-      "status": "running"
+      "detail": "último run em main: success (commit ca8c482)",
+      "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit a4bf6cf)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit ca8c482)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -67,21 +67,21 @@
       "category": "queue",
       "id": "pr49-monitor",
       "label": "#49 — chore(deps): bump org.springframework.boot:spring-boot-starter-parent from 4.1.0 to 4.1.1 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr48-monitor",
       "label": "#48 — chore(deps): bump org.flywaydb:flyway-core from 13.0.0 to 13.5.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr47-monitor",
       "label": "#47 — chore(deps): bump org.apache.maven:apache-maven from 3.9.6 to 3.9.16 in /backend",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -106,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T12:26:58Z"
+  "updatedAt": "2026-09-10T12:50:46Z"
 }
