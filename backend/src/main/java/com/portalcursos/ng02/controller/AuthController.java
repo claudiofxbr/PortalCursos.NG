@@ -225,7 +225,7 @@ public class AuthController {
                     .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Erro de Autenticação: Usuário ou senha inválidos."));
         } catch (Exception e) {
-            logger.error("[AUTH API] [ERROR] Erro inesperado no login para {}: {}", loginRequest.getUsername(), e.getMessage());
+            logger.error("[AUTH API] [ERROR] Erro inesperado no login para {}: {}", maskUsername(loginRequest.getUsername()), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Erro interno no servidor de autenticação."));
