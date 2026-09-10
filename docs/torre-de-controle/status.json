@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 386335a)",
+      "detail": "último run em main: success (commit 3cc6f30)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 386335a)",
+      "detail": "último run em main: success (commit 3cc6f30)",
       "status": "active"
     },
     {
@@ -41,14 +41,7 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr63-monitor",
-      "label": "#63 — docs(CLAUDE.md): arquitetura e decisões da rodada de auditoria",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T23:17:12Z"
+  "updatedAt": "2026-09-10T23:21:18Z"
 }
