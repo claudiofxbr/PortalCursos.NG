@@ -58,7 +58,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                     java.util.List<String> roles = (java.util.List<String>) claims.get("roles");
 
                     if (roles == null) {
-                        logger.warn("[FILTER WARN] Claims 'roles' ausente no token para: {}", username);
+                        logger.warn("[FILTER WARN] Claims 'roles' ausente no token recebido.");
                         filterChain.doFilter(request, response);
                         return;
                     }

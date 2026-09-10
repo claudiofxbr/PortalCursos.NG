@@ -257,7 +257,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(new MessageResponse("Refresh token não fornecido."));
         }
 
-        logger.info("[AUTH] Renovação de token: ...{}", refreshToken.length() > 5 ? refreshToken.substring(refreshToken.length() - 5) : "?");
+        logger.debug("[AUTH] Renovação de token solicitada.");
 
         try {
             return userSessionRepository.findByRefreshToken(refreshToken)
@@ -283,7 +283,7 @@ public class AuthController {
                         response.addCookie(buildRefreshCookie(newRefreshToken));
 
                         loginAttemptService.loginSucceeded(rateLimitKey);
-                        logger.info("[AUTH] Token renovado para: {}", user.getUsername());
+                        logger.info("[AUTH] Token renovado para: {}", maskUsername(user.getUsername()));
                         // Retorna apenas confirmação — tokens viajam via cookie
                         return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
                     })
@@ -356,7 +356,7 @@ public class AuthController {
     public ResponseEntity<?> registerUser(
             @Valid @RequestBody SignupRequest signUpRequest,
             HttpServletRequest request) {
-        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {}", signUpRequest.getUsername());
+        logger.info("[AUTH] [SIGNUP] Tentativa de registro: {}", maskUsername(signUpRequest.getUsername()));
 
         String ipAddress = extractClientIp(request);
         String rateLimitKey = "signup:" + ipAddress;
@@ -390,7 +390,7 @@ public class AuthController {
                                     || a.getAuthority().equals("ROLE_ROOT_MASTER"));
 
             if (!hasElevatedPrivileges) {
-                logger.warn("[SECURITY] Tentativa de registro com roles privilegiadas bloqueada: {}", signUpRequest.getUsername());
+                logger.warn("[SECURITY] Tentativa de registro com roles privilegiadas bloqueada: {}", maskUsername(signUpRequest.getUsername()));
                 return ResponseEntity.status(403)
                         .body(new MessageResponse("Apenas administradores podem registrar contas privilegiadas."));
             }
@@ -447,7 +447,7 @@ public class AuthController {
             user.setRoles(roles);
             userRepository.save(user);
 
-            logger.info("[AUTH] [SIGNUP-SUCCESS] Usuário {} registrado.", signUpRequest.getUsername());
+            logger.info("[AUTH] [SIGNUP-SUCCESS] Usuário {} registrado.", maskUsername(signUpRequest.getUsername()));
             return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso."));
 
         } catch (IllegalArgumentException e) {
