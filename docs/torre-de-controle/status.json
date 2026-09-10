@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 2e4c041)",
+      "detail": "último run em main: success (commit f1c6308)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 2e4c041)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit f1c6308)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -41,14 +41,7 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr61-monitor",
-      "label": "#61 — refactor: remove EAGER forçado pelo @NotFound (segue PR #60)",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-10T22:10:03Z"
+  "updatedAt": "2026-09-10T22:16:44Z"
 }
