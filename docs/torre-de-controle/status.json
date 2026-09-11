@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 9e7743e)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit a2850ba)",
+      "status": "running"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 9e7743e)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit a2850ba)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -51,18 +51,11 @@
     },
     {
       "category": "queue",
-      "id": "pr65-monitor",
-      "label": "#65 — feat(students): DTOs para os endpoints de aluno (achado 1.2)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
       "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-11T15:36:27Z"
+  "updatedAt": "2026-09-11T15:40:39Z"
 }
