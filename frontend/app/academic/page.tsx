@@ -29,8 +29,8 @@ interface GradStudent {
     email: string;
     cpf: string;
     phone: string;
-    dateOfBirth: string;
-    address: string;
+    dateOfBirth?: string;
+    address?: string;
     currentCourse: string;
     enrollmentStatus: string;
     registrationNumber: string;

@@ -14,8 +14,8 @@ interface PostgradStudent {
     email: string;
     cpf: string;
     phone: string;
-    dateOfBirth: string;
-    address: string;
+    dateOfBirth?: string;
+    address?: string;
     graduationInstitution: string;
     graduationYear: number;
     desiredCourse: string;
