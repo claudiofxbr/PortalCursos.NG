@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr67-monitor",
+      "label": "#67 — fix(docker): cria e ajusta ownership de /app/uploads antes de USER app",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr66-monitor",
       "label": "#66 — fix(nginx): certificado SSL autoassinado -> Let's Encrypt valido",
       "detail": "CI ok.",
@@ -64,5 +71,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-11T12:11:09Z"
+  "updatedAt": "2026-09-11T12:39:47Z"
 }
