@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 3cc6f30)",
+      "detail": "último run em main: success (commit 9e7743e)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 3cc6f30)",
+      "detail": "último run em main: success (commit 9e7743e)",
       "status": "active"
     },
     {
@@ -46,14 +46,7 @@
       "category": "queue",
       "id": "pr67-monitor",
       "label": "#67 — fix(docker): cria e ajusta ownership de /app/uploads antes de USER app",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr66-monitor",
-      "label": "#66 — fix(nginx): certificado SSL autoassinado -> Let's Encrypt valido",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     },
     {
@@ -71,5 +64,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-11T12:39:47Z"
+  "updatedAt": "2026-09-11T12:49:13Z"
 }
