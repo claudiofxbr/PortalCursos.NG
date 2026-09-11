@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr66-monitor",
+      "label": "#66 — fix(nginx): certificado SSL autoassinado -> Let's Encrypt valido",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr65-monitor",
       "label": "#65 — feat(students): DTOs para os endpoints de aluno (achado 1.2)",
       "detail": "CI ok.",
@@ -57,5 +64,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-11T10:18:56Z"
+  "updatedAt": "2026-09-11T12:11:09Z"
 }
