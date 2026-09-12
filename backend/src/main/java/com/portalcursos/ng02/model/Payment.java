@@ -52,8 +52,9 @@ public class Payment extends BaseAuditEntity {
     // Student mantém @SQLRestriction (soft-delete real). @NotFound(IGNORE) faz
     // getStudent() devolver null em vez de lançar EntityNotFoundException quando o
     // aluno foi desativado — FinancialController.ownsStudentRecord já checa != null.
-    // Isso força a associação a EAGER; as queries de listagem do PaymentRepository
-    // fazem LEFT JOIN FETCH p.student para não gerar N+1.
+    // A associação é LAZY; é seguro porque as queries de listagem do
+    // PaymentRepository fazem LEFT JOIN FETCH p.student explicitamente para
+    // não gerar N+1.
     @ManyToOne(fetch = FetchType.LAZY)
     @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     @JoinColumn(name = "student_id", referencedColumnName = "id")

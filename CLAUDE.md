@@ -27,7 +27,7 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - **Soft-delete** (`@SQLDelete` + coluna `active`):
   - `@SQLRestriction("active = true")` apenas em **`Student`, `Payment`, `RepairTicket`** (entidades transacionais).
   - `Course` e `StaffMember` **não** têm `@SQLRestriction` (são referência, apontadas por FKs de registros históricos) — as listagens de catálogo/staff filtram `active = true` explicitamente nas `@Query` (`CourseRepository.findAllActiveWithCreator`, `StaffMemberRepository.findAllByActiveTrue`, etc.). Usar métodos com filtro explícito, não `findAll()`/`findById()` cru.
-  - `Payment.student` tem `@NotFound(action = IGNORE)` (Student é soft-deleted de verdade) → é EAGER; as queries de listagem do `PaymentRepository` fazem `LEFT JOIN FETCH p.student` para evitar N+1.
+  - `Payment.student` tem `@NotFound(action = IGNORE)` (Student é soft-deleted de verdade) → é LAZY; as queries de listagem do `PaymentRepository` fazem `LEFT JOIN FETCH p.student` para evitar N+1.
   - Fluxos que precisam ver inativos (LGPD, reativação de colaborador) usam métodos `*IncludingInactive` (nativeQuery).
 - `UNIQUE` de `students.cpf`/`students.email` é **parcial** (`WHERE active = true`, V21) — permite reusar CPF/e-mail de aluno desativado.
 - Migrações Flyway em `backend/src/main/resources/db/migration/`. `spring.flyway.enabled=true` em produção; **desabilitado nos testes** (H2) → V20+ e o comportamento real de `@SQLRestriction` no Postgres não são exercitados no CI (backlog: Testcontainers).
