@@ -56,4 +56,60 @@ public class AuthControllerIntegrationTest {
                 // Formato antigo tinha somente "message" (sem os demais campos do handler padrão)
                 .andExpect(jsonPath("$.message").isNotEmpty());
     }
+
+    // Cobertura do Lote E, item A1: login extraído de AuthController.authenticateUser para
+    // AuthService.login. IPs distintos por teste (X-Real-IP) isolam o contador de
+    // LoginAttemptService, que é por IP e persiste no mesmo contexto Spring entre os testes
+    // desta classe.
+
+    @Test
+    public void testSigninComCredenciaisValidasRetornaCookiesEDadosDoUsuario() throws Exception {
+        String payload = "{\"username\":\"admin\",\"password\":\"TestAdminPass123!\"}";
+
+        mockMvc.perform(post("/api/auth/signin")
+                .header("X-Real-IP", "10.10.10.1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("admin"))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(cookie().exists("portal_access_token"))
+                .andExpect(cookie().exists("portal_refresh_token"));
+    }
+
+    @Test
+    public void testSigninComSenhaErradaRetorna401() throws Exception {
+        String payload = "{\"username\":\"admin\",\"password\":\"senha-errada-123\"}";
+
+        mockMvc.perform(post("/api/auth/signin")
+                .header("X-Real-IP", "10.10.10.2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Erro de Autenticação: Usuário ou senha inválidos."));
+    }
+
+    @Test
+    public void testSigninBloqueiaIpAposCincoFalhas() throws Exception {
+        String payloadErrado = "{\"username\":\"admin\",\"password\":\"senha-errada-123\"}";
+        String ip = "10.10.10.3";
+
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/auth/signin")
+                    .header("X-Real-IP", ip)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(payloadErrado))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // 6ª tentativa (mesmo com senha certa): IP já bloqueado por força bruta
+        String payloadCerto = "{\"username\":\"admin\",\"password\":\"TestAdminPass123!\"}";
+        mockMvc.perform(post("/api/auth/signin")
+                .header("X-Real-IP", ip)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payloadCerto))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.message").value(
+                        "Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
+    }
 }
