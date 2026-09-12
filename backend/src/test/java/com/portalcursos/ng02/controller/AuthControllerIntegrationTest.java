@@ -1,8 +1,13 @@
 package com.portalcursos.ng02.controller;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.model.UserSession;
+import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.repository.UserSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -10,6 +15,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
+import java.util.UUID;
 
 @SpringBootTest(properties = {
     "SPRING_DATASOURCE_URL=jdbc:h2:mem:authtestdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
@@ -29,6 +37,12 @@ public class AuthControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private UserSessionRepository userSessionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Regressão: catch de IllegalArgumentException no signup deve delegar ao
     // GlobalExceptionHandler via BusinessException (400 com corpo padronizado),
@@ -111,5 +125,72 @@ public class AuthControllerIntegrationTest {
                 .andExpect(status().isLocked())
                 .andExpect(jsonPath("$.message").value(
                         "Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
+    }
+
+    // Cobertura do Lote E, item A2: refreshtoken extraído de AuthController.refreshtoken para
+    // AuthService.refreshToken (lookup de sessão, checagem de expiração, rotação de token).
+
+    @Test
+    public void testRefreshTokenValidoRenovaSessaoERotacionaToken() throws Exception {
+        User admin = userRepository.findByUsername("admin").orElseThrow();
+        String oldToken = UUID.randomUUID().toString();
+        userSessionRepository.save(UserSession.builder()
+                .user(admin)
+                .refreshToken(oldToken)
+                .expiryDate(Instant.now().plusSeconds(3600))
+                .build());
+
+        mockMvc.perform(post("/api/auth/refreshtoken")
+                .header("X-Real-IP", "10.10.20.1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"" + oldToken + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Token renovado com sucesso."))
+                .andExpect(cookie().exists("portal_access_token"))
+                .andExpect(cookie().exists("portal_refresh_token"));
+
+        assertFalse(userSessionRepository.findByRefreshToken(oldToken).isPresent(),
+                "Refresh token antigo deve ser invalidado (rotação)");
+    }
+
+    @Test
+    public void testRefreshTokenExpiradoRetorna403EInvalidaSessao() throws Exception {
+        User admin = userRepository.findByUsername("admin").orElseThrow();
+        String expiredToken = UUID.randomUUID().toString();
+        userSessionRepository.save(UserSession.builder()
+                .user(admin)
+                .refreshToken(expiredToken)
+                .expiryDate(Instant.now().minusSeconds(60))
+                .build());
+
+        mockMvc.perform(post("/api/auth/refreshtoken")
+                .header("X-Real-IP", "10.10.20.2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"" + expiredToken + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Sessão expirada. Faça login novamente."));
+
+        assertFalse(userSessionRepository.findByRefreshToken(expiredToken).isPresent(),
+                "Sessão expirada deve ser removida do banco");
+    }
+
+    @Test
+    public void testRefreshTokenInexistenteRetorna403() throws Exception {
+        mockMvc.perform(post("/api/auth/refreshtoken")
+                .header("X-Real-IP", "10.10.20.3")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Sessão inválida. Faça login novamente."));
+    }
+
+    @Test
+    public void testRefreshTokenSemTokenRetorna400() throws Exception {
+        mockMvc.perform(post("/api/auth/refreshtoken")
+                .header("X-Real-IP", "10.10.20.4")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Refresh token não fornecido."));
     }
 }
