@@ -165,8 +165,8 @@ try {
                   "cd /var/www/portalcursos && " +
                   "git fetch origin main && " +
                   "git reset --hard origin/main && " +
-                  "chmod +x devops/scripts/deploy_docker_compose.sh && " +
-                  "./devops/scripts/deploy_docker_compose.sh"
+                  "chmod +x devops/scripts/legacy-do-not-run/deploy_docker_compose.sh && " +
+                  "./devops/scripts/legacy-do-not-run/deploy_docker_compose.sh"
 
     ssh -o StrictHostKeyChecking=accept-new "$vpsUser@$vpsIp" $sshCommand
     if ($LASTEXITCODE -ne 0) {
