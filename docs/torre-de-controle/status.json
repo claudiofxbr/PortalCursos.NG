@@ -44,13 +44,6 @@
     },
     {
       "category": "queue",
-      "id": "pr71-monitor",
-      "label": "#71 — fix(security): remove endpoint /uploads sem autenticacao + docs fetch Payment",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr70-monitor",
       "label": "#70 — chore(deps-dev): bump @babel/core from 7.29.0 to 7.29.7 in /frontend",
       "detail": "CI ok.",
@@ -71,5 +64,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T15:49:15Z"
+  "updatedAt": "2026-09-12T15:49:27Z"
 }
