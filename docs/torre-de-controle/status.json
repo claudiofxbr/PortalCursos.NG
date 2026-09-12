@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a2850ba)",
-      "status": "active"
+      "detail": "último run em main: queued (commit 73e7c9b)",
+      "status": "running"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit a2850ba)",
-      "status": "active"
+      "detail": "último run em main: queued (commit 73e7c9b)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr67-monitor",
-      "label": "#67 — fix(docker): cria e ajusta ownership de /app/uploads antes de USER app",
-      "detail": "sem checks reportados ainda.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
       "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T14:42:33Z"
+  "updatedAt": "2026-09-12T15:09:32Z"
 }
