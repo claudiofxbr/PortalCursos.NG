@@ -1,10 +1,8 @@
 package com.portalcursos.ng02.service;
 
-import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
-import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
@@ -18,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,7 +28,7 @@ public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
+    private final RoleResolver roleResolver;
     private final StaffMemberRepository staffMemberRepository;
     private final StudentRepository studentRepository;
     private final AuthorityHierarchyService authorityService;
@@ -68,21 +65,7 @@ public class UserService {
         // 2. Preparação do Usuário
         user.setPassword(encoder.encode(user.getPassword()));
         
-        Set<Role> roles = new HashSet<>();
-        if (strRoles == null || strRoles.isEmpty()) {
-            roles.add(getOrCreateRole(Role.ERole.ROLE_ALUNO));
-        } else {
-            strRoles.forEach(role -> {
-                try {
-                    String name = role.toUpperCase();
-                    if (!name.startsWith("ROLE_")) name = "ROLE_" + name;
-                    roles.add(getOrCreateRole(Role.ERole.valueOf(name)));
-                } catch (Exception e) {
-                    roles.add(getOrCreateRole(Role.ERole.ROLE_ALUNO));
-                }
-            });
-        }
-        user.setRoles(roles);
+        user.setRoles(roleResolver.resolveLenient(strRoles));
 
         // 3. Persistência do Usuário (Atomicidade Fase 1)
         User savedUser = userRepository.saveAndFlush(user);
@@ -163,15 +146,7 @@ public class UserService {
         // 2. Validar autoridade para as novas roles
         authorityService.validateRoleAssignment(operator, strRoles);
 
-        Set<Role> roles = strRoles.stream()
-                .map(r -> {
-                    String name = r.toUpperCase();
-                    if (!name.startsWith("ROLE_")) name = "ROLE_" + name;
-                    return getOrCreateRole(Role.ERole.valueOf(name));
-                })
-                .collect(Collectors.toSet());
-
-        target.setRoles(roles);
+        target.setRoles(roleResolver.resolveStrict(strRoles));
         User savedUser = userRepository.saveAndFlush(target);
 
         // 3. Atualização Institucional Condicional
@@ -204,10 +179,5 @@ public class UserService {
         } catch (Exception e) {
             logger.warn("[V50.0-WARN] Falha na sincronização parcial: {}", e.getMessage());
         }
-    }
-
-    private Role getOrCreateRole(Role.ERole eRole) {
-        return roleRepository.findByName(eRole)
-                .orElseGet(() -> roleRepository.save(Role.builder().name(eRole).build()));
     }
 }
