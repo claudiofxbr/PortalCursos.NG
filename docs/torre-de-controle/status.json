@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 73e7c9b)",
+      "detail": "último run em main: success (commit 959e44c)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 73e7c9b)",
+      "detail": "último run em main: success (commit 959e44c)",
       "status": "active"
     },
     {
@@ -62,14 +62,7 @@
       "label": "#68 — chore(deps): bump brace-expansion in /frontend",
       "detail": "CI ok.",
       "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr64-monitor",
-      "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T15:23:08Z"
+  "updatedAt": "2026-09-12T15:26:56Z"
 }
