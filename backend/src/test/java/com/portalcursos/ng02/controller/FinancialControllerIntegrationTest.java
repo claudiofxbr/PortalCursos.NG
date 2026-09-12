@@ -122,4 +122,73 @@ public class FinancialControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value(
                         "Acesso negado: Você só pode visualizar seus próprios dados financeiros."));
     }
+
+    // Cobertura do Lote E, item F3: geração de PIX/boleto extraída para
+    // PaymentCodeGenerationService. Também cobre a regressão do bug "%08s" (formato
+    // inválido para String.format) que fazia generatePix falhar sempre com 500.
+
+    @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testGeneratePixComPrivilegioElevadoRetornaCodigoGerado() throws Exception {
+        Payment payment = Payment.builder()
+                .id(10L)
+                .amount(new BigDecimal("199.90"))
+                .dueDate(LocalDate.now().plusDays(5))
+                .status(EPaymentStatus.PENDING)
+                .build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(10L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        mockMvc.perform(post("/api/finance/generate-pix/10").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.method").value("PIX"))
+                .andExpect(jsonPath("$.paymentCode").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "aluno", roles = {"ALUNO"})
+    public void testGeneratePixForbiddenQuandoAlunoNaoEDonoDaFatura() throws Exception {
+        Payment payment = Payment.builder()
+                .id(11L)
+                .amount(new BigDecimal("199.90"))
+                .dueDate(LocalDate.now().plusDays(5))
+                .status(EPaymentStatus.PENDING)
+                .build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(11L)).thenReturn(Optional.of(payment));
+
+        mockMvc.perform(post("/api/finance/generate-pix/11").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Acesso negado: esta fatura não pertence a você."));
+
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testGenerateBoletoComPrivilegioElevadoRetornaUrlGerada() throws Exception {
+        Payment payment = Payment.builder()
+                .id(12L)
+                .amount(new BigDecimal("500.00"))
+                .dueDate(LocalDate.of(2026, 12, 1))
+                .status(EPaymentStatus.PENDING)
+                .build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(12L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        mockMvc.perform(post("/api/finance/generate-boleto/12").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.method").value("BOLETO"))
+                .andExpect(jsonPath("$.paymentCode").value(
+                        "https://portalcursos.edu.br/financeiro/boletos/download/SIM-12-2026-12-01"));
+    }
+
+    @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testGeneratePixFaturaInexistenteRetorna404() throws Exception {
+        when(paymentRepository.findByIdWithCreatorAndStudent(999L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/finance/generate-pix/999").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Fatura não encontrada para gerar PIX"));
+    }
 }
