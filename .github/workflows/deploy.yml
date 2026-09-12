@@ -31,7 +31,9 @@ jobs:
   # dois estavam sequenciais no mesmo job (build backend terminava antes do
   # frontend começar), sem motivo: um não depende do artefato do outro.
   test-frontend:
-    name: Build & Test — Frontend
+    # Sem suite de testes real hoje (sem `npm test`, sem arquivos de teste) —
+    # o nome reflete o que o job de fato faz: só valida que o build passa.
+    name: Build — Frontend (sem testes)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
