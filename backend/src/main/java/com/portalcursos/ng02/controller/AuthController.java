@@ -5,15 +5,12 @@ import com.portalcursos.ng02.dto.MessageResponse;
 import com.portalcursos.ng02.dto.SignupRequest;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.User;
-import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.security.JwtUtils;
 import com.portalcursos.ng02.service.UserDetailsImpl;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,8 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,6 +33,8 @@ import com.portalcursos.ng02.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.LoginAttemptService;
+import com.portalcursos.ng02.service.CookieService;
+import com.portalcursos.ng02.service.RoleResolver;
 import com.portalcursos.ng02.model.StaffMember;
 
 
@@ -50,71 +47,13 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
     private final UserSessionRepository userSessionRepository;
     private final StaffMemberRepository staffMemberRepository;
     private final LoginAttemptService loginAttemptService;
-
-    @Value("${portalcursos.jwt.refresh-expiration:86400000}")
-    private long refreshExpirationMs;
-
-    @Value("${portalcursos.jwt.expiration:900000}")
-    private int jwtExpirationMs;
-
-    @Value("${portalcursos.jwt.access-cookie-name:accessToken}")
-    private String accessCookieName;
-
-    @Value("${portalcursos.jwt.refresh-cookie-name:refreshToken}")
-    private String refreshCookieName;
-
-    @Value("${app.secure-cookies:true}")
-    private boolean secureCookies;
-
-    // ─── Helpers de Cookie ───────────────────────────────────────────────────
-
-    /** Cria um cookie HttpOnly para o token de acesso. */
-    private Cookie buildAccessCookie(String token) {
-        Cookie cookie = new Cookie(accessCookieName, token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(secureCookies);
-        cookie.setPath("/");
-        cookie.setMaxAge(jwtExpirationMs / 1000);
-        cookie.setAttribute("SameSite", "Strict");
-        return cookie;
-    }
-
-    /** Cria um cookie HttpOnly para o refresh token. */
-    private Cookie buildRefreshCookie(String token) {
-        Cookie cookie = new Cookie(refreshCookieName, token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(secureCookies);
-        cookie.setPath("/api/auth/refreshtoken");
-        cookie.setMaxAge((int) (refreshExpirationMs / 1000));
-        cookie.setAttribute("SameSite", "Strict");
-        return cookie;
-    }
-
-    /** Seta cookies de expiração para realizar o logout. */
-    private void clearAuthCookies(HttpServletResponse response) {
-        Cookie access = new Cookie(accessCookieName, "");
-        access.setHttpOnly(true);
-        access.setSecure(secureCookies);
-        access.setPath("/");
-        access.setMaxAge(0);
-        access.setAttribute("SameSite", "Strict");
-
-        Cookie refresh = new Cookie(refreshCookieName, "");
-        refresh.setHttpOnly(true);
-        refresh.setSecure(secureCookies);
-        refresh.setPath("/api/auth/refreshtoken");
-        refresh.setMaxAge(0);
-        refresh.setAttribute("SameSite", "Strict");
-
-        response.addCookie(access);
-        response.addCookie(refresh);
-    }
+    private final CookieService cookieService;
+    private final RoleResolver roleResolver;
 
     /**
      * Extrai o IP real do cliente atrás do nginx (devops/scripts/nginx.conf).
@@ -145,18 +84,6 @@ public class AuthController {
             return "***";
         }
         return username.length() <= 2 ? "***" : username.substring(0, 2) + "***";
-    }
-
-    /** Extrai o refresh token do cookie ou, como fallback, do body da requisição. */
-    private String extractRefreshToken(HttpServletRequest request, String bodyToken) {
-        if (request.getCookies() != null) {
-            return Arrays.stream(request.getCookies())
-                    .filter(c -> refreshCookieName.equals(c.getName()))
-                    .map(Cookie::getValue)
-                    .findFirst()
-                    .orElse(bodyToken);
-        }
-        return bodyToken;
     }
 
     // ─── Endpoints ───────────────────────────────────────────────────────────
@@ -197,15 +124,15 @@ public class AuthController {
             UserSession session = UserSession.builder()
                     .user(user)
                     .refreshToken(refreshTokenStr)
-                    .expiryDate(Instant.now().plusMillis(refreshExpirationMs))
+                    .expiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()))
                     .userAgent(request.getHeader("User-Agent") != null ? request.getHeader("User-Agent") : "Unknown")
                     .ipAddress(ipAddress)
                     .build();
             userSessionRepository.save(session);
 
             // Setar cookies HttpOnly — tokens NÃO são mais expostos ao JavaScript
-            response.addCookie(buildAccessCookie(jwt));
-            response.addCookie(buildRefreshCookie(refreshTokenStr));
+            response.addCookie(cookieService.buildAccessCookie(jwt));
+            response.addCookie(cookieService.buildRefreshCookie(refreshTokenStr));
 
             List<String> roles = userDetails.getAuthorities().stream()
                     .map(item -> item.getAuthority())
@@ -251,7 +178,7 @@ public class AuthController {
 
         // Cookie tem prioridade; body é fallback para compatibilidade
         String bodyToken = (body != null) ? body.getRefreshToken() : null;
-        String refreshToken = extractRefreshToken(request, bodyToken);
+        String refreshToken = cookieService.extractRefreshToken(request, bodyToken);
 
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Refresh token não fornecido."));
@@ -264,7 +191,7 @@ public class AuthController {
                     .map(session -> {
                         if (session.getExpiryDate().isBefore(Instant.now())) {
                             userSessionRepository.delete(session);
-                            clearAuthCookies(response);
+                            cookieService.clearAuthCookies(response);
                             loginAttemptService.loginFailed(rateLimitKey);
                             logger.warn("[AUTH] Refresh token expirado.");
                             return ResponseEntity.status(403).body(new MessageResponse("Sessão expirada. Faça login novamente."));
@@ -276,11 +203,11 @@ public class AuthController {
                         // Rotação: novo refresh token, invalida o anterior
                         String newRefreshToken = UUID.randomUUID().toString();
                         session.setRefreshToken(newRefreshToken);
-                        session.setExpiryDate(Instant.now().plusMillis(refreshExpirationMs));
+                        session.setExpiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()));
                         userSessionRepository.save(session);
 
-                        response.addCookie(buildAccessCookie(newAccessToken));
-                        response.addCookie(buildRefreshCookie(newRefreshToken));
+                        response.addCookie(cookieService.buildAccessCookie(newAccessToken));
+                        response.addCookie(cookieService.buildRefreshCookie(newRefreshToken));
 
                         loginAttemptService.loginSucceeded(rateLimitKey);
                         logger.info("[AUTH] Token renovado para: {}", maskUsername(user.getUsername()));
@@ -288,7 +215,7 @@ public class AuthController {
                         return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
                     })
                     .orElseGet(() -> {
-                        clearAuthCookies(response);
+                        cookieService.clearAuthCookies(response);
                         loginAttemptService.loginFailed(rateLimitKey);
                         logger.warn("[AUTH] Refresh token não encontrado.");
                         return ResponseEntity.status(403).body(new MessageResponse("Sessão inválida. Faça login novamente."));
@@ -336,7 +263,7 @@ public class AuthController {
             @RequestBody(required = false) com.portalcursos.ng02.dto.TokenRefreshRequest body) {
 
         String bodyToken = (body != null) ? body.getRefreshToken() : null;
-        String refreshToken = extractRefreshToken(request, bodyToken);
+        String refreshToken = cookieService.extractRefreshToken(request, bodyToken);
 
         logger.info("[AUTH] Encerrando sessão.");
 
@@ -348,7 +275,7 @@ public class AuthController {
                     });
         }
 
-        clearAuthCookies(response);
+        cookieService.clearAuthCookies(response);
         return ResponseEntity.ok(new MessageResponse("Logout realizado com sucesso."));
     }
 
@@ -416,34 +343,7 @@ public class AuthController {
                     .privacyConsentAt(LocalDateTime.now())
                     .build();
 
-            Set<String> strRoles = signUpRequest.getRole();
-            Set<Role> roles = new HashSet<>();
-
-            if (strRoles == null || strRoles.isEmpty()) {
-                roles.add(roleRepository.findByName(Role.ERole.ROLE_ALUNO)
-                        .orElseThrow(() -> new RuntimeException("ROLE_ALUNO não encontrado.")));
-            } else {
-                for (String role : strRoles) {
-                    Role.ERole targetRole = switch (role.toLowerCase()) {
-                        case "admin" -> Role.ERole.ROLE_ADMIN;
-                        case "root_master", "rootmaster" -> Role.ERole.ROLE_ROOT_MASTER;
-                        case "staff", "secretaria" -> Role.ERole.ROLE_SECRETARIA;
-                        case "financeiro" -> Role.ERole.ROLE_FINANCEIRO;
-                        case "academico" -> Role.ERole.ROLE_ACADEMICO;
-                        case "matricula" -> Role.ERole.ROLE_MATRICULA;
-                        case "coordenador" -> Role.ERole.ROLE_COORDENADOR;
-                        case "teacher", "professor" -> Role.ERole.ROLE_PROFESSOR;
-                        case "monitor" -> Role.ERole.ROLE_MONITOR;
-                        case "bibliotecario" -> Role.ERole.ROLE_BIBLIOTECARIO;
-                        case "aluno", "student" -> Role.ERole.ROLE_ALUNO;
-                        case "candidato" -> Role.ERole.ROLE_CANDIDATO;
-                        default -> throw new IllegalArgumentException("Role desconhecida: " + role);
-                    };
-                    roles.add(roleRepository.findByName(targetRole)
-                            .orElseThrow(() -> new RuntimeException(targetRole + " não encontrado.")));
-                }
-            }
-
+            Set<Role> roles = roleResolver.resolveStrict(signUpRequest.getRole());
             user.setRoles(roles);
             userRepository.save(user);
 
