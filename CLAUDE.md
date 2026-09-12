@@ -41,6 +41,7 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - Uploads de documentos de usuários em `backend/uploads/` — nunca commitar nem expor (dados pessoais).
 - JDK 21 / Node 24 (LTS) — Dependabot ignora o major do `typescript` (`.github/dependabot.yml`); TS 7 está bloqueado por falta de API programática que o `typescript-eslint` precisa.
 - CI com jobs paralelizados (`test-backend`/`test-frontend`, `security-scan-*`). A branch protection `required_status_checks.contexts` precisa bater exatamente com os nomes dos jobs — renomear job = atualizar a proteção via `gh api` senão os PRs ficam `BLOCKED`.
+- Frontend tem suíte de testes real (Vitest + React Testing Library, `frontend/__tests__/`) cobrindo os fluxos críticos: login (`auth/signin`) e matrícula com upload de documentos (`academic/enroll`). Roda como parte do job `test-frontend` no CI (`npm run test:run`, antes do build). `npm test` local roda em modo watch.
 
 ## Torre de Controle dos Processos
 
