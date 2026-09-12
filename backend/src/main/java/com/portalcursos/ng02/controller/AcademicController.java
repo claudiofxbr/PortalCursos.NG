@@ -6,6 +6,7 @@ import com.portalcursos.ng02.model.Teacher;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.TeacherRepository;
+import com.portalcursos.ng02.dto.StudentListDTO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +31,9 @@ public class AcademicController {
     @GetMapping("/students")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
     public ResponseEntity<?> getAllStudents() {
-        return ResponseEntity.ok(studentRepository.findAllWithCourseAndCreator());
+        return ResponseEntity.ok(studentRepository.findAllWithCourseAndCreator().stream()
+                .map(StudentListDTO::from)
+                .toList());
     }
 
     @GetMapping("/teachers")
