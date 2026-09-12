@@ -3,9 +3,6 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.dto.LoginRequest;
 import com.portalcursos.ng02.dto.MessageResponse;
 import com.portalcursos.ng02.dto.SignupRequest;
-import com.portalcursos.ng02.model.Role;
-import com.portalcursos.ng02.model.User;
-import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,14 +10,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
-import java.time.LocalDateTime;
 
 import com.portalcursos.ng02.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +22,6 @@ import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.service.AuthService;
 import com.portalcursos.ng02.service.LoginAttemptService;
 import com.portalcursos.ng02.service.CookieService;
-import com.portalcursos.ng02.service.RoleResolver;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.exception.AccountLockedException;
 
@@ -38,15 +31,11 @@ import com.portalcursos.ng02.exception.AccountLockedException;
 @RequiredArgsConstructor
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-    private static final String PRIVACY_POLICY_VERSION = "1.0";
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder encoder;
     private final UserSessionRepository userSessionRepository;
     private final StaffMemberRepository staffMemberRepository;
     private final LoginAttemptService loginAttemptService;
     private final CookieService cookieService;
-    private final RoleResolver roleResolver;
     private final AuthService authService;
 
     /**
@@ -233,62 +222,19 @@ public class AuthController {
         // signups (mesmo bem-sucedidos) é o vetor de abuso que queremos limitar.
         loginAttemptService.loginFailed(rateLimitKey);
 
-        Set<String> requestedRoles = signUpRequest.getRole();
-        // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados
-        boolean isRequestingPrivilegedRoles = requestedRoles != null && requestedRoles.stream()
-                .anyMatch(role -> {
-                    String r = role.toUpperCase();
-                    return !r.equals("ALUNO") && !r.equals("CANDIDATO")
-                            && !r.equals("STUDENT") && !r.equals("ROLE_STUDENT")
-                            && !r.equals("ROLE_ALUNO") && !r.equals("ROLE_CANDIDATO");
-                });
-
-        if (isRequestingPrivilegedRoles) {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            boolean hasElevatedPrivileges = auth != null && auth.isAuthenticated()
-                    && !"anonymousUser".equals(auth.getPrincipal())
-                    && auth.getAuthorities().stream()
-                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-                                    || a.getAuthority().equals("ROLE_ROOT_MASTER"));
-
-            if (!hasElevatedPrivileges) {
-                logger.warn("[SECURITY] Tentativa de registro com roles privilegiadas bloqueada: {}", maskUsername(signUpRequest.getUsername()));
-                return ResponseEntity.status(403)
-                        .body(new MessageResponse("Apenas administradores podem registrar contas privilegiadas."));
-            }
-        }
-
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Erro: Nome de usuário já está em uso."));
-        }
-
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Erro: E-mail já está em uso."));
-        }
-
         try {
-            User user = User.builder()
-                    .username(signUpRequest.getUsername())
-                    .email(signUpRequest.getEmail())
-                    .password(encoder.encode(signUpRequest.getPassword()))
-                    .privacyConsentAccepted(true)
-                    .privacyConsentVersion(PRIVACY_POLICY_VERSION)
-                    .privacyConsentAt(LocalDateTime.now())
-                    .build();
-
-            Set<Role> roles = roleResolver.resolveStrict(signUpRequest.getRole());
-            user.setRoles(roles);
-            userRepository.save(user);
-
+            authService.signup(signUpRequest);
             logger.info("[AUTH] [SIGNUP-SUCCESS] Usuário {} registrado.", maskUsername(signUpRequest.getUsername()));
             return ResponseEntity.ok(new MessageResponse("Usuário registrado com sucesso."));
 
-        } catch (IllegalArgumentException e) {
-            // Mensagem de IllegalArgumentException aqui é controlada (ex.: "Role desconhecida: X"),
-            // mas delega ao GlobalExceptionHandler via BusinessException para manter formato de erro consistente.
-            throw new com.portalcursos.ng02.exception.BusinessException(e.getMessage());
+        } catch (com.portalcursos.ng02.exception.SignupPrivilegeException e) {
+            logger.warn("[SECURITY] Tentativa de registro com roles privilegiadas bloqueada: {}", maskUsername(signUpRequest.getUsername()));
+            return ResponseEntity.status(403).body(new MessageResponse(e.getMessage()));
+        } catch (com.portalcursos.ng02.exception.SignupConflictException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        } catch (com.portalcursos.ng02.exception.BusinessException e) {
+            // Role desconhecida — delega ao GlobalExceptionHandler para manter o formato padrão (400).
+            throw e;
         } catch (Exception e) {
             logger.error("[AUTH] [SIGNUP-ERROR] Falha ao salvar usuário: ", e);
             return ResponseEntity
