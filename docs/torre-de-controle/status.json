@@ -18,8 +18,8 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: queued (commit 73e7c9b)",
-      "status": "running"
+      "detail": "último run em main: success (commit 73e7c9b)",
+      "status": "active"
     },
     {
       "category": "auto",
@@ -46,9 +46,9 @@
       "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
-      "detail": "CI ok.",
+      "detail": "sem checks reportados ainda.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T15:09:32Z"
+  "updatedAt": "2026-09-12T15:09:45Z"
 }
