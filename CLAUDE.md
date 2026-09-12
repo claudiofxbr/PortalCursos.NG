@@ -42,6 +42,10 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - JDK 21 / Node 24 (LTS) — Dependabot ignora o major do `typescript` (`.github/dependabot.yml`); TS 7 está bloqueado por falta de API programática que o `typescript-eslint` precisa.
 - CI com jobs paralelizados (`test-backend`/`test-frontend`, `security-scan-*`). A branch protection `required_status_checks.contexts` precisa bater exatamente com os nomes dos jobs — renomear job = atualizar a proteção via `gh api` senão os PRs ficam `BLOCKED`.
 - Frontend tem suíte de testes real (Vitest + React Testing Library, `frontend/__tests__/`) cobrindo os fluxos críticos: login (`auth/signin`) e matrícula com upload de documentos (`academic/enroll`). Roda como parte do job `test-frontend` no CI (`npm run test:run`, antes do build). `npm test` local roda em modo watch.
+- Lote E (auditoria) — quebra de `AuthController`/`FinancialController` em Services, item a item, com aval prévio para cada um (achado marcado como "split arriscado"):
+  - **A1 (feito)**: lógica de `signin` extraída para `AuthService.login` — controller só resolve IP, loga e traduz o resultado/exceções (`AccountLockedException` → 423, `AuthenticationException` → 401) em `ResponseEntity`.
+  - **A2 (feito)**: lógica de `refreshtoken` extraída para `AuthService.refreshToken` (lookup de sessão, checagem de expiração, rotação de token). O bloqueio por força bruta e a extração do token do cookie/body continuam no controller — são checagens de entrada da requisição, não lógica de domínio da sessão. `SessionExpiredException`/`InvalidSessionException` novas ficam fora do `GlobalExceptionHandler` de propósito, para preservar o corpo de resposta legado (`{"message": "..."}`, sem os campos timestamp/status/error/path).
+  - Itens ainda não abordados: A3 (`signup`) no `AuthController`; F1 (helpers de autorização), F2 (CRUD de cobranças), F3 (geração de PIX/boleto) no `FinancialController`. Não avançar nesses sem pedido explícito — é exatamente o que "item a item" quer dizer aqui.
 
 ## Torre de Controle dos Processos
 
