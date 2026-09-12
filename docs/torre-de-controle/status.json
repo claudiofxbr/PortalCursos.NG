@@ -32,7 +32,7 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 067d6f1)",
+      "detail": "último run em main: success (commit 73e7c9b)",
       "status": "active"
     },
     {
@@ -44,11 +44,32 @@
     },
     {
       "category": "queue",
+      "id": "pr70-monitor",
+      "label": "#70 — chore(deps-dev): bump @babel/core from 7.29.0 to 7.29.7 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr69-monitor",
+      "label": "#69 — chore(deps-dev): bump js-yaml from 4.1.1 to 4.3.2 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr68-monitor",
+      "label": "#68 — chore(deps): bump brace-expansion in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
       "detail": "sem checks reportados ainda.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T15:14:25Z"
+  "updatedAt": "2026-09-12T15:22:35Z"
 }
