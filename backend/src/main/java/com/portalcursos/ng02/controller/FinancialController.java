@@ -2,10 +2,8 @@ package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
-import com.portalcursos.ng02.repository.PostgradStudentRepository;
-import com.portalcursos.ng02.repository.StudentRepository;
-import com.portalcursos.ng02.service.AuditService;
 import com.portalcursos.ng02.service.PaymentAuthorizationService;
+import com.portalcursos.ng02.service.PaymentService;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.portalcursos.ng02.dto.ManualChargeRequest;
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
 
@@ -23,10 +22,8 @@ import java.util.List;
 public class FinancialController {
 
     private final PaymentRepository paymentRepository;
-    private final StudentRepository studentRepository;
-    private final PostgradStudentRepository postgradStudentRepository;
-    private final AuditService auditService;
     private final PaymentAuthorizationService authorizationService;
+    private final PaymentService paymentService;
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
@@ -58,81 +55,20 @@ public class FinancialController {
     @PostMapping("/charge")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> createManualCharge(@RequestBody ManualChargeRequest request) {
-        Payment payment = Payment.builder()
-                .amount(request.getAmount())
-                .dueDate(request.getDueDate())
-                .status(EPaymentStatus.PENDING)
-                .category(request.getCategory())
-                .secretaryProcessType(request.getSecretaryProcessType())
-                .academicLevel(request.getAcademicLevel())
-                .description(request.getDescription())
-                .build();
-
-        if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
-            Student student = studentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de graduação não encontrado"));
-            payment.setStudent(student);
-            payment.setStudentPhotoUrl(student.getFotoMatricula());
-        } else {
-            PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
-            payment.setStudent(postgradStudent);
-            payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
-        }
-
-        auditService.injectCreator(payment);
-        return ResponseEntity.ok(paymentRepository.save(payment));
+        return ResponseEntity.ok(paymentService.createManualCharge(request));
     }
 
     @PutMapping("/invoices/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
-        Payment payment = paymentRepository.findByIdWithCreatorAndStudent(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
-
-        payment.setAmount(request.getAmount());
-        payment.setDueDate(request.getDueDate());
-        payment.setCategory(request.getCategory());
-        payment.setSecretaryProcessType(request.getSecretaryProcessType());
-        payment.setDescription(request.getDescription());
-
-        auditService.injectCreator(payment);
-        return ResponseEntity.ok(paymentRepository.save(payment));
+        return ResponseEntity.ok(paymentService.updateCharge(id, request));
     }
 
     @DeleteMapping("/invoices/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
-        Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
-
-        paymentRepository.delete(payment);
+        paymentService.deleteCharge(id);
         return ResponseEntity.ok(new MessageResponse("Cobrança removida com sucesso"));
-    }
-
-    public static class ManualChargeRequest {
-        private java.math.BigDecimal amount;
-        private java.time.LocalDate dueDate;
-        private Long studentId;
-        private EAcademicLevel academicLevel;
-        private EPaymentCategory category;
-        private ESecretaryProcessType secretaryProcessType;
-        private String description;
-
-        public java.math.BigDecimal getAmount() { return amount; }
-        public void setAmount(java.math.BigDecimal amount) { this.amount = amount; }
-        public java.time.LocalDate getDueDate() { return dueDate; }
-        public void setDueDate(java.time.LocalDate dueDate) { this.dueDate = dueDate; }
-        public Long getStudentId() { return studentId; }
-        public void setStudentId(Long studentId) { this.studentId = studentId; }
-        public EAcademicLevel getAcademicLevel() { return academicLevel; }
-        public void setAcademicLevel(EAcademicLevel academicLevel) { this.academicLevel = academicLevel; }
-        public EPaymentCategory getCategory() { return category; }
-        public void setCategory(EPaymentCategory category) { this.category = category; }
-        public ESecretaryProcessType getSecretaryProcessType() { return secretaryProcessType; }
-        public void setSecretaryProcessType(ESecretaryProcessType secretaryProcessType) { this.secretaryProcessType = secretaryProcessType; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
     }
 
     @GetMapping("/student/{studentId}")
