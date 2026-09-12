@@ -3,6 +3,7 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.service.PaymentAuthorizationService;
+import com.portalcursos.ng02.service.PaymentCodeGenerationService;
 import com.portalcursos.ng02.service.PaymentService;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.exception.BusinessException;
@@ -24,6 +25,7 @@ public class FinancialController {
     private final PaymentRepository paymentRepository;
     private final PaymentAuthorizationService authorizationService;
     private final PaymentService paymentService;
+    private final PaymentCodeGenerationService paymentCodeGenerationService;
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
@@ -113,10 +115,7 @@ public class FinancialController {
                 .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
         }
 
-        p.setMethod(EPaymentMethod.PIX);
-        p.setPaymentCode(buildSimulatedPixCode(p));
-        paymentRepository.save(p);
-        return ResponseEntity.ok(p);
+        return ResponseEntity.ok(paymentCodeGenerationService.generatePix(p));
     }
 
     @PostMapping("/generate-boleto/{paymentId}")
@@ -130,33 +129,6 @@ public class FinancialController {
                 .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
         }
 
-        p.setMethod(EPaymentMethod.BOLETO);
-        p.setPaymentCode(buildSimulatedBoletoUrl(p));
-        paymentRepository.save(p);
-        return ResponseEntity.ok(p);
-    }
-
-    /**
-     * SIMULAÇÃO — não há integração com um PSP (gateway de pagamento) real.
-     * O código gerado varia por fatura (id, valor e vencimento) para evitar que
-     * todas as cobranças recebam o mesmo "QR Code", mas não é um payload BR Code
-     * válido para uso bancário real. Substituir por integração real (ex: Mercado
-     * Pago, PagSeguro) antes de processar pagamentos de produção.
-     */
-    private String buildSimulatedPixCode(Payment p) {
-        java.math.BigDecimal amount = p.getTotalAmount() != null ? p.getTotalAmount() : java.math.BigDecimal.ZERO;
-        String amountDigits = amount.setScale(2, java.math.RoundingMode.HALF_UP)
-                .movePointRight(2)
-                .toBigInteger()
-                .toString();
-        String txid = String.format("PORTAL%010d", p.getId());
-        return "00020126580014BR.GOV.BCB.PIX0136" + txid
-                + "5204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304"
-                + String.format("%08s", amountDigits).replace(" ", "0");
-    }
-
-    private String buildSimulatedBoletoUrl(Payment p) {
-        return "https://portalcursos.edu.br/financeiro/boletos/download/SIM-" + p.getId()
-                + "-" + p.getDueDate();
+        return ResponseEntity.ok(paymentCodeGenerationService.generateBoleto(p));
     }
 }
