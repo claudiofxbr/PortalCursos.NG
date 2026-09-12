@@ -2,9 +2,8 @@ package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
-import com.portalcursos.ng02.repository.PostgradStudentRepository;
-import com.portalcursos.ng02.repository.StudentRepository;
-import com.portalcursos.ng02.service.AuditService;
+import com.portalcursos.ng02.service.PaymentAuthorizationService;
+import com.portalcursos.ng02.service.PaymentService;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.portalcursos.ng02.dto.ManualChargeRequest;
 import com.portalcursos.ng02.dto.MessageResponse;
 import java.util.List;
 
@@ -22,14 +22,13 @@ import java.util.List;
 public class FinancialController {
 
     private final PaymentRepository paymentRepository;
-    private final StudentRepository studentRepository;
-    private final PostgradStudentRepository postgradStudentRepository;
-    private final AuditService auditService;
+    private final PaymentAuthorizationService authorizationService;
+    private final PaymentService paymentService;
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getInvoicesByLevel(@PathVariable String level) {
-        if (!hasElevatedPrivileges()) {
+        if (!authorizationService.hasElevatedPrivileges()) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
@@ -44,7 +43,7 @@ public class FinancialController {
     @GetMapping("/history/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getHistoryByLevel(@PathVariable String level) {
-        if (!hasElevatedPrivileges()) {
+        if (!authorizationService.hasElevatedPrivileges()) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
@@ -56,87 +55,26 @@ public class FinancialController {
     @PostMapping("/charge")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> createManualCharge(@RequestBody ManualChargeRequest request) {
-        Payment payment = Payment.builder()
-                .amount(request.getAmount())
-                .dueDate(request.getDueDate())
-                .status(EPaymentStatus.PENDING)
-                .category(request.getCategory())
-                .secretaryProcessType(request.getSecretaryProcessType())
-                .academicLevel(request.getAcademicLevel())
-                .description(request.getDescription())
-                .build();
-
-        if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
-            Student student = studentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de graduação não encontrado"));
-            payment.setStudent(student);
-            payment.setStudentPhotoUrl(student.getFotoMatricula());
-        } else {
-            PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
-            payment.setStudent(postgradStudent);
-            payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
-        }
-
-        auditService.injectCreator(payment);
-        return ResponseEntity.ok(paymentRepository.save(payment));
+        return ResponseEntity.ok(paymentService.createManualCharge(request));
     }
 
     @PutMapping("/invoices/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> updateCharge(@PathVariable Long id, @RequestBody ManualChargeRequest request) {
-        Payment payment = paymentRepository.findByIdWithCreatorAndStudent(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
-
-        payment.setAmount(request.getAmount());
-        payment.setDueDate(request.getDueDate());
-        payment.setCategory(request.getCategory());
-        payment.setSecretaryProcessType(request.getSecretaryProcessType());
-        payment.setDescription(request.getDescription());
-
-        auditService.injectCreator(payment);
-        return ResponseEntity.ok(paymentRepository.save(payment));
+        return ResponseEntity.ok(paymentService.updateCharge(id, request));
     }
 
     @DeleteMapping("/invoices/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
-        Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
-
-        paymentRepository.delete(payment);
+        paymentService.deleteCharge(id);
         return ResponseEntity.ok(new MessageResponse("Cobrança removida com sucesso"));
-    }
-
-    public static class ManualChargeRequest {
-        private java.math.BigDecimal amount;
-        private java.time.LocalDate dueDate;
-        private Long studentId;
-        private EAcademicLevel academicLevel;
-        private EPaymentCategory category;
-        private ESecretaryProcessType secretaryProcessType;
-        private String description;
-
-        public java.math.BigDecimal getAmount() { return amount; }
-        public void setAmount(java.math.BigDecimal amount) { this.amount = amount; }
-        public java.time.LocalDate getDueDate() { return dueDate; }
-        public void setDueDate(java.time.LocalDate dueDate) { this.dueDate = dueDate; }
-        public Long getStudentId() { return studentId; }
-        public void setStudentId(Long studentId) { this.studentId = studentId; }
-        public EAcademicLevel getAcademicLevel() { return academicLevel; }
-        public void setAcademicLevel(EAcademicLevel academicLevel) { this.academicLevel = academicLevel; }
-        public EPaymentCategory getCategory() { return category; }
-        public void setCategory(EPaymentCategory category) { this.category = category; }
-        public ESecretaryProcessType getSecretaryProcessType() { return secretaryProcessType; }
-        public void setSecretaryProcessType(ESecretaryProcessType secretaryProcessType) { this.secretaryProcessType = secretaryProcessType; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<?> getStudentPayments(@PathVariable Long studentId) {
-        if (!hasElevatedPrivileges() && !ownsStudentRecord(studentId)) {
+        if (!authorizationService.hasElevatedPrivileges() && !authorizationService.ownsStudentRecord(studentId)) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: Você só pode visualizar seus próprios dados financeiros."));
         }
@@ -150,41 +88,6 @@ public class FinancialController {
         } catch (IllegalArgumentException ex) {
             throw new BusinessException("Nível acadêmico inválido: " + level);
         }
-    }
-
-    /** true se o usuário autenticado tem role operacional/administrativa (não é um ALUNO comum). */
-    private boolean hasElevatedPrivileges() {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return false;
-        return auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-                        || a.getAuthority().equals("ROLE_ROOT_MASTER")
-                        || a.getAuthority().equals("ROLE_FINANCEIRO")
-                        || a.getAuthority().equals("ROLE_SECRETARIA"));
-    }
-
-    /** true se o usuário autenticado é o próprio aluno (graduação) dono do registro {@code studentId}. */
-    private boolean ownsStudentRecord(Long studentId) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (!(auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl)) {
-            return false;
-        }
-        com.portalcursos.ng02.service.UserDetailsImpl userDetails = (com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal();
-        return studentRepository.findByUserId(userDetails.getId())
-            .map(s -> s.getId().equals(studentId))
-            .orElse(false);
-    }
-
-    /** true se o pagamento pertence ao aluno (graduação ou pós) autenticado. */
-    private boolean ownsPayment(Payment payment) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (!(auth != null && auth.getPrincipal() instanceof com.portalcursos.ng02.service.UserDetailsImpl)) {
-            return false;
-        }
-        Long userId = ((com.portalcursos.ng02.service.UserDetailsImpl) auth.getPrincipal()).getId();
-        return payment.getStudent() != null
-            && payment.getStudent().getUser() != null
-            && payment.getStudent().getUser().getId().equals(userId);
     }
 
     @GetMapping("/invoices")
@@ -205,7 +108,7 @@ public class FinancialController {
         Payment p = paymentRepository.findByIdWithCreatorAndStudent(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar PIX"));
 
-        if (!hasElevatedPrivileges() && !ownsPayment(p)) {
+        if (!authorizationService.hasElevatedPrivileges() && !authorizationService.ownsPayment(p)) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
         }
@@ -222,7 +125,7 @@ public class FinancialController {
         Payment p = paymentRepository.findByIdWithCreatorAndStudent(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para gerar boleto"));
 
-        if (!hasElevatedPrivileges() && !ownsPayment(p)) {
+        if (!authorizationService.hasElevatedPrivileges() && !authorizationService.ownsPayment(p)) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
         }

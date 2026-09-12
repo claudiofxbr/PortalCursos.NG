@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.controller;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -69,6 +70,90 @@ public class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.path").exists())
                 // Formato antigo tinha somente "message" (sem os demais campos do handler padrão)
                 .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // Cobertura do Lote E, item A3: signup extraído de AuthController.registerUser para
+    // AuthService.signup (checagem de role privilegiada, unicidade de username/e-mail).
+
+    @Test
+    public void testSignupComRolePrivilegiadaSemAutenticacaoRetorna403() throws Exception {
+        String payload = "{"
+                + "\"username\":\"tentativaadmin\","
+                + "\"email\":\"tentativaadmin@example.com\","
+                + "\"password\":\"senha123\","
+                + "\"role\":[\"admin\"],"
+                + "\"privacyConsentAccepted\":true"
+                + "}";
+
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Apenas administradores podem registrar contas privilegiadas."))
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
+
+        assertFalse(userRepository.existsByUsername("tentativaadmin"),
+                "Usuário não deve ser criado quando a role privilegiada é negada");
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testSignupComRolePrivilegiadaAutenticadoComoAdminFunciona() throws Exception {
+        String payload = "{"
+                + "\"username\":\"novacoordenadora\","
+                + "\"email\":\"novacoordenadora@example.com\","
+                + "\"password\":\"senha123\","
+                + "\"role\":[\"coordenador\"],"
+                + "\"privacyConsentAccepted\":true"
+                + "}";
+
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Usuário registrado com sucesso."));
+
+        assertTrue(userRepository.existsByUsername("novacoordenadora"));
+    }
+
+    @Test
+    public void testSignupComUsernameJaExistenteRetorna400() throws Exception {
+        String payload = "{"
+                + "\"username\":\"admin\","
+                + "\"email\":\"outroemail@example.com\","
+                + "\"password\":\"senha123\","
+                + "\"role\":[\"aluno\"],"
+                + "\"privacyConsentAccepted\":true"
+                + "}";
+
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.3")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro: Nome de usuário já está em uso."))
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
+    }
+
+    @Test
+    public void testSignupComEmailJaExistenteRetorna400() throws Exception {
+        String payload = "{"
+                + "\"username\":\"usuarionovo123\","
+                + "\"email\":\"admin@portalcursos.com\","
+                + "\"password\":\"senha123\","
+                + "\"role\":[\"aluno\"],"
+                + "\"privacyConsentAccepted\":true"
+                + "}";
+
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.4")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro: E-mail já está em uso."))
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
     }
 
     // Cobertura do Lote E, item A1: login extraído de AuthController.authenticateUser para
