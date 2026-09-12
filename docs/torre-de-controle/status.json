@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr76-monitor",
+      "label": "#76 — refactor(auth): extrai login para AuthService — Lote E, item A1",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr70-monitor",
       "label": "#70 — chore(deps-dev): bump @babel/core from 7.29.0 to 7.29.7 in /frontend",
       "detail": "sem checks reportados ainda.",
@@ -64,5 +71,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T16:58:26Z"
+  "updatedAt": "2026-09-12T17:17:57Z"
 }
