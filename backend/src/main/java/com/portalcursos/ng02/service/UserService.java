@@ -65,7 +65,13 @@ public class UserService {
         // 2. Preparação do Usuário
         user.setPassword(encoder.encode(user.getPassword()));
         
-        user.setRoles(roleResolver.resolveLenient(strRoles));
+        try {
+            user.setRoles(roleResolver.resolveStrict(strRoles));
+        } catch (IllegalArgumentException e) {
+            // Mensagem controlada (ex.: "Role desconhecida: X") — mesmo padrão de
+            // AuthController.registerUser, para manter o formato de erro consistente.
+            throw new BusinessException(e.getMessage());
+        }
 
         // 3. Persistência do Usuário (Atomicidade Fase 1)
         User savedUser = userRepository.saveAndFlush(user);
