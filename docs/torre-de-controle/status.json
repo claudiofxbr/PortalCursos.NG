@@ -67,9 +67,9 @@
       "category": "queue",
       "id": "pr64-monitor",
       "label": "#64 — refactor(auth): RoleResolver + CookieService (backlog E, subset seguro)",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-12T15:22:35Z"
+  "updatedAt": "2026-09-12T15:22:55Z"
 }
