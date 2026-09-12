@@ -17,6 +17,9 @@ FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a343
 RUN apk add --no-cache wget && apk upgrade --no-cache libexpat p11-kit p11-kit-trust libssl3 libcrypto3 sqlite-libs && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build --chown=app:app /app/target/portalcursos-backend.jar app.jar
+# Volume nomeado novo montado em /app/uploads herda dono root do diretório
+# da imagem; cria e ajusta ownership antes de trocar para o usuário não-root.
+RUN mkdir -p /app/uploads && chown -R app:app /app/uploads
 USER app
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
