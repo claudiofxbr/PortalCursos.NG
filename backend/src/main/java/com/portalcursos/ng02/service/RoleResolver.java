@@ -14,14 +14,12 @@ import java.util.Set;
  * Consolida o mapeamento que estava duplicado entre {@code AuthController.registerUser}
  * e {@code UserService.createUser/updateUser} (achado 1.4 da auditoria).
  *
- * <p>Dois modos, preservando o comportamento de cada chamador original:
- * <ul>
- *   <li>{@link #resolveStrict} — role desconhecida lança {@link IllegalArgumentException}
- *       e a role precisa já existir no banco (comportamento do signup).</li>
- *   <li>{@link #resolveLenient} — role desconhecida vira {@code ROLE_ALUNO} individualmente
- *       e roles ausentes no banco são criadas (comportamento do UserService).</li>
- * </ul>
- * O modo estrito é o correto; o leniente é dívida conhecida (achado 1.6).
+ * <p>Role desconhecida lança {@link IllegalArgumentException} — o chamador decide como
+ * traduzir isso para a API (ver {@code AuthController.registerUser} e
+ * {@code UserService.createUser}, que convertem para {@code BusinessException}/400).
+ * Até a auditoria de 2026-09 havia um modo "leniente" que engolia o erro e atribuía
+ * {@code ROLE_ALUNO} silenciosamente — removido (achado 1.6): uma role mal digitada
+ * na criação de usuário virava aluno sem aviso nenhum, em vez de falhar a operação.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -29,7 +27,7 @@ public class RoleResolver {
 
     private final RoleRepository roleRepository;
 
-    /** Signup / troca de roles: qualquer nome de role inválido aborta a operação. */
+    /** Role desconhecida aborta a operação — nenhum chamador deve receber um resultado parcial/errado. */
     public Set<Role> resolveStrict(Set<String> strRoles) {
         Set<Role> roles = new HashSet<>();
         if (strRoles == null || strRoles.isEmpty()) {
@@ -38,25 +36,6 @@ public class RoleResolver {
         }
         for (String raw : strRoles) {
             ERole target = mapToERole(raw);
-            roles.add(getOrCreateRole(target));
-        }
-        return roles;
-    }
-
-    /** UserService: role inválida cai em ROLE_ALUNO (por item); cria a role se faltar. */
-    public Set<Role> resolveLenient(Set<String> strRoles) {
-        Set<Role> roles = new HashSet<>();
-        if (strRoles == null || strRoles.isEmpty()) {
-            roles.add(getOrCreateRole(ERole.ROLE_ALUNO));
-            return roles;
-        }
-        for (String raw : strRoles) {
-            ERole target;
-            try {
-                target = mapToERole(raw);
-            } catch (IllegalArgumentException e) {
-                target = ERole.ROLE_ALUNO;
-            }
             roles.add(getOrCreateRole(target));
         }
         return roles;

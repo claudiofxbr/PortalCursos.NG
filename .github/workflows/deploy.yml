@@ -31,9 +31,7 @@ jobs:
   # dois estavam sequenciais no mesmo job (build backend terminava antes do
   # frontend começar), sem motivo: um não depende do artefato do outro.
   test-frontend:
-    # Sem suite de testes real hoje (sem `npm test`, sem arquivos de teste) —
-    # o nome reflete o que o job de fato faz: só valida que o build passa.
-    name: Build — Frontend (sem testes)
+    name: Build & Test — Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -50,14 +48,20 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Frontend install & build
+      - name: Frontend install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend unit tests (Vitest)
+        working-directory: frontend
+        run: npm run test:run
+
+      - name: Frontend build
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: https://xavierbr-vps.tech
           NEXT_PUBLIC_BASE_PATH: /portalcursos.ng
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
   # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
   # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o

@@ -4,6 +4,14 @@
 # OMEGA-SUPREME: Script de Automação Definitiva de Deploy Docker
 # PortalCursos.NG - Versão 2026.05 (Docker/Nginx/SSL Edition)
 # =================================================================
+#
+# OBSOLETO — NÃO USAR. Movido para cá pela auditoria de 2026-09 porque:
+# - Assume Traefik como único proxy de borda; produção usa nginx do host
+#   (ver CLAUDE.md, "Edge = nginx do host").
+# - Sobe um serviço "postgres" via docker-compose.prod.yml; produção usa
+#   exclusivamente Neon (cloud), não há Postgres local.
+# O deploy real é `devops/scripts/deploy_ci.sh`, disparado pelo
+# `.github/workflows/deploy.yml` a cada push em main.
 
 set -e
 
