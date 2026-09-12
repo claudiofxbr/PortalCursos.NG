@@ -17,7 +17,9 @@ Foram movidos para cá pela auditoria de banco de dados de 2026-08 porque:
   plano, mas mantém-se aqui por não fazer parte do fluxo de deploy padrão
   (o `DataLoader` já sincroniza o usuário `rootmaster` a partir de
   `APP_ROOT_PASSWORD` no boot).
-- `V39_5_Normalization_3FN.sql` e `V40_Normalization_Omega.sql` vieram de uma
+- `Normalization_3FN.sql` e `Normalization_Omega.sql` (renomeados; tinham
+  prefixo `V39_5_`/`V40_` que confundia com as migrations reais do Flyway,
+  que vão até V21) vieram de uma
   pasta `database/` na raiz do projeto que não fazia parte do fluxo Flyway
   nem estava sinalizada como quarentena — movidos para cá pela auditoria de
   banco de dados de 2026-08. Referenciam colunas/tabelas que não existem no
