@@ -6,36 +6,31 @@ import com.portalcursos.ng02.dto.SignupRequest;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.UserRepository;
-import com.portalcursos.ng02.security.JwtUtils;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
-import java.time.Instant;
 import java.time.LocalDateTime;
 
-import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.AuthService;
 import com.portalcursos.ng02.service.LoginAttemptService;
 import com.portalcursos.ng02.service.CookieService;
 import com.portalcursos.ng02.service.RoleResolver;
 import com.portalcursos.ng02.model.StaffMember;
+import com.portalcursos.ng02.exception.AccountLockedException;
 
 
 @RestController
@@ -45,15 +40,14 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private static final String PRIVACY_POLICY_VERSION = "1.0";
 
-    private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
-    private final JwtUtils jwtUtils;
     private final UserSessionRepository userSessionRepository;
     private final StaffMemberRepository staffMemberRepository;
     private final LoginAttemptService loginAttemptService;
     private final CookieService cookieService;
     private final RoleResolver roleResolver;
+    private final AuthService authService;
 
     /**
      * Extrai o IP real do cliente atrás do nginx (devops/scripts/nginx.conf).
@@ -98,55 +92,19 @@ public class AuthController {
 
         logger.info("[AUTH API] [SIGNIN] Tentativa de login: {}", maskUsername(loginRequest.getUsername()));
 
-        if (loginAttemptService.isBlocked(ipAddress)) {
+        try {
+            com.portalcursos.ng02.dto.JwtResponse jwtResponse = authService.login(
+                    loginRequest.getUsername(), loginRequest.getPassword(), ipAddress, request, response);
+
+            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso.", maskUsername(loginRequest.getUsername()));
+            return ResponseEntity.ok(jwtResponse);
+
+        } catch (AccountLockedException e) {
             logger.warn("[SECURITY] Tentativa de login bloqueada para IP: {}", ipAddress);
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.LOCKED)
-                    .body(new MessageResponse("Acesso temporariamente bloqueado por excesso de tentativas. Tente novamente em 15 minutos."));
-        }
-
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            User user = userRepository.findById(userDetails.getId())
-                    .orElseThrow(() -> new RuntimeException("Erro: Usuário não encontrado."));
-
-            userSessionRepository.deleteByUser(user);
-            loginAttemptService.loginSucceeded(ipAddress);
-
-            String jwt = jwtUtils.generateTokenFromUserDetails(userDetails);
-            String refreshTokenStr = UUID.randomUUID().toString();
-
-            UserSession session = UserSession.builder()
-                    .user(user)
-                    .refreshToken(refreshTokenStr)
-                    .expiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()))
-                    .userAgent(request.getHeader("User-Agent") != null ? request.getHeader("User-Agent") : "Unknown")
-                    .ipAddress(ipAddress)
-                    .build();
-            userSessionRepository.save(session);
-
-            // Setar cookies HttpOnly — tokens NÃO são mais expostos ao JavaScript
-            response.addCookie(cookieService.buildAccessCookie(jwt));
-            response.addCookie(cookieService.buildRefreshCookie(refreshTokenStr));
-
-            List<String> roles = userDetails.getAuthorities().stream()
-                    .map(item -> item.getAuthority())
-                    .collect(Collectors.toList());
-
-            logger.info("[AUTH API] [SUCCESS] Usuário {} autenticado com sucesso.", maskUsername(loginRequest.getUsername()));
-
-            // Retorna apenas dados de perfil — tokens viajam exclusivamente via cookie
-            return ResponseEntity.ok(new com.portalcursos.ng02.dto.JwtResponse(
-                    null, null,
-                    userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles));
-
+                    .body(new MessageResponse(e.getMessage()));
         } catch (org.springframework.security.core.AuthenticationException e) {
-            loginAttemptService.loginFailed(ipAddress);
             logger.warn("[AUTH API] [FAILURE] Falha na autenticação para {}: {}", maskUsername(loginRequest.getUsername()), e.getMessage());
             return ResponseEntity
                     .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
@@ -187,39 +145,16 @@ public class AuthController {
         logger.debug("[AUTH] Renovação de token solicitada.");
 
         try {
-            return userSessionRepository.findByRefreshToken(refreshToken)
-                    .map(session -> {
-                        if (session.getExpiryDate().isBefore(Instant.now())) {
-                            userSessionRepository.delete(session);
-                            cookieService.clearAuthCookies(response);
-                            loginAttemptService.loginFailed(rateLimitKey);
-                            logger.warn("[AUTH] Refresh token expirado.");
-                            return ResponseEntity.status(403).body(new MessageResponse("Sessão expirada. Faça login novamente."));
-                        }
-
-                        User user = session.getUser();
-                        String newAccessToken = jwtUtils.generateTokenFromUser(user);
-
-                        // Rotação: novo refresh token, invalida o anterior
-                        String newRefreshToken = UUID.randomUUID().toString();
-                        session.setRefreshToken(newRefreshToken);
-                        session.setExpiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()));
-                        userSessionRepository.save(session);
-
-                        response.addCookie(cookieService.buildAccessCookie(newAccessToken));
-                        response.addCookie(cookieService.buildRefreshCookie(newRefreshToken));
-
-                        loginAttemptService.loginSucceeded(rateLimitKey);
-                        logger.info("[AUTH] Token renovado para: {}", maskUsername(user.getUsername()));
-                        // Retorna apenas confirmação — tokens viajam via cookie
-                        return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
-                    })
-                    .orElseGet(() -> {
-                        cookieService.clearAuthCookies(response);
-                        loginAttemptService.loginFailed(rateLimitKey);
-                        logger.warn("[AUTH] Refresh token não encontrado.");
-                        return ResponseEntity.status(403).body(new MessageResponse("Sessão inválida. Faça login novamente."));
-                    });
+            String username = authService.refreshToken(refreshToken, rateLimitKey, response);
+            logger.info("[AUTH] Token renovado para: {}", maskUsername(username));
+            // Retorna apenas confirmação — tokens viajam via cookie
+            return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
+        } catch (com.portalcursos.ng02.exception.SessionExpiredException e) {
+            logger.warn("[AUTH] Refresh token expirado.");
+            return ResponseEntity.status(403).body(new MessageResponse(e.getMessage()));
+        } catch (com.portalcursos.ng02.exception.InvalidSessionException e) {
+            logger.warn("[AUTH] Refresh token não encontrado.");
+            return ResponseEntity.status(403).body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             logger.error("[AUTH] Erro crítico no refresh token: ", e);
             return ResponseEntity.status(500).body(new MessageResponse("Erro interno ao renovar sessão."));
