@@ -2,6 +2,8 @@ package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.JwtResponse;
 import com.portalcursos.ng02.exception.AccountLockedException;
+import com.portalcursos.ng02.exception.InvalidSessionException;
+import com.portalcursos.ng02.exception.SessionExpiredException;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.model.UserSession;
 import com.portalcursos.ng02.repository.UserRepository;
@@ -90,5 +92,45 @@ public class AuthService {
 
         // Retorna apenas dados de perfil — tokens viajam exclusivamente via cookie
         return new JwtResponse(null, null, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles);
+    }
+
+    /**
+     * Renova a sessão a partir do refresh token (rotação: emite um novo, invalida o anterior).
+     * O bloqueio por força bruta (isBlocked) e a validação de presença do token continuam no
+     * controller — são checagens de entrada da requisição, não lógica de domínio da sessão.
+     *
+     * @return o username do dono da sessão renovada (controller usa para o log mascarado).
+     * @throws InvalidSessionException refresh token não encontrado (HTTP 403 — ver AuthController).
+     * @throws SessionExpiredException refresh token encontrado mas expirado (HTTP 403 — ver AuthController).
+     */
+    public String refreshToken(String refreshToken, String rateLimitKey, HttpServletResponse response) {
+        UserSession session = userSessionRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() -> {
+                    cookieService.clearAuthCookies(response);
+                    loginAttemptService.loginFailed(rateLimitKey);
+                    return new InvalidSessionException("Sessão inválida. Faça login novamente.");
+                });
+
+        if (session.getExpiryDate().isBefore(Instant.now())) {
+            userSessionRepository.delete(session);
+            cookieService.clearAuthCookies(response);
+            loginAttemptService.loginFailed(rateLimitKey);
+            throw new SessionExpiredException("Sessão expirada. Faça login novamente.");
+        }
+
+        User user = session.getUser();
+        String newAccessToken = jwtUtils.generateTokenFromUser(user);
+
+        // Rotação: novo refresh token, invalida o anterior
+        String newRefreshToken = UUID.randomUUID().toString();
+        session.setRefreshToken(newRefreshToken);
+        session.setExpiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()));
+        userSessionRepository.save(session);
+
+        response.addCookie(cookieService.buildAccessCookie(newAccessToken));
+        response.addCookie(cookieService.buildRefreshCookie(newRefreshToken));
+
+        loginAttemptService.loginSucceeded(rateLimitKey);
+        return user.getUsername();
     }
 }

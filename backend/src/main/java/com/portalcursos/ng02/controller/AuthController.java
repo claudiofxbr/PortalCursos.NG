@@ -6,7 +6,6 @@ import com.portalcursos.ng02.dto.SignupRequest;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.UserRepository;
-import com.portalcursos.ng02.security.JwtUtils;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,9 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 import com.portalcursos.ng02.repository.UserSessionRepository;
@@ -45,7 +42,6 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
-    private final JwtUtils jwtUtils;
     private final UserSessionRepository userSessionRepository;
     private final StaffMemberRepository staffMemberRepository;
     private final LoginAttemptService loginAttemptService;
@@ -149,39 +145,16 @@ public class AuthController {
         logger.debug("[AUTH] Renovação de token solicitada.");
 
         try {
-            return userSessionRepository.findByRefreshToken(refreshToken)
-                    .map(session -> {
-                        if (session.getExpiryDate().isBefore(Instant.now())) {
-                            userSessionRepository.delete(session);
-                            cookieService.clearAuthCookies(response);
-                            loginAttemptService.loginFailed(rateLimitKey);
-                            logger.warn("[AUTH] Refresh token expirado.");
-                            return ResponseEntity.status(403).body(new MessageResponse("Sessão expirada. Faça login novamente."));
-                        }
-
-                        User user = session.getUser();
-                        String newAccessToken = jwtUtils.generateTokenFromUser(user);
-
-                        // Rotação: novo refresh token, invalida o anterior
-                        String newRefreshToken = UUID.randomUUID().toString();
-                        session.setRefreshToken(newRefreshToken);
-                        session.setExpiryDate(Instant.now().plusMillis(cookieService.getRefreshExpirationMs()));
-                        userSessionRepository.save(session);
-
-                        response.addCookie(cookieService.buildAccessCookie(newAccessToken));
-                        response.addCookie(cookieService.buildRefreshCookie(newRefreshToken));
-
-                        loginAttemptService.loginSucceeded(rateLimitKey);
-                        logger.info("[AUTH] Token renovado para: {}", maskUsername(user.getUsername()));
-                        // Retorna apenas confirmação — tokens viajam via cookie
-                        return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
-                    })
-                    .orElseGet(() -> {
-                        cookieService.clearAuthCookies(response);
-                        loginAttemptService.loginFailed(rateLimitKey);
-                        logger.warn("[AUTH] Refresh token não encontrado.");
-                        return ResponseEntity.status(403).body(new MessageResponse("Sessão inválida. Faça login novamente."));
-                    });
+            String username = authService.refreshToken(refreshToken, rateLimitKey, response);
+            logger.info("[AUTH] Token renovado para: {}", maskUsername(username));
+            // Retorna apenas confirmação — tokens viajam via cookie
+            return ResponseEntity.ok(new MessageResponse("Token renovado com sucesso."));
+        } catch (com.portalcursos.ng02.exception.SessionExpiredException e) {
+            logger.warn("[AUTH] Refresh token expirado.");
+            return ResponseEntity.status(403).body(new MessageResponse(e.getMessage()));
+        } catch (com.portalcursos.ng02.exception.InvalidSessionException e) {
+            logger.warn("[AUTH] Refresh token não encontrado.");
+            return ResponseEntity.status(403).body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             logger.error("[AUTH] Erro crítico no refresh token: ", e);
             return ResponseEntity.status(500).body(new MessageResponse("Erro interno ao renovar sessão."));
