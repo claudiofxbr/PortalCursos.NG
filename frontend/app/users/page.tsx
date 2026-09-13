@@ -361,28 +361,28 @@ export default function UsersManagementPage() {
                                 <PhotoUpload3x4 onPhotoSelected={(file) => setFormData({...formData, foto3x4File: file})} label="FOTO IDENTITÁRIA (3X4)" />
                             </div>
                             <div style={{ gridColumn: 'span 2' }}>
-                                <label style={LABEL_STYLE}>Nome Operacional Completo</label>
-                                <input style={INPUT_STYLE} required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} placeholder="Nome completo para crachá e sistemas" />
+                                <label htmlFor="newUserFullName" style={LABEL_STYLE}>Nome Operacional Completo</label>
+                                <input id="newUserFullName" autoComplete="name" style={INPUT_STYLE} required value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} placeholder="Nome completo para crachá e sistemas" />
                             </div>
                             <div>
-                                <label style={LABEL_STYLE}>Cargo Institucional</label>
-                                <input style={INPUT_STYLE} required value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} placeholder="ex: Coordenador Pedagógico" />
+                                <label htmlFor="newUserPosition" style={LABEL_STYLE}>Cargo Institucional</label>
+                                <input id="newUserPosition" autoComplete="organization-title" style={INPUT_STYLE} required value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} placeholder="ex: Coordenador Pedagógico" />
                             </div>
                             <div>
-                                <label style={LABEL_STYLE}>Departamento / Setor</label>
-                                <input style={INPUT_STYLE} required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} placeholder="ex: Acadêmico" />
+                                <label htmlFor="newUserDepartment" style={LABEL_STYLE}>Departamento / Setor</label>
+                                <input id="newUserDepartment" autoComplete="off" style={INPUT_STYLE} required value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} placeholder="ex: Acadêmico" />
                             </div>
                             <div>
-                                <label style={LABEL_STYLE}>ID de Usuário (Username)</label>
-                                <input style={INPUT_STYLE} required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="ex: claudio.braga" />
+                                <label htmlFor="newUserUsername" style={LABEL_STYLE}>ID de Usuário (Username)</label>
+                                <input id="newUserUsername" autoComplete="username" style={INPUT_STYLE} required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="ex: claudio.braga" />
                             </div>
                             <div>
-                                <label style={LABEL_STYLE}>Email Institucional</label>
-                                <input style={INPUT_STYLE} required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="ex: institucional@portal.edu.br" />
+                                <label htmlFor="newUserEmail" style={LABEL_STYLE}>Email Institucional</label>
+                                <input id="newUserEmail" autoComplete="email" style={INPUT_STYLE} required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="ex: institucional@portal.edu.br" />
                             </div>
                             <div>
-                                <label style={LABEL_STYLE}>Senha Provisória</label>
-                                <input style={INPUT_STYLE} required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
+                                <label htmlFor="newUserPassword" style={LABEL_STYLE}>Senha Provisória</label>
+                                <input id="newUserPassword" autoComplete="new-password" style={INPUT_STYLE} required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
                             </div>
                             <div>
                                 <label style={LABEL_STYLE}>Nível de Autoridade</label>
