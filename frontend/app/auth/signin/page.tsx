@@ -101,16 +101,13 @@ export default function SignInPage() {
 
   return (
     <div style={{
-      height: '100vh',
-      width: '100vw',
+      minHeight: '100vh',
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       background: 'linear-gradient(135deg, #0d123d 0%, #1a237e 40%, #c5a059 100%)',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      overflow: 'hidden'
+      position: 'relative'
     }} className="fade-in">
       
       <div style={{ position: 'absolute', width: '300px', height: '300px', background: 'rgba(197, 160, 89, 0.1)', borderRadius: '50%', top: '-50px', right: '-50px', filter: 'blur(50px)' }}></div>

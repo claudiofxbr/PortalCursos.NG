@@ -84,16 +84,12 @@ export default function SignUpPage() {
 
   return (
     <div style={{
-      height: '100vh',
-      width: '100vw',
+      minHeight: '100vh',
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, var(--sidebar-bg) 0%, var(--primary-color) 100%)',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      zIndex: 1000
+      background: 'linear-gradient(135deg, var(--sidebar-bg) 0%, var(--primary-color) 100%)'
     }}>
       <div className="glass-panel fade-in" style={{
         width: '400px',
