@@ -1,10 +1,14 @@
 package com.portalcursos.ng02;
 
+import com.portalcursos.ng02.model.DataDeletionRequest;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
+import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.repository.DataDeletionRequestRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
+import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.service.PaymentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +82,12 @@ class PostgresMigrationIntegrationTest {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private DataDeletionRequestRepository dataDeletionRequestRepository;
 
     @Test
     void migrationsAplicamSemFalhaContraPostgresReal() {
@@ -168,6 +178,40 @@ class PostgresMigrationIntegrationTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM payments WHERE id = ? AND active = false", Integer.class, saved.getId());
         assertEquals(1, count, "O pagamento deve continuar na tabela, só marcado como inativo");
+    }
+
+    // Regressão do achado: userRepository.deleteById() (hard delete, usado por
+    // UserService.deleteUser) lançava DataIntegrityViolationException sempre que existisse
+    // um DataDeletionRequest.user_id (ou repair_tickets.reported_by_id) apontando para o
+    // usuário, porque as FKs para users(id) ficavam sem ON DELETE (RESTRICT/NO ACTION por
+    // padrão) — diferente do padrão ON DELETE SET NULL já usado no resto do schema para
+    // referências a users(id) (ver V9, students.user_id/staff_members.user_id). Corrigido na
+    // V22, recriando essas duas FKs com ON DELETE SET NULL.
+    @Test
+    void deleteUserNaoQuebraComDataDeletionRequestApontandoParaEleContraPostgresReal() {
+        User user = userRepository.saveAndFlush(User.builder()
+                .username("usuario-fk-teste")
+                .email("usuario-fk-teste@test.com")
+                .password("hash-qualquer")
+                .build());
+        Long userId = user.getId();
+
+        DataDeletionRequest request = dataDeletionRequestRepository.saveAndFlush(
+                DataDeletionRequest.builder()
+                        .userId(userId)
+                        .requestedUsername(user.getUsername())
+                        .build());
+        Long requestId = request.getId();
+
+        assertDoesNotThrow(() -> userRepository.deleteById(userId));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertTrue(userRepository.findById(userId).isEmpty(), "Usuário deve ter sido removido (hard delete)");
+
+        DataDeletionRequest reloaded = dataDeletionRequestRepository.findById(requestId).orElseThrow();
+        assertNull(reloaded.getUserId(),
+                "V22: ON DELETE SET NULL deve zerar user_id em vez de bloquear a exclusão do usuário");
     }
 
     private Student buildStudent(String cpf, String email, String registrationNumber) {
