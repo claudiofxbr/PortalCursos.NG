@@ -64,3 +64,6 @@ dump.rdb
 
 # Arquivos de saída de teste manual (lixo, não deveriam ser versionados)
 test_env_out.txt
+
+# Notas privadas de infraestrutura (links de console, nomes de recursos — nunca versionar)
+infra-notas-privadas.md
