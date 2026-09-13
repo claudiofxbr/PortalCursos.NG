@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 4975e4e)",
+      "detail": "último run em main: success (commit 8027802)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 4975e4e)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit 8027802)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -46,23 +46,16 @@
       "category": "queue",
       "id": "pr70-monitor",
       "label": "#70 — chore(deps-dev): bump @babel/core from 7.29.0 to 7.29.7 in /frontend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
       "category": "queue",
       "id": "pr69-monitor",
       "label": "#69 — chore(deps-dev): bump js-yaml from 4.1.1 to 4.3.2 in /frontend",
-      "detail": "sem checks reportados ainda.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr68-monitor",
-      "label": "#68 — chore(deps): bump brace-expansion in /frontend",
-      "detail": "sem checks reportados ainda.",
+      "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-13T13:06:14Z"
+  "updatedAt": "2026-09-13T13:38:14Z"
 }
