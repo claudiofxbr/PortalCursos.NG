@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 363f6ea)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit b28ac46)",
+      "status": "running"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: failure (commit 363f6ea)",
-      "status": "failed"
+      "detail": "último run em main: queued (commit b28ac46)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -43,5 +43,5 @@
       "status": "active"
     }
   ],
-  "updatedAt": "2026-09-13T13:50:59Z"
+  "updatedAt": "2026-09-13T14:26:14Z"
 }
