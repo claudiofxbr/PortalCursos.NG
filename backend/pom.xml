@@ -105,6 +105,22 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 			<version>13.5.0</version>
 		</dependency>
+		<!-- Testcontainers: roda as migrations Flyway contra Postgres real (não H2) para
+		     exercitar migrations V20+ e o comportamento real de @SQLRestriction/índices
+		     parciais, que o H2 não valida fielmente (achado da auditoria). DataSource é
+		     bean manual em DatabaseConfig (não usa JdbcConnectionDetails), então não
+		     precisamos de spring-boot-testcontainers/@ServiceConnection — @DynamicPropertySource
+		     clássico basta. -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
