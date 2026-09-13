@@ -1,6 +1,5 @@
 'use client';
 
-import { V_BUILD_ID } from '../../services/api';
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,13 +14,9 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [retryStatus, setRetryStatus] = useState<string | null>(null);
-  const [retryProgress, setRetryProgress] = useState(0);
 
-  // --- MECANISMO DE CONVERGÊNCIA V11.7 ---
+  // Fecha o banner de erro com Esc ou após timeout
   useEffect(() => {
-    // A sincronização principal agora é feita pelo VersionGuard no RootLayout.
-    // Aqui apenas limpamos erros locais.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setError(null);
@@ -68,8 +63,6 @@ export default function SignInPage() {
         }, 800);
       }
     } catch (err: any) {
-      console.error("[AUTH DEBUG] Erro no Login:", err);
-      
       let msg = err.message || "Não foi possível conectar ao sistema.";
 
       if (err.response) {
@@ -92,8 +85,6 @@ export default function SignInPage() {
       } 
       
       setError(msg);
-      setRetryProgress(0);
-      setRetryStatus(null);
     } finally {
       setLoading(false);
     }
@@ -160,13 +151,15 @@ export default function SignInPage() {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', textAlign: 'left' }}>
               <div className="hover-lift">
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c5a059', letterSpacing: '1px', textTransform: 'uppercase' }}>Usuário</label>
-                <input 
-                  type="text" 
+                <label htmlFor="username" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c5a059', letterSpacing: '1px', textTransform: 'uppercase' }}>Usuário</label>
+                <input
+                  id="username"
+                  type="text"
                   required
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin" 
+                  placeholder="admin"
                   style={{
                     width: '100%',
                     padding: '14px',
@@ -182,13 +175,15 @@ export default function SignInPage() {
               </div>
 
               <div className="hover-lift">
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c5a059', letterSpacing: '1px', textTransform: 'uppercase' }}>Senha</label>
-                <input 
-                  type="password" 
+                <label htmlFor="password" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c5a059', letterSpacing: '1px', textTransform: 'uppercase' }}>Senha</label>
+                <input
+                  id="password"
+                  type="password"
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" 
+                  placeholder="••••••••"
                   style={{
                     width: '100%',
                     padding: '14px',
@@ -218,31 +213,14 @@ export default function SignInPage() {
                   overflow: 'hidden'
                 }}
               >
-                {loading && retryProgress > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    height: '4px',
-                    width: `${retryProgress}%`,
-                    backgroundColor: '#fff',
-                    transition: 'width 0.5s ease-out'
-                  }} />
-                )}
                 <span style={{ position: 'relative', zIndex: 1 }}>
-                    {loading 
-                    ? (retryStatus || "Validando Credenciais...") 
-                    : "Entrar no Sistema (VITA-V17.1)"}
+                    {loading
+                    ? "Validando Credenciais..."
+                    : "Entrar no Sistema"}
                 </span>
               </button>
 
               <div style={{ textAlign: 'center', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '0.65rem', color: '#c5a059', opacity: 0.8, letterSpacing: '1px', fontWeight: 'bold' }}>
-                  [ V17.1 - PROTOCOLO VITA ]
-                </span>
-                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  AUTO-CICATRIZAÇÃO ATIVA | {V_BUILD_ID}
-                </span>
                 <Link href="/health" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>
                   Rede & Diagnóstico de Conexão
                 </Link>
