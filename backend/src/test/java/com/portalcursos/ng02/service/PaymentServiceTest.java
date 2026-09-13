@@ -132,14 +132,25 @@ public class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    // Achado da auditoria: paymentRepository.delete() usava @SQLDelete que quebrava sempre
+    // contra um banco real (entidade versionada, SQL customizado sem o parâmetro de
+    // @Version — confirmado via Testcontainers). Removido; deleteCharge agora faz
+    // soft-delete explícito (setActive(false) + save()), mesmo padrão de
+    // UserService.deleteUser. Este teste, mockado, não teria pego o bug original (mock não
+    // executa SQL de verdade) — por isso o achado só apareceu com Testcontainers.
     @Test
-    public void deleteChargeRemoveQuandoExiste() {
+    public void deleteChargeDesativaQuandoExiste() {
         Payment existing = Payment.builder().id(7L).build();
+        existing.setActive(true);
         when(paymentRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(existing)).thenReturn(existing);
 
         paymentService.deleteCharge(7L);
 
-        verify(paymentRepository).delete(existing);
+        assertFalse(existing.isActive());
+        verify(paymentRepository).save(existing);
+        verify(paymentRepository, never()).delete(any());
+        verify(paymentRepository, never()).deleteById(any());
     }
 
     @Test
@@ -150,6 +161,6 @@ public class PaymentServiceTest {
                 () -> paymentService.deleteCharge(404L));
 
         assertEquals("Cobrança não encontrada", ex.getMessage());
-        verify(paymentRepository, never()).delete(any());
+        verify(paymentRepository, never()).save(any());
     }
 }

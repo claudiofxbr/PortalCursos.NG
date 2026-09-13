@@ -72,6 +72,9 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
-        paymentRepository.delete(payment);
+        // Soft-delete explícito (mesmo padrão de UserService.deleteUser) — não usa
+        // paymentRepository.delete()/deleteById(), que dependia do @SQLDelete removido.
+        payment.setActive(false);
+        paymentRepository.save(payment);
     }
 }
