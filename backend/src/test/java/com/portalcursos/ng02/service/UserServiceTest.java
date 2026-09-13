@@ -7,8 +7,6 @@ import static org.mockito.Mockito.*;
 import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.Role.ERole;
-import com.portalcursos.ng02.model.StaffMember;
-import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
@@ -68,45 +66,32 @@ public class UserServiceTest {
         lenient().when(userRepository.findById(2L)).thenReturn(Optional.of(target));
     }
 
+    /**
+     * Achado real de produção (2026-09-13): a versão anterior desta desativação carregava o
+     * StaffMember/Student no contexto de persistência (find + setActive + save/saveAndFlush).
+     * Como StaffMember.user usa @MapsId (mesma PK do User), a entidade gerenciada continuava
+     * anexada à sessão quando userRepository.deleteById() removia o User na mesma transação —
+     * o Hibernate lançava TransientPropertyValueException ao resolver essa associação no flush
+     * seguinte. Um mock de repositório não executa flush de verdade, então esse bug nunca
+     * apareceria aqui (só um teste com Postgres real, via Testcontainers, pegou — ver
+     * PostgresMigrationIntegrationTest#deleteUserComStaffMemberVinculadoNaoLancaExcecaoContraPostgresReal).
+     * Corrigido trocando para updates em lote (deactivateById/deactivateByUserId), que nunca
+     * materializam a entidade gerenciada. Estes testes cobrem só que os métodos certos são
+     * chamados — a garantia real contra regressão de Hibernate está no teste com banco real.
+     */
     @Test
     public void deleteUserDesativaStaffMemberVinculado() {
-        StaffMember staff = StaffMember.builder().id(2L).fullName("Colaborador").position("X").department("Y").build();
-        staff.setActive(true);
-
-        when(staffMemberRepository.findByIdAndActiveTrue(2L)).thenReturn(Optional.of(staff));
-        when(studentRepository.findByUserId(2L)).thenReturn(Optional.empty());
-
         userService.deleteUser(2L);
 
-        assertFalse(staff.isActive(), "StaffMember deve ser desativado antes do hard delete do User");
-        verify(staffMemberRepository).save(staff);
+        verify(staffMemberRepository).deactivateById(2L);
         verify(userRepository).deleteById(2L);
     }
 
     @Test
     public void deleteUserDesativaStudentVinculado() {
-        Student student = Student.builder().id(50L).fullName("Aluno").build();
-        student.setActive(true);
-
-        when(staffMemberRepository.findByIdAndActiveTrue(2L)).thenReturn(Optional.empty());
-        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
-
         userService.deleteUser(2L);
 
-        assertFalse(student.isActive(), "Student deve ser desativado antes do hard delete do User");
-        verify(studentRepository).save(student);
-        verify(userRepository).deleteById(2L);
-    }
-
-    @Test
-    public void deleteUserSemVinculosNaoChamaSaveExtra() {
-        when(staffMemberRepository.findByIdAndActiveTrue(2L)).thenReturn(Optional.empty());
-        when(studentRepository.findByUserId(2L)).thenReturn(Optional.empty());
-
-        userService.deleteUser(2L);
-
-        verify(staffMemberRepository, never()).save(any());
-        verify(studentRepository, never()).save(any());
+        verify(studentRepository).deactivateByUserId(2L);
         verify(userRepository).deleteById(2L);
     }
 

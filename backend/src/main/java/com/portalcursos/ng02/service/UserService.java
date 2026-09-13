@@ -127,14 +127,15 @@ public class UserService {
 
         // Desativa registros institucionais/acadêmicos vinculados antes de remover a conta de login,
         // evitando StaffMember/Student "fantasma" (ativo, mas sem usuário para autenticar).
-        staffMemberRepository.findByIdAndActiveTrue(id).ifPresent(staff -> {
-            staff.setActive(false);
-            staffMemberRepository.save(staff);
-        });
-        studentRepository.findByUserId(id).ifPresent(student -> {
-            student.setActive(false);
-            studentRepository.save(student);
-        });
+        // Update em lote (não find+set+save): StaffMember.user usa @MapsId (mesma PK do User) —
+        // se a entidade ficar anexada ao contexto de persistência quando userRepository.deleteById()
+        // remover o User na mesma transação, o Hibernate lança TransientPropertyValueException ao
+        // resolver essa associação no flush seguinte (confirmado em produção: o log registrava
+        // "Usuário deletado", mas o COMMIT da transação falhava logo depois — rollback completo
+        // com erro 500 sem explicação). O update em lote nunca materializa a entidade gerenciada,
+        // evitando o problema por completo.
+        staffMemberRepository.deactivateById(id);
+        studentRepository.deactivateByUserId(id);
 
         userRepository.deleteById(id);
         logger.info("[V50.0] Usuário deletado por autoridade superior: {}", target.getUsername());

@@ -2,6 +2,7 @@ package com.portalcursos.ng02.repository;
 
 import com.portalcursos.ng02.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -13,6 +14,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     Optional<Student> findByCpf(String cpf);
     Optional<Student> findByUserId(Long userId);
     Optional<Student> findByIdAndActiveTrue(Long id);
+
+    /**
+     * Update em lote (sem carregar a entidade no contexto de persistência) — mesmo motivo de
+     * StaffMemberRepository.deactivateById: evita o TransientPropertyValueException que o
+     * Hibernate lança quando uma entidade gerenciada com referência a User continua anexada
+     * ao contexto na mesma transação em que o User é removido.
+     */
+    @Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Student s SET s.active = false WHERE s.user.id = :userId AND s.active = true")
+    int deactivateByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 
     /**
      * Ignora o filtro global {@code @SQLRestriction("active = true")}: fluxos de privacidade/LGPD

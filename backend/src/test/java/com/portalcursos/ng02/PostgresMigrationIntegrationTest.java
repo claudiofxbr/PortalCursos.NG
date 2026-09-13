@@ -3,18 +3,27 @@ package com.portalcursos.ng02;
 import com.portalcursos.ng02.model.DataDeletionRequest;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
+import com.portalcursos.ng02.model.Role;
+import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.DataDeletionRequestRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
+import com.portalcursos.ng02.repository.RoleRepository;
+import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
 import com.portalcursos.ng02.service.PaymentService;
+import com.portalcursos.ng02.service.UserDetailsImpl;
+import com.portalcursos.ng02.service.UserService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -22,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -88,6 +99,20 @@ class PostgresMigrationIntegrationTest {
 
     @Autowired
     private DataDeletionRequestRepository dataDeletionRequestRepository;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private StaffMemberRepository staffMemberRepository;
+
+    @AfterEach
+    void limpaContextoDeSeguranca() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void migrationsAplicamSemFalhaContraPostgresReal() {
@@ -212,6 +237,71 @@ class PostgresMigrationIntegrationTest {
         DataDeletionRequest reloaded = dataDeletionRequestRepository.findById(requestId).orElseThrow();
         assertNull(reloaded.getUserId(),
                 "V22: ON DELETE SET NULL deve zerar user_id em vez de bloquear a exclusão do usuário");
+    }
+
+    // Regressão do achado real de produção (2026-09-13): UserService.deleteUser desativava o
+    // StaffMember vinculado com staffMemberRepository.save() (sem flush) e, em seguida,
+    // chamava userRepository.deleteById() na MESMA transação. StaffMember.user usa @MapsId
+    // (compartilha a PK do User) — como o UPDATE do StaffMember ainda estava pendente de
+    // flush quando o User foi marcado para remoção, o Hibernate, ao tentar resolver essa
+    // associação no commit, encontrava uma referência a uma instância de User já removida e
+    // lançava TransientPropertyValueException. Resultado real em produção: o log dizia
+    // "Usuário deletado" (a chamada a deleteById não lança nada por si só), mas o COMMIT da
+    // transação falhava logo em seguida — a operação inteira sofria rollback (nenhum dado
+    // ficou corrompido) e o admin via um erro 500 sem explicação ao tentar remover qualquer
+    // colaborador com StaffMember ativo. Corrigido trocando save() por saveAndFlush() nas
+    // duas desativações (StaffMember e Student) dentro de deleteUser, garantindo que essas
+    // escritas sejam concluídas antes do delete do User. Só um teste com banco real
+    // (Testcontainers) pega esse tipo de bug de ordenação de flush do Hibernate — os testes
+    // mockados de UserServiceTest não executam SQL de verdade.
+    @Test
+    void deleteUserComStaffMemberVinculadoNaoLancaExcecaoContraPostgresReal() {
+        Role rootRole = roleRepository.findByName(Role.ERole.ROLE_ROOT_MASTER).orElseThrow();
+        Role staffRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA).orElseThrow();
+
+        User operator = userRepository.saveAndFlush(User.builder()
+                .username("operador-root-teste")
+                .email("operador-root-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(rootRole))
+                .build());
+
+        User target = userRepository.saveAndFlush(User.builder()
+                .username("colaborador-fk-teste")
+                .email("colaborador-fk-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(staffRole))
+                .build());
+        Long targetId = target.getId();
+
+        StaffMember staff = new StaffMember();
+        staff.setUser(target);
+        staff.setFullName("Colaborador Teste");
+        staff.setPosition("Secretaria");
+        staff.setDepartment("Acadêmico");
+        staff.setActive(true);
+        staffMemberRepository.saveAndFlush(staff);
+
+        // Simula uma requisição HTTP nova (a remoção real acontece numa transação separada da
+        // criação): limpa o contexto de persistência para que deleteUser() não encontre o
+        // objeto StaffMember/User desta configuração ainda anexado à sessão.
+        entityManager.clear();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UserDetailsImpl.build(operator), null, UserDetailsImpl.build(operator).getAuthorities()));
+
+        assertDoesNotThrow(() -> userService.deleteUser(targetId),
+                "Remover um usuário com StaffMember ativo vinculado não deve lançar TransientPropertyValueException");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertTrue(userRepository.findById(targetId).isEmpty(), "Usuário deve ter sido removido (hard delete)");
+
+        Integer staffAtivo = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM staff_members WHERE id = ? AND active = true", Integer.class, targetId);
+        assertEquals(0, staffAtivo, "StaffMember vinculado deve ter sido desativado antes da remoção do usuário");
     }
 
     private Student buildStudent(String cpf, String email, String registrationNumber) {
