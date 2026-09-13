@@ -13,9 +13,13 @@ import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+// @SQLDelete removido (achado da auditoria): o SQL customizado não incluía o parâmetro
+// de @Version que o Hibernate injeta para entidades versionadas, e paymentRepository.delete()
+// lançava DataIntegrityViolationException sempre que chamado de verdade (confirmado via
+// Testcontainers). Soft-delete real é feito explicitamente via setActive(false) + save()
+// em PaymentService.deleteCharge, mesmo padrão já usado em UserService.deleteUser.
 @Entity
 @Table(name = "payments")
 @Data
@@ -23,7 +27,6 @@ import org.hibernate.annotations.SQLRestriction;
 @AllArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper=true)
-@SQLDelete(sql = "UPDATE payments SET active = false WHERE id = ?")
 @SQLRestriction("active = true")
 public class Payment extends BaseAuditEntity {
     @Id

@@ -11,16 +11,19 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+// @SQLDelete removido (mesmo achado do Payment): o SQL customizado não incluía o
+// parâmetro de @Version que o Hibernate injeta para entidades versionadas, então
+// repairTicketRepository.delete()/deleteById() sempre lançaria DataIntegrityViolationException
+// se alguém chegasse a chamá-los — código morto hoje (nenhum lugar chama). Soft-delete real
+// é via setActive(false) + save() (ver UserService.deleteUser).
 @Entity
 @Table(name = "repair_tickets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@SQLDelete(sql = "UPDATE repair_tickets SET active = false WHERE id = ?")
 @SQLRestriction("active = true")
 @EqualsAndHashCode(callSuper=true)
 public class RepairTicket extends BaseAuditEntity {

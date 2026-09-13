@@ -9,11 +9,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+// @SQLDelete removido (mesmo achado do Payment): o SQL customizado não incluía o
+// parâmetro de @Version que o Hibernate injeta para entidades versionadas, então
+// studentRepository.delete()/deleteById() sempre lançaria DataIntegrityViolationException
+// se alguém chegasse a chamá-los — código morto hoje (nenhum lugar chama), mas armadilha
+// para o futuro. Soft-delete real é via setActive(false) + save() (ver UserService.deleteUser).
 @Entity
 @Table(name = "students")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -23,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@SQLDelete(sql = "UPDATE students SET active = false WHERE id = ?")
 @SQLRestriction("active = true")
 @EqualsAndHashCode(callSuper=true)
 public class Student extends BaseAuditEntity {
