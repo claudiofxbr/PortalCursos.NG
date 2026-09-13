@@ -16,6 +16,7 @@ export default function SignUpPage() {
   const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Limpa o erro após 30 segundos OU ao apertar a tecla Esc
   useEffect(() => {
@@ -71,8 +72,10 @@ export default function SignUpPage() {
 
     try {
       await api.post('auth/signup', { ...formData, privacyConsentAccepted });
-      alert("✅ Conta criada com sucesso! Redirecionando para o login...");
-      router.push('/auth/signin');
+      setSuccess("Conta criada com sucesso! Redirecionando para o login...");
+      setTimeout(() => {
+        router.push('/auth/signin');
+      }, 1200);
     } catch (err: any) {
       console.error("Erro no cadastro:", err);
       const msg = err.response?.data?.message || "Não foi possível criar sua conta. Verifique os dados.";
@@ -106,15 +109,23 @@ export default function SignUpPage() {
           </div>
         )}
 
+        {success && (
+          <div style={{ color: '#2f855a', backgroundColor: '#f0fff4', padding: '10px', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>USUÁRIO</label>
-            <input 
+            <label htmlFor="username" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>USUÁRIO</label>
+            <input
+              id="username"
               type="text"
               name="username"
               required
               minLength={3}
               maxLength={20}
+              autoComplete="username"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value.replace(/\s/g, '') })}
               placeholder="nome_usuario (sem espaços)"
@@ -123,28 +134,32 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>E-MAIL</label>
-            <input 
-              type="email" 
+            <label htmlFor="email" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>E-MAIL</label>
+            <input
+              id="email"
+              type="email"
               name="email"
               required
+              autoComplete="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="seu@email.com" 
-              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }} 
+              placeholder="seu@email.com"
+              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>SENHA</label>
-            <input 
-              type="password" 
+            <label htmlFor="password" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>SENHA</label>
+            <input
+              id="password"
+              type="password"
               name="password"
               required
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="••••••••" 
-              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }} 
+              placeholder="••••••••"
+              style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '8px', border: '1px solid #ddd' }}
             />
           </div>
 
