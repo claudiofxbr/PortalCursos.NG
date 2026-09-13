@@ -1,7 +1,11 @@
 package com.portalcursos.ng02;
 
+import com.portalcursos.ng02.model.EPaymentStatus;
+import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
+import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
+import com.portalcursos.ng02.service.PaymentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +27,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * auditoria — "hoje o CI roda Flyway desabilitado + H2"): migrations V1..V21 aplicando sem
  * falha, o comportamento real de {@code @SQLRestriction} (soft-delete) e o índice único
  * parcial de {@code students.cpf/email} (V21) no dialeto Postgres de verdade — nenhum dos
- * dois é exercitado fielmente pelo H2 em modo de compatibilidade.
+ * dois é exercitado fielmente pelo H2 em modo de compatibilidade. Também cobre a
+ * regressão do bug de {@code @SQLDelete}+{@code @Version} em {@code Payment} (achado P0
+ * corrigido nesta rodada — ver {@link #deleteChargeDesativaPagamentoSemErroContraPostgresReal()}).
  *
  * <p>{@code DatabaseConfig} declara o bean {@code DataSource} manualmente a partir de
  * {@code DataSourceProperties} (para tratar URLs estilo Render/Neon), então não usa o
@@ -67,6 +73,12 @@ class PostgresMigrationIntegrationTest {
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
 
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private PaymentService paymentService;
+
     @Test
     void migrationsAplicamSemFalhaContraPostgresReal() {
         Integer failed = jdbcTemplate.queryForObject(
@@ -80,10 +92,10 @@ class PostgresMigrationIntegrationTest {
 
     // Soft-delete via setActive(false) + save(), não via repository.delete()/deleteById():
     // é assim que a aplicação real desativa Student (ver UserService.deleteUser). O
-    // @SQLDelete da entidade nunca é exercitado em produção (nenhum código chama
-    // studentRepository.delete()) e está com um bug próprio (SQL customizado não bate com
-    // o parâmetro de @Version que Hibernate injeta) — fora do escopo desta tarefa, reportado
-    // à parte.
+    // @SQLDelete de Student nunca é exercitado em produção (nenhum código chama
+    // studentRepository.delete()) e tem o mesmo bug do Payment abaixo (SQL customizado não
+    // bate com o parâmetro de @Version que o Hibernate injeta) — como é código morto (não
+    // afeta nenhum fluxo real), ficou registrado como achado sem correção por ora.
     @Test
     void sqlRestrictionEscondeStudentDesativado() {
         Student saved = studentRepository.saveAndFlush(
@@ -125,6 +137,37 @@ class PostgresMigrationIntegrationTest {
         assertThrows(DataIntegrityViolationException.class,
                 () -> studentRepository.saveAndFlush(buildStudent(cpf, "ativo2@test.com", "REG-CPF-004")),
                 "Dois alunos ATIVOS com o mesmo CPF continuam proibidos pelo índice parcial");
+    }
+
+    // Regressão do achado P0: paymentRepository.delete() (via @SQLDelete) lançava
+    // DataIntegrityViolationException sempre contra um Postgres real, porque o SQL
+    // customizado não incluía o parâmetro de @Version que o Hibernate injeta para
+    // entidades versionadas — endpoint DELETE /api/finance/invoices/{id} retornava 500 em
+    // produção. Corrigido removendo @SQLDelete de Payment e trocando deleteCharge para
+    // soft-delete explícito (setActive(false) + save()). Só um teste com banco real
+    // (Testcontainers) pega esse tipo de bug — um mock de PaymentRepository não executa
+    // SQL de verdade, por isso passou despercebido antes.
+    @Test
+    void deleteChargeDesativaPagamentoSemErroContraPostgresReal() {
+        Payment saved = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("150.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(10))
+                .status(EPaymentStatus.PENDING)
+                .build());
+
+        assertDoesNotThrow(() -> paymentService.deleteCharge(saved.getId()));
+
+        // deleteCharge usa paymentRepository.save() (flush implícito só no commit da
+        // transação) — força a escrita agora para poder verificar via jdbcTemplate/limpar
+        // o persistence context sem perder a mudança ainda não sincronizada.
+        entityManager.flush();
+        entityManager.clear();
+        assertTrue(paymentRepository.findById(saved.getId()).isEmpty(),
+                "@SQLRestriction(active = true) deve esconder o pagamento desativado");
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payments WHERE id = ? AND active = false", Integer.class, saved.getId());
+        assertEquals(1, count, "O pagamento deve continuar na tabela, só marcado como inativo");
     }
 
     private Student buildStudent(String cpf, String email, String registrationNumber) {
