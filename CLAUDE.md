@@ -67,3 +67,11 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - Ao criar um processo automático novo (workflow, rotina, monitor), registrá-lo no painel no mesmo passo.
 - Escrever sempre a lista `processes` completa via `ArtifactData` action `set` — nunca `update` parcial (não faz merge dentro de arrays).
 - Quando a própria Torre está operacional (writes no `status/current` funcionando) **e** o PortalCursos.NG está saudável (`/api/health` = `UP`, Neon `CONNECTED`, `migrations` OK), registrar essa confirmação no painel.
+
+### Torre Multi-Agentes (isolada)
+
+- Painel dedicado **exclusivamente** ao sistema de sub-agentes Claude Code deste projeto (`.claude/agents/*.md`): **https://claude.ai/artifact/WmgugMjfgbXn68c374S2VP** (artifact separado; doc `multiagent/live`, coleção `multiagent`, via `ArtifactData` — banco próprio, sem relação com o `status/current` da Torre geral acima nem com qualquer dado do CVFacil.NG).
+- Cobre só os 5 processos definidos para esse sistema: monitoramento em tempo real, gerenciamento de agentes, roteamento de tarefas, autenticação de agentes (escopo de ferramentas por agente) e logs de auditoria.
+- Regra de acesso do `db`: leitura para qualquer visualizador (`read: view`), escrita só para quem pode editar o artifact (`write: admin`) — evita que um visualizador comum adultere o log de auditoria.
+- Escrever sempre o documento `multiagent/live` completo via `ArtifactData` action `set` (mesmo padrão da Torre geral — nunca `update` parcial em array).
+- Ao rodar um sub-agente (`.claude/agents/*.md` ou `portal-*`) neste projeto, atualizar esse painel: status em "Monitoramento em tempo real", nova linha em "Roteamento de tarefas" e, se houver achado/decisão, nova entrada em "Logs de auditoria".
