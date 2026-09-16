@@ -54,7 +54,7 @@ public class StaffMemberControllerIntegrationTest {
                 .position("ANALISTA")
                 .department("TI")
                 .build();
-        when(staffRepository.findAll()).thenReturn(Arrays.asList(staff));
+        when(staffRepository.findAllByActiveTrue()).thenReturn(Arrays.asList(staff));
 
         mockMvc.perform(get("/api/v1/staff").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
