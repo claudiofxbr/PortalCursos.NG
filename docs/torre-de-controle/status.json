@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr102-monitor",
+      "label": "#102 — Plano operacional de sub-agentes + correção de 3 achados de auditoria (código/BD)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr101-monitor",
       "label": "#101 — chore(deps): bump lucide-react from 1.42.0 to 1.45.0 in /frontend",
       "detail": "CI ok.",
@@ -99,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-16T10:33:17Z"
+  "updatedAt": "2026-09-16T14:19:17Z"
 }
