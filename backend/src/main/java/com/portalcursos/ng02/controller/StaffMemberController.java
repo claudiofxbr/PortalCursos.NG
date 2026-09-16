@@ -113,7 +113,8 @@ public class StaffMemberController {
         } catch (Exception e) {
             logger.warn("[STAFF API] Erro ao deletar arquivo de foto: {}", e.getMessage());
         }
-        staffRepository.delete(staff);
+        staff.setActive(false);
+        staffRepository.save(staff);
         return ResponseEntity.ok(new MessageResponse("Membro removido com sucesso."));
     }
 }

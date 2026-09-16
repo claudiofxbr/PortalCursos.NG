@@ -1,6 +1,7 @@
 package com.portalcursos.ng02;
 
 import com.portalcursos.ng02.controller.RepairController;
+import com.portalcursos.ng02.controller.StaffMemberController;
 import com.portalcursos.ng02.model.DataDeletionRequest;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
@@ -117,6 +118,9 @@ class PostgresMigrationIntegrationTest {
 
     @Autowired
     private RepairController repairController;
+
+    @Autowired
+    private StaffMemberController staffMemberController;
 
     @AfterEach
     void limpaContextoDeSeguranca() {
@@ -256,6 +260,55 @@ class PostgresMigrationIntegrationTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM repair_tickets WHERE id = ? AND active = false", Integer.class, id);
         assertEquals(1, count, "O chamado deve continuar na tabela, só marcado como inativo (soft-delete real)");
+    }
+
+    // Regressão do achado P1: StaffMemberController.deleteStaff fazia hard-delete real
+    // (staffRepository.delete(staff)) — mesmo bug de @SQLDelete sem o parâmetro de @Version
+    // já corrigido em Payment/RepairTicket, então toda chamada lançava
+    // DataIntegrityViolationException. Corrigido trocando para setActive(false) + save().
+    // StaffMember não tem @SQLRestriction (é referenciado como `creator` em todo registro
+    // auditado), então o soft-delete não esconde o registro de findById — só marca
+    // active=false; as listagens já filtram explicitamente via findAllByActiveTrue.
+    @Test
+    void deleteStaffDesativaColaboradorSemErroContraPostgresReal() {
+        Role staffRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA).orElseThrow();
+        User linkedUser = userRepository.saveAndFlush(User.builder()
+                .username("colaborador-delete-teste")
+                .email("colaborador-delete-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(staffRole))
+                .build());
+
+        StaffMember staff = new StaffMember();
+        staff.setUser(linkedUser);
+        staff.setFullName("Colaborador Para Remover");
+        staff.setPosition("Secretaria");
+        staff.setDepartment("Acadêmico");
+        staff.setActive(true);
+        StaffMember saved = staffMemberRepository.saveAndFlush(staff);
+        Long id = saved.getId();
+
+        // StaffMemberController.deleteStaff tem @PreAuthorize — mesmo padrão de autenticação
+        // dos outros testes de soft-delete direto no controller nesta classe.
+        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN).orElseThrow();
+        User operator = userRepository.saveAndFlush(User.builder()
+                .username("operador-staff-teste")
+                .email("operador-staff-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(adminRole))
+                .build());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UserDetailsImpl.build(operator), null, UserDetailsImpl.build(operator).getAuthorities()));
+
+        assertDoesNotThrow(() -> staffMemberController.deleteStaff(id));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM staff_members WHERE id = ? AND active = false", Integer.class, id);
+        assertEquals(1, count, "O colaborador deve continuar na tabela, só marcado como inativo (soft-delete real)");
     }
 
     // Regressão do achado: userRepository.deleteById() (hard delete, usado por
