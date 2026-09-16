@@ -29,7 +29,7 @@ public class StaffMemberController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('ROOT_MASTER')")
     public ResponseEntity<?> getAllStaff() {
-        return ResponseEntity.ok(staffRepository.findAll());
+        return ResponseEntity.ok(staffRepository.findAllByActiveTrue());
     }
 
     @PostMapping(consumes = "multipart/form-data")
