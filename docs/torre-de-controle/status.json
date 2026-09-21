@@ -32,7 +32,7 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 4e3fba6)",
+      "detail": "último run em main: success (commit d1f75f5)",
       "status": "active"
     },
     {
@@ -41,6 +41,20 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
+    },
+    {
+      "category": "queue",
+      "id": "pr105-monitor",
+      "label": "#105 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.5.0 to 13.7.0 in /backend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr104-monitor",
+      "label": "#104 — chore(deps): bump org.flywaydb:flyway-core from 13.5.0 to 13.7.0 in /backend",
+      "detail": "CI ok.",
+      "status": "queued"
     },
     {
       "category": "queue",
@@ -90,21 +104,7 @@
       "label": "#96 — chore(deps): bump sonner from 2.0.7 to 2.0.8 in /frontend",
       "detail": "CI ok.",
       "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr95-monitor",
-      "label": "#95 — chore(deps): bump org.flywaydb:flyway-core from 13.5.0 to 13.6.0 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr94-monitor",
-      "label": "#94 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.5.0 to 13.6.0 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-21T11:33:57Z"
+  "updatedAt": "2026-09-21T11:58:22Z"
 }
