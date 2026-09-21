@@ -103,7 +103,7 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
-			<version>13.5.0</version>
+			<version>13.7.0</version>
 		</dependency>
 		<!-- Testcontainers: roda as migrations Flyway contra Postgres real (não H2) para
 		     exercitar migrations V20+ e o comportamento real de @SQLRestriction/índices
