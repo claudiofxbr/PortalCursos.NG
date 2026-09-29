@@ -48,6 +48,7 @@ public class StaffMemberController {
                 fotoPath = storageService.store(foto3x4File, "staff-photos");
             } catch (Exception e) {
                 logger.error("[STAFF API] Erro ao salvar foto institucional: {}", e.getMessage());
+                throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar imagem. Tente novamente.");
             }
         }
 
@@ -79,6 +80,11 @@ public class StaffMemberController {
         }
 
         StaffMember staff = staffOpt.get();
+        if (!staff.isActive()) {
+            throw new com.portalcursos.ng02.exception.BusinessException(
+                    "Colaborador está desativado — reative antes de editar.");
+        }
+
         staff.setFullName(fullName);
         staff.setPosition(position);
         staff.setDepartment(department);
@@ -90,6 +96,7 @@ public class StaffMemberController {
                 staff.setFotoUrl(fotoPath);
             } catch (Exception e) {
                 logger.error("[STAFF API] Erro ao atualizar foto institucional: {}", e.getMessage());
+                throw new com.portalcursos.ng02.exception.BusinessException("Erro ao salvar imagem. Tente novamente.");
             }
         }
 

@@ -161,6 +161,9 @@ services:
     container_name: portalcursos_frontend_green
     ports:
       - "127.0.0.1:3011:3000"
+    depends_on:
+      backend-green:
+        condition: service_healthy
 
 networks:
   portal_net:
