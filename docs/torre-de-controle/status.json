@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr108-monitor",
+      "label": "#108 — docs: registra incidente de nginx com config vazia e URL real de produção",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr107-monitor",
       "label": "#107 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.5.0 to 13.8.0 in /backend",
       "detail": "CI ok.",
@@ -106,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-30T17:19:31Z"
+  "updatedAt": "2026-09-30T19:24:23Z"
 }
