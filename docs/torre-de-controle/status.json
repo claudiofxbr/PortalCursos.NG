@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit ab9cb67)",
+      "detail": "último run em main: success (commit 0c3a04b)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit ab9cb67)",
+      "detail": "último run em main: success (commit 0c3a04b)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr110-monitor",
-      "label": "#110 — fix(deploy): aponta deploy-hostinger.ps1 para o pipeline real e para de sobrescrever .env",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -74,7 +67,7 @@
       "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
-      "detail": "CI ok.",
+      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     },
     {
@@ -120,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-30T20:14:53Z"
+  "updatedAt": "2026-09-30T20:19:35Z"
 }
