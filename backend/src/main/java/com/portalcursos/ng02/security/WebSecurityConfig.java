@@ -71,6 +71,10 @@ public class WebSecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
+                        // Chamado pelo PagBank (PSP), não por usuário autenticado do sistema —
+                        // autenticação é feita via HMAC no path (paymentId + webhookToken),
+                        // não via JWT. Ver PixWebhookController.
+                        .requestMatchers("/api/finance/pix/webhook/**").permitAll()
 
                         // /uploads/** removido: servido agora via DocumentController
                         // (/api/uploads/**) com autenticação e checagem de role por categoria.
