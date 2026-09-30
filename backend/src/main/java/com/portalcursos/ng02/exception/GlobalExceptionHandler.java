@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,19 +38,6 @@ public class GlobalExceptionHandler {
         body.put("path", request.getDescription(false));
 
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
-    }
-
-    @ExceptionHandler(LockedException.class)
-    public ResponseEntity<?> handleLockedException(LockedException ex, WebRequest request) {
-        logger.warn("[AUTH WARN] Locked account attempt: {}", ex.getMessage());
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", new Date());
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Locked");
-        body.put("message", "Sua conta ou IP foi temporariamente bloqueado devido a múltiplas tentativas falhas. Tente novamente em 24 horas.");
-        body.put("path", request.getDescription(false));
-
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(AuthenticationException.class)

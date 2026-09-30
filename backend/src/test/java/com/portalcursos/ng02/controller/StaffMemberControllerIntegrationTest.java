@@ -81,17 +81,14 @@ public class StaffMemberControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Membro não encontrado."));
     }
 
-    // Diferente de outros controllers (ex: RepairController), aqui a falha de storage
-    // é engolida (log + fotoPath=null) e a criação prossegue com sucesso — documentado
-    // como comportamento observado, não uma regressão a corrigir nesta rodada.
+    // Mesmo padrão de RepairController: falha de storage vira BusinessException (400),
+    // sem engolir o erro nem deixar o registro com fotoUrl=null silenciosamente.
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
-    public void testCreateStaffStorageFailureIsSwallowedAndDoesNotLeakInternalDetails() throws Exception {
+    public void testCreateStaffStorageFailurePropagatesAsBusinessExceptionAndDoesNotLeakInternalDetails() throws Exception {
         when(storageService.store(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("staff-photos")))
                 .thenThrow(new java.io.IOException(
                         "Falha ao escrever em C:\\Users\\VeKTI-01\\Desktop\\uploads\\staff-photos\\segredo.png: Disco cheio"));
-        when(staffRepository.save(org.mockito.ArgumentMatchers.any(StaffMember.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
 
         MockMultipartFile foto = new MockMultipartFile(
                 "foto3x4File", "foto.png", "image/png", "conteudo-fake".getBytes());
@@ -101,11 +98,63 @@ public class StaffMemberControllerIntegrationTest {
                 .param("fullName", "Novo Colaborador")
                 .param("position", "ANALISTA")
                 .param("department", "TI"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fotoUrl").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro ao salvar imagem. Tente novamente."))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("C:\\Users"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("Disco cheio"))));
+
+        verify(staffRepository, never()).save(org.mockito.ArgumentMatchers.any(StaffMember.class));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testUpdateStaffStorageFailurePropagatesAsBusinessException() throws Exception {
+        StaffMember staff = StaffMember.builder()
+                .id(1L)
+                .fullName("Colaborador Teste")
+                .position("ANALISTA")
+                .department("TI")
+                .active(true)
+                .build();
+        when(staffRepository.findById(1L)).thenReturn(Optional.of(staff));
+        when(storageService.store(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("staff-photos")))
+                .thenThrow(new java.io.IOException("Disco cheio"));
+
+        MockMultipartFile foto = new MockMultipartFile(
+                "foto3x4File", "foto.png", "image/png", "conteudo-fake".getBytes());
+
+        mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/staff/1")
+                .file(foto)
+                .param("fullName", "Colaborador Teste")
+                .param("position", "ANALISTA")
+                .param("department", "TI"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Erro ao salvar imagem. Tente novamente."));
+
+        verify(staffRepository, never()).save(org.mockito.ArgumentMatchers.any(StaffMember.class));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testUpdateStaffInactiveBlockedWithBusinessException() throws Exception {
+        StaffMember staff = StaffMember.builder()
+                .id(2L)
+                .fullName("Colaborador Desativado")
+                .position("ANALISTA")
+                .department("TI")
+                .active(false)
+                .build();
+        when(staffRepository.findById(2L)).thenReturn(Optional.of(staff));
+
+        mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/staff/2")
+                .param("fullName", "Nova Tentativa de Edição")
+                .param("position", "ANALISTA")
+                .param("department", "TI"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Colaborador está desativado — reative antes de editar."));
+
+        verify(staffRepository, never()).save(org.mockito.ArgumentMatchers.any(StaffMember.class));
     }
 }

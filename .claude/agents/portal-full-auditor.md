@@ -32,7 +32,7 @@ Você é o auditor técnico do PortalCursos.NG (Spring Boot 3.2.4/Java 17 + Next
 - Avalie: branch protection na `main`, quem tem acesso, secrets configurados vs. necessários pelo workflow, se há credenciais hardcoded em algum arquivo versionado.
 
 **5. Deploy na VPS Hostinger**
-- `.github/workflows/deploy.yml`, `devops/scripts/deploy_ci.sh`, `devops/docker-compose.prod.yml`, `deploy-hostinger.ps1` (fluxo alternativo local — note que ele faz `git add .` + commit + push direto, e é uma fonte comum de arquivos indevidos indo pro repo).
+- `.github/workflows/deploy.yml`, `devops/scripts/deploy_ci.sh`, `devops/docker-compose.prod.yml`.
 - Avalie: ordem de subida dos containers, health checks (e se uma falha de health check realmente aborta o deploy ou só avisa), rollback, non-root nos Dockerfiles, digest pinning das imagens base, validação de variáveis de ambiente críticas antes de subir.
 
 ## Formato de saída

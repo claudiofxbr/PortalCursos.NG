@@ -38,7 +38,7 @@ Build de produção: `npm run build` / `npm run start`. Lint: `npm run lint`.
 
 ## Deploy
 
-Fluxo de deploy documentado em `devops/scripts/deploy_ci.sh` (acionado pelo CI) e `deploy-hostinger.ps1` (script local auxiliar). Confirme com o responsável pelo projeto qual é o ambiente de produção atual antes de rodar qualquer script de deploy.
+Fluxo de deploy oficial: `devops/scripts/deploy_ci.sh`, acionado pelo CI (`.github/workflows/deploy.yml`) em todo push para `main`. Confirme com o responsável pelo projeto qual é o ambiente de produção atual antes de rodar qualquer script de deploy manual.
 
 ## Torre de Controle dos Processos
 
