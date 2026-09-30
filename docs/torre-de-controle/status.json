@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr110-monitor",
+      "label": "#110 — fix(deploy): aponta deploy-hostinger.ps1 para o pipeline real e para de sobrescrever .env",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr109-monitor",
       "label": "#109 — feat(finance): PIX real via PagBank (substitui simulação)",
       "detail": "CI ok.",
@@ -113,5 +120,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-30T20:12:31Z"
+  "updatedAt": "2026-09-30T20:14:53Z"
 }
