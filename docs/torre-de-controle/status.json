@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit d1f75f5)",
+      "detail": "último run em main: success (commit ab9cb67)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit d1f75f5)",
+      "detail": "último run em main: success (commit ab9cb67)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr108-monitor",
-      "label": "#108 — docs: registra incidente de nginx com config vazia e URL real de produção",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -113,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-09-30T19:24:23Z"
+  "updatedAt": "2026-09-30T19:30:12Z"
 }
