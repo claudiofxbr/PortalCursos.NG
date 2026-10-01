@@ -4,12 +4,14 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.portalcursos.ng02.dto.PixOrderResult;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
+import com.portalcursos.ng02.service.PagBankPixGatewayService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -55,6 +57,9 @@ public class FinancialControllerIntegrationTest {
 
     @MockitoBean
     private StaffMemberRepository staffMemberRepository;
+
+    @MockitoBean
+    private PagBankPixGatewayService pagBankPixGatewayService;
 
     @Test
     @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
@@ -138,6 +143,10 @@ public class FinancialControllerIntegrationTest {
                 .build();
         when(paymentRepository.findByIdWithCreatorAndStudent(10L)).thenReturn(Optional.of(payment));
         when(paymentRepository.save(payment)).thenReturn(payment);
+        // Gateway PagBank sempre mockado neste teste de fronteira do controller — o cliente
+        // HTTP real é coberto separadamente em PagBankPixGatewayServiceTest.
+        when(pagBankPixGatewayService.createPixOrder(eq(payment), any(), any())).thenReturn(
+                new PixOrderResult("ORDE_TEST123", "00020126580014BR.GOV.BCB.PIX...", "https://pagbank.example/qr.png"));
 
         mockMvc.perform(post("/api/finance/generate-pix/10").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
