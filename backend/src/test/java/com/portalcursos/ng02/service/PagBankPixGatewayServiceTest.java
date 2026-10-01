@@ -72,9 +72,12 @@ class PagBankPixGatewayServiceTest {
                 .andRespond(withSuccess("""
                         {
                           "id": "ORDE_ABC123",
-                          "qr_codes": [{
-                            "id": "QRCO_1",
-                            "text": "00020126580014BR.GOV.BCB.PIX...",
+                          "charges": [{
+                            "status": "WAITING",
+                            "qr_code": {
+                              "id": "QRCO_1",
+                              "text": "00020126580014BR.GOV.BCB.PIX..."
+                            },
                             "links": [{"rel": "QRCODE.PNG", "href": "https://pagbank.example/qr.png"}]
                           }]
                         }

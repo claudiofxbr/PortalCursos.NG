@@ -26,26 +26,34 @@ import java.util.Map;
  * o PortalCursos.NG recebe na própria conta, não é o fluxo OAuth Connect de
  * marketplace).
  *
- * <p><b>Suposições de contrato assumidas nesta implementação</b> (sem acesso à
- * documentação ao vivo do PagBank no momento desta tarefa — precisam ser validadas
- * contra a conta sandbox real antes de ir para produção):
+ * <p><b>Contrato confirmado contra a documentação oficial atual</b>
+ * ({@code developer.pagbank.com.br/devpagbank/reference/criar-pedido-com-qr-code-pix-v2},
+ * 2026-10-01 — a versão anterior deste Javadoc assumia {@code qr_codes} na raiz do
+ * request/response, que está incorreto; o contrato real usa {@code charges[]}):
  *
  * <p><b>POST {@code {baseUrl}/orders}</b> — corpo de requisição:
  * <pre>{@code
  * {
- *   "reference_id": "PORTAL-<paymentId>",
  *   "customer": { "name": "...", "email": "...", "tax_id": "<cpf só dígitos>" },
- *   "items": [{ "name": "...", "quantity": 1, "unit_amount": <centavos inteiro> }],
- *   "qr_codes": [{ "amount": { "value": <centavos> }, "expiration_date": "<ISO-8601 instant>" }],
+ *   "items": [{ "reference_id": "...", "name": "...", "quantity": 1, "unit_amount": <centavos inteiro> }],
+ *   "charges": [{
+ *     "reference_id": "PORTAL-<paymentId>",
+ *     "description": "...",
+ *     "amount": { "value": <centavos>, "currency": "BRL" },
+ *     "payment_method": { "type": "PIX", "pix": { "expiration_date": "<ISO-8601 instant>" } }
+ *   }],
  *   "notification_urls": ["<PORTALCURSOS_PUBLIC_API_URL>/api/finance/pix/webhook/<paymentId>/<webhookToken>"]
  * }
  * }</pre>
- * Resposta esperada:
+ * Resposta esperada (campos relevantes dentro do primeiro item de {@code charges}):
  * <pre>{@code
  * {
  *   "id": "ORDE_XXXX",
- *   "qr_codes": [{ "id": "QRCO_XXX", "text": "<BR Code copia-e-cola>",
- *                   "links": [{ "rel": "QRCODE.PNG", "href": "https://..." }] }]
+ *   "charges": [{
+ *     "status": "WAITING",
+ *     "qr_code": { "id": "QRCO_XXX", "text": "<BR Code copia-e-cola>" },
+ *     "links": [{ "rel": "QRCODE.PNG", "href": "https://..." }]
+ *   }]
  * }
  * }</pre>
  *
@@ -111,21 +119,27 @@ public class PagBankPixGatewayService {
         }
 
         Map<String, Object> item = Map.of(
+                "reference_id", "PORTAL-ITEM-" + payment.getId(),
                 "name", payment.getDescription() != null ? payment.getDescription() : "Mensalidade PortalCursos",
                 "quantity", 1,
                 "unit_amount", amountInCents
         );
 
-        Map<String, Object> qrCode = Map.of(
-                "amount", Map.of("value", amountInCents),
-                "expiration_date", expirationDate
+        Map<String, Object> paymentMethod = Map.of(
+                "type", "PIX",
+                "pix", Map.of("expiration_date", expirationDate)
         );
 
+        Map<String, Object> charge = new LinkedHashMap<>();
+        charge.put("reference_id", "PORTAL-" + payment.getId());
+        charge.put("description", payment.getDescription() != null ? payment.getDescription() : "Mensalidade PortalCursos");
+        charge.put("amount", Map.of("value", amountInCents, "currency", "BRL"));
+        charge.put("payment_method", paymentMethod);
+
         Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("reference_id", "PORTAL-" + payment.getId());
         requestBody.put("customer", customer);
         requestBody.put("items", List.of(item));
-        requestBody.put("qr_codes", List.of(qrCode));
+        requestBody.put("charges", List.of(charge));
         requestBody.put("notification_urls", List.of(webhookUrl));
 
         Map<String, Object> response;
@@ -150,21 +164,25 @@ public class PagBankPixGatewayService {
         }
 
         String pspOrderId = (String) response.get("id");
-        List<Map<String, Object>> qrCodes = (List<Map<String, Object>>) response.get("qr_codes");
-        if (pspOrderId == null || qrCodes == null || qrCodes.isEmpty()) {
+        List<Map<String, Object>> charges = (List<Map<String, Object>>) response.get("charges");
+        if (pspOrderId == null || charges == null || charges.isEmpty()) {
             throw new PaymentGatewayException("Resposta inesperada do gateway de pagamento");
         }
 
-        Map<String, Object> firstQrCode = qrCodes.get(0);
-        String copiaECola = (String) firstQrCode.get("text");
-        String qrCodeImageUrl = extractQrCodeImageUrl(firstQrCode);
+        Map<String, Object> firstCharge = charges.get(0);
+        Map<String, Object> qrCode = (Map<String, Object>) firstCharge.get("qr_code");
+        if (qrCode == null) {
+            throw new PaymentGatewayException("Resposta inesperada do gateway de pagamento");
+        }
+        String copiaECola = (String) qrCode.get("text");
+        String qrCodeImageUrl = extractQrCodeImageUrl(firstCharge);
 
         return new PixOrderResult(pspOrderId, copiaECola, qrCodeImageUrl);
     }
 
     @SuppressWarnings("unchecked")
-    private String extractQrCodeImageUrl(Map<String, Object> qrCode) {
-        List<Map<String, Object>> links = (List<Map<String, Object>>) qrCode.get("links");
+    private String extractQrCodeImageUrl(Map<String, Object> charge) {
+        List<Map<String, Object>> links = (List<Map<String, Object>>) charge.get("links");
         if (links == null) {
             return null;
         }
