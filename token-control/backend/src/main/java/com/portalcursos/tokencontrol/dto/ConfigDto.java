@@ -14,4 +14,6 @@ public record ConfigDto(
         @NotNull @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d$", message = "use HH:mm") String resetTime,
         @NotBlank @Size(max = 60) String timezone,
         @Min(1) @Max(1_000_000_000_000L) long weeklyLimitTokens,
+        /** Opcional: sem valor, o mês usa a referência estimada (semanal x dias do mês / 7). */
+        @Min(1) @Max(1_000_000_000_000L) Long monthlyLimitTokens,
         boolean countCacheReads) {}

@@ -31,6 +31,9 @@ public class PlanConfig {
     @Column(name = "weekly_limit_tokens", nullable = false)
     private long weeklyLimitTokens;
 
+    @Column(name = "monthly_limit_tokens")
+    private Long monthlyLimitTokens;
+
     @Column(name = "count_cache_reads", nullable = false)
     private boolean countCacheReads;
 
@@ -46,6 +49,12 @@ public class PlanConfig {
 
     public void apply(String planName, int resetDayOfWeek, LocalTime resetTime, String timezone,
             long weeklyLimitTokens, boolean countCacheReads, Instant updatedAt) {
+        apply(planName, resetDayOfWeek, resetTime, timezone, weeklyLimitTokens, null, countCacheReads, updatedAt);
+    }
+
+    public void apply(String planName, int resetDayOfWeek, LocalTime resetTime, String timezone,
+            long weeklyLimitTokens, Long monthlyLimitTokens, boolean countCacheReads, Instant updatedAt) {
+        this.monthlyLimitTokens = monthlyLimitTokens;
         this.planName = planName;
         this.resetDayOfWeek = (short) resetDayOfWeek;
         this.resetTime = resetTime;
@@ -60,6 +69,7 @@ public class PlanConfig {
     public LocalTime getResetTime() { return resetTime; }
     public String getTimezone() { return timezone; }
     public long getWeeklyLimitTokens() { return weeklyLimitTokens; }
+    public Long getMonthlyLimitTokens() { return monthlyLimitTokens; }
     public boolean isCountCacheReads() { return countCacheReads; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

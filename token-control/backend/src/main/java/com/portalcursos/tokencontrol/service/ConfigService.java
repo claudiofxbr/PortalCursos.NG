@@ -37,13 +37,13 @@ public class ConfigService {
         }
         PlanConfig config = current();
         config.apply(dto.planName().trim(), dto.resetDayOfWeek(), LocalTime.parse(dto.resetTime()), dto.timezone(),
-                dto.weeklyLimitTokens(), dto.countCacheReads(), clock.instant());
+                dto.weeklyLimitTokens(), dto.monthlyLimitTokens(), dto.countCacheReads(), clock.instant());
         return repository.save(config);
     }
 
     public static ConfigDto toDto(PlanConfig c) {
         return new ConfigDto(c.getPlanName(), c.getResetDayOfWeek(),
                 String.format("%02d:%02d", c.getResetTime().getHour(), c.getResetTime().getMinute()),
-                c.getTimezone(), c.getWeeklyLimitTokens(), c.isCountCacheReads());
+                c.getTimezone(), c.getWeeklyLimitTokens(), c.getMonthlyLimitTokens(), c.isCountCacheReads());
     }
 }

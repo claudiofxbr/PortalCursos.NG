@@ -22,6 +22,12 @@ class TokenControlApiIntegrationTest {
 
     private static final String KEY = "test-key-123";
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @org.junit.jupiter.api.BeforeEach
+    void limpaConsumo() {
+        jdbc.update("delete from token_usage_entries"); // isolamento: cada teste parte do banco sem consumo
+    }
 
     private String entry(String id, Instant at, String process, String model, long in, long out, long cc, long cr) {
         return """
@@ -82,6 +88,39 @@ class TokenControlApiIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[2].current").value(true))
                 .andExpect(jsonPath("$[2].used").value(360));
+    }
+
+    @Test
+    void mesAtualSomaDoDia1ComLimiteEstimadoEDepoisConfigurado() throws Exception {
+        Instant now = Instant.now();
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("mes-1", now.minusSeconds(120), "proj-mes", "claude-sonnet-5-5", 1000, 500, 0, 9999))))
+                .andExpect(status().isOk());
+
+        // sem orçamento mensal → referência estimada (semanal x dias/7), sinalizada
+        mvc.perform(get("/api/tokens/month").header("X-API-Key", KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limitEstimated").value(true))
+                .andExpect(jsonPath("$.used").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1500)))
+                .andExpect(jsonPath("$.period.daysInMonth").value(org.hamcrest.Matchers.greaterThanOrEqualTo(28)))
+                .andExpect(jsonPath("$.daily.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(28)))
+                .andExpect(jsonPath("$.remaining").isNumber())
+                .andExpect(jsonPath("$.byProcess[?(@.name=='proj-mes')]").exists());
+
+        String cfg = """
+            {"planName":"Claude Code Pro","resetDayOfWeek":1,"resetTime":"00:00","timezone":"America/Sao_Paulo",
+             "weeklyLimitTokens":50000000,"monthlyLimitTokens":200000000,"countCacheReads":false}""";
+        mvc.perform(put("/api/tokens/config").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(cfg)).andExpect(status().isOk()).andExpect(jsonPath("$.monthlyLimitTokens").value(200000000));
+        mvc.perform(get("/api/tokens/month").header("X-API-Key", KEY))
+                .andExpect(jsonPath("$.limitEstimated").value(false))
+                .andExpect(jsonPath("$.limit").value(200000000));
+        mvc.perform(get("/api/tokens/month")).andExpect(status().isUnauthorized());
+
+        // volta ao padrão (limite mensal null) para não vazar estado
+        mvc.perform(put("/api/tokens/config").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(cfg.replace(",\"monthlyLimitTokens\":200000000", ""))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.monthlyLimitTokens").doesNotExist());
     }
 
     @Test

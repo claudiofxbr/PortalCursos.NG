@@ -39,6 +39,10 @@ export default function ConfigForm({ config, onSave }: { config: PlanConfig; onS
         <input type="number" min={1} required value={form.weeklyLimitTokens}
           onChange={(e) => setForm({ ...form, weeklyLimitTokens: Number(e.target.value) })} />
       </label>
+      <label>Orçamento mensal (tokens) — opcional
+        <input type="number" min={1} placeholder="vazio = estimado (semanal × dias/7)" value={form.monthlyLimitTokens ?? ""}
+          onChange={(e) => setForm({ ...form, monthlyLimitTokens: e.target.value === "" ? null : Number(e.target.value) })} />
+      </label>
       <label>
         <span><input type="checkbox" checked={form.countCacheReads}
           onChange={(e) => setForm({ ...form, countCacheReads: e.target.checked })} /> Contar leituras de cache</span>

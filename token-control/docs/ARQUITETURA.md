@@ -30,6 +30,11 @@ Skills oficiais instaladas em `.claude/skills/` (`neon`, `neon-postgres`, via `n
 - **API de gestão do Neon (opcional, somente leitura)**: com `NEON_API_KEY` + `NEON_PROJECT_ID`, mostra consumo do período (computação, dados escritos, transferência), branches e computes. Cache de 60 s; erro vira `HTTP <status>` sem vazar a chave. ⚠️ **Não verificado contra a API real** (a documentação/API do Neon não são acessíveis do ambiente de desenvolvimento): os campos são lidos de forma tolerante (ausente → `—`), e há teste com servidor simulado. Validar uma vez com a chave real.
 - Operações que alteram o Neon (branch, restore, apagar) ficam **fora** do app: são manuais ou via CLI `neon`, com confirmação.
 
+## Aba "Mês atual" (além do ciclo semanal)
+- Migration `V2`: `token_plan_config.monthly_limit_tokens` (opcional, `CHECK > 0`). **Sem valor, o limite do mês é estimado = limite semanal × dias do mês ÷ 7**, e a tela sinaliza "referência estimada". O orçamento mensal real pode ser definido em "Configurar plano".
+- Mês civil no fuso configurado `[dia 1 00:00, dia 1 do mês seguinte)`, com aritmética em data local (virada de mês e DST testadas).
+- O frontend usa um único `PeriodPanel` para as duas abas (semana e mês): mesma tela, só mudam janela, rótulos e limite. O histórico de ciclos aparece só na aba semanal.
+
 ## Regras de negócio
 - **Ciclo** = `[último reset, próximo reset)` no fuso configurado; aritmética em data local (seguro contra DST); o instante exato do reset pertence ao novo ciclo.
 - **Tokens contados** = input + output + cache_creation (+ cache_read se `count_cache_reads`). Leituras de cache ficam fora por padrão (são baratas e inflariam o número).
@@ -43,6 +48,7 @@ Skills oficiais instaladas em `.claude/skills/` (`neon`, `neon-postgres`, via `n
 |---|---|---|
 | POST | `/api/tokens/usage` | `{entries:[≤1000]}` → `{received, inserted, duplicates}`. 400 se inválido. |
 | GET | `/api/tokens/summary` | Ciclo, uso, %, projeção, últimas 5 h, diário, por processo/modelo. |
+| GET | `/api/tokens/month` | **Mês atual** (dia 1 até hoje, fuso configurado): uso, restante, projeção até o fim do mês, diário (1 item por dia civil), por processo/modelo. `limitEstimated=true` quando não há orçamento mensal. |
 | GET | `/api/tokens/history?cycles=8` | Uso dos últimos ciclos (1–26). |
 | GET/PUT | `/api/tokens/config` | Configuração do plano (valida fuso e `HH:mm`). |
 | GET | `/actuator/health` | Público (healthcheck do Docker). |
@@ -56,10 +62,10 @@ Skills oficiais instaladas em `.claude/skills/` (`neon`, `neon-postgres`, via `n
 ## Verificação executada
 | Camada | Comando | Resultado |
 |---|---|---|
-| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 26 testes ✅ (25 + sonda Postgres real) |
+| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 32 testes ✅ (inclui sonda Postgres real, V2 e mês atual) |
 | Sonda do banco + migration V1 em Postgres 16 real | `TC_TEST_PG_URL=… mvn verify` (`PostgresDbProbeTest`; no CI via service postgres) | ✅ (Testcontainers não disponível: sem Docker no ambiente) |
 | Collector | `cd collector && npm test` | 5 testes ✅; ingestão real de 31 msgs, reenvio = 31 duplicadas ✅ |
-| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 23 testes ✅, build ✅ |
+| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 25 testes ✅, build ✅ |
 | E2E navegador (Chromium) | `e2e/dashboard.e2e.mjs` | login, KPIs, 11 SVGs, salvar config, sem erros de console ✅ |
 | Carga/estresse | `load-test/load.mjs` | ver abaixo |
 

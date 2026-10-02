@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "@/components/Dashboard";
-import type { DbStatus, HistoryEntry, Summary } from "@/lib/types";
+import type { DbStatus, HistoryEntry, MonthSummary, Summary } from "@/lib/types";
 
 // Recharts depende de layout real (ResponsiveContainer = 0px no jsdom); aqui validamos dados/estado, não SVG.
 vi.mock("recharts", async () => {
@@ -13,7 +13,7 @@ vi.mock("recharts", async () => {
 });
 
 const summary: Summary = {
-  config: { planName: "Claude Code Pro", resetDayOfWeek: 1, resetTime: "09:00", timezone: "America/Sao_Paulo", weeklyLimitTokens: 1_000_000, countCacheReads: false },
+  config: { planName: "Claude Code Pro", resetDayOfWeek: 1, resetTime: "09:00", timezone: "America/Sao_Paulo", weeklyLimitTokens: 1_000_000, monthlyLimitTokens: null, countCacheReads: false },
   cycle: { start: "2026-09-28T12:00:00Z", end: "2026-10-05T12:00:00Z", secondsRemaining: 273_600, elapsedPct: 45 },
   limit: 1_000_000, used: 720_000, remaining: 280_000, usedPct: 72,
   totals: { input: 100, output: 200, cacheCreation: 300, cacheRead: 400, messages: 42 },
@@ -24,6 +24,17 @@ const summary: Summary = {
   byModel: [{ name: "claude-sonnet-5-5", tokens: 720_000, messages: 42, pct: 100 }],
 };
 const history: HistoryEntry[] = [{ start: "2026-09-28T12:00:00Z", end: "2026-10-05T12:00:00Z", used: 720_000, limit: 1_000_000, usedPct: 72, current: true }];
+
+const monthData: MonthSummary = {
+  config: summary.config,
+  period: { start: "2026-10-01T03:00:00Z", end: "2026-11-01T03:00:00Z", daysInMonth: 31, dayOfMonth: 2, secondsRemaining: 2_505_600, elapsedPct: 6.5 },
+  limit: 7_000_000, limitEstimated: true, used: 350_000, remaining: 6_650_000, usedPct: 5,
+  totals: { input: 10, output: 20, cacheCreation: 30, cacheRead: 40, messages: 9 },
+  projection: { projectedTotal: 5_400_000, projectedPct: 77, dailyAverage: 175_000, willExceed: false, exhaustionAt: null },
+  daily: Array.from({ length: 31 }, (_, i) => ({ index: i + 1, date: `2026-10-${String(i + 1).padStart(2, "0")}`, tokens: i < 2 ? 175_000 : 0, cumulative: Math.min(i + 1, 2) * 175_000 })),
+  byProcess: [{ name: "token-control", tokens: 350_000, messages: 9, pct: 100 }],
+  byModel: [{ name: "claude-sonnet-5-5", tokens: 350_000, messages: 9, pct: 100 }],
+};
 
 const db: DbStatus = {
   connected: true, latencyMs: 12, version: "17.2", databaseSizeBytes: 52_428_800,
@@ -65,9 +76,40 @@ describe("Dashboard", () => {
       "tokens/db": db,
     });
     render(<Dashboard />);
-    await screen.findByText(/Nenhum consumo neste ciclo/);
+    await screen.findByText(/Nenhum consumo neste período/);
     expect(screen.getByText("Dentro do ritmo")).toBeInTheDocument();
     expect(screen.getByText(/aguardando 1h de dados/)).toBeInTheDocument();
+  });
+
+  it("aba Mês atual (além da semana): consumo do dia 1 até hoje, o que falta e referência estimada", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/month": monthData, "tokens/db": db });
+    render(<Dashboard />);
+    await screen.findByText(/Uso do ciclo atual/); // semana continua sendo a aba padrão
+    expect(screen.getByText(/Histórico dos últimos ciclos/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Mês atual" }));
+    const panel = await screen.findByRole("tabpanel", { name: "Mês atual" });
+    expect(within(panel).getByText(/Uso do mês atual/)).toBeInTheDocument();
+    expect(within(panel).getByText(/350 mil de 7 mi/)).toBeInTheDocument();
+    expect(within(panel).getByText(/referência estimada/)).toBeInTheDocument();
+    expect(within(panel).getByText("Fim do mês")).toBeInTheDocument();
+    expect(within(panel).getByText("Restante no mês")).toBeInTheDocument();
+    expect(within(panel).getByText("6,7 mi")).toBeInTheDocument(); // quanto falta
+    expect(within(panel).getByText("29d 0h")).toBeInTheDocument();
+    expect(within(panel).getByText("Consumo por dia do mês")).toBeInTheDocument();
+    expect(screen.queryByText(/Histórico dos últimos ciclos/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Semana (ciclo)" }));
+    expect(await screen.findByText(/Uso do ciclo atual/)).toBeInTheDocument();
+  });
+
+  it("falha só no /month aparece na aba do mês e não derruba a semana", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/db": db });
+    render(<Dashboard />);
+    await screen.findByText(/Uso do ciclo atual/);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Mês atual" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o mês");
   });
 
   it("card do Neon mostra saúde, aviso de conexão direta e orientação da API do Neon", async () => {

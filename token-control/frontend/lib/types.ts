@@ -4,6 +4,7 @@ export interface PlanConfig {
   resetTime: string; // HH:mm
   timezone: string;
   weeklyLimitTokens: number;
+  monthlyLimitTokens: number | null; // null = referência estimada (semanal × dias/7)
   countCacheReads: boolean;
 }
 
@@ -75,4 +76,19 @@ export interface DbStatus {
   migrations: { status: "OK" | "FAILED" | "UNKNOWN"; latest: string | null; failed: number };
   tables: { name: string; rows: number; sizeBytes: number }[];
   neonApi: NeonApiInfo | null;
+}
+
+export interface MonthSummary {
+  config: PlanConfig;
+  period: { start: string; end: string; daysInMonth: number; dayOfMonth: number; secondsRemaining: number; elapsedPct: number };
+  limit: number;
+  limitEstimated: boolean;
+  used: number;
+  remaining: number;
+  usedPct: number;
+  totals: Summary["totals"];
+  projection: Summary["projection"];
+  daily: Day[];
+  byProcess: Slice[];
+  byModel: Slice[];
 }

@@ -29,11 +29,23 @@ for (const t of ["Próximo reset", "Últimas 5 horas", "Projeção até o reset"
 }
 const neon = page.getByRole("region", { name: "Banco de dados Neon" });
 await neon.getByText("Conectado").waitFor();
-await neon.getByText("OK · v1").waitFor();
+await neon.getByText("OK · v2").waitFor();
 await neon.getByRole("table", { name: "Tabelas do app" }).waitFor();
 await page.waitForSelector("svg.recharts-surface");
 const charts = await page.locator("svg.recharts-surface").count();
 assert.ok(charts >= 5, `esperava ≥5 gráficos SVG, achei ${charts}`);
+
+// aba "Mês atual" (além da semana)
+await page.getByRole("tab", { name: "Mês atual" }).click();
+const month = page.getByRole("tabpanel", { name: "Mês atual" });
+await month.getByText("Uso do mês atual").first().waitFor();
+for (const t of ["Fim do mês", "Restante no mês", "Projeção até o fim do mês", "Consumo por dia do mês", "Consumo por processo"]) {
+  await month.getByText(t, { exact: false }).first().waitFor();
+}
+await month.locator("svg.recharts-surface").first().waitFor();
+if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SCREENSHOT.replace(".png", "-mes.png"), fullPage: true });
+await page.getByRole("tab", { name: "Semana (ciclo)" }).click();
+await page.getByText("Uso do ciclo atual").first().waitFor();
 
 // configuração: alterar orçamento e ver refletido
 await page.getByRole("button", { name: "Configurar plano" }).click();

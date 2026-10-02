@@ -38,7 +38,7 @@ class PostgresDbProbeTest {
         assertThat(s.connections().total()).isPositive();
         assertThat(s.connections().max()).isPositive();
         assertThat(s.migrations().status()).isEqualTo("OK");
-        assertThat(s.migrations().latest()).isEqualTo("1"); // histórico próprio: ignora a "v22" do PortalCursos
+        assertThat(s.migrations().latest()).isEqualTo("2"); // histórico próprio: ignora a "v22" do PortalCursos
         assertThat(s.tables()).extracting(DbStatus.TableInfo::name)
                 .containsExactly("token_plan_config", "token_usage_entries");
         // contagem exata em tabela pequena: config tem a linha id=1 da migration, mesmo sem ANALYZE

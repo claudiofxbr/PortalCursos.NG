@@ -3,6 +3,7 @@ package com.portalcursos.tokencontrol.controller;
 import com.portalcursos.tokencontrol.dto.ConfigDto;
 import com.portalcursos.tokencontrol.dto.HistoryEntry;
 import com.portalcursos.tokencontrol.dto.IngestResult;
+import com.portalcursos.tokencontrol.dto.MonthSummaryResponse;
 import com.portalcursos.tokencontrol.dto.SummaryResponse;
 import com.portalcursos.tokencontrol.dto.UsageBatchRequest;
 import com.portalcursos.tokencontrol.service.ConfigService;
@@ -48,6 +49,11 @@ public class TokenController {
     @GetMapping("/summary")
     public SummaryResponse summary() {
         return summaryService.summary(clock.instant());
+    }
+
+    @GetMapping("/month")
+    public MonthSummaryResponse month() {
+        return summaryService.month(clock.instant());
     }
 
     @GetMapping("/history")

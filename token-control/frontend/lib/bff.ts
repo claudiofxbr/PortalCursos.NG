@@ -6,6 +6,7 @@ const RULES: Rule[] = [
   { method: "GET", path: "history" },
   { method: "GET", path: "config" },
   { method: "GET", path: "db" },
+  { method: "GET", path: "month" },
   { method: "PUT", path: "config" },
   { method: "POST", path: "usage" },
 ];

@@ -2,6 +2,7 @@ package com.portalcursos.tokencontrol.service;
 
 import com.portalcursos.tokencontrol.dto.ConfigDto;
 import com.portalcursos.tokencontrol.dto.HistoryEntry;
+import com.portalcursos.tokencontrol.dto.MonthSummaryResponse;
 import com.portalcursos.tokencontrol.dto.SummaryResponse;
 import com.portalcursos.tokencontrol.dto.SummaryResponse.Cycle;
 import com.portalcursos.tokencontrol.dto.SummaryResponse.Day;
@@ -62,6 +63,55 @@ public class SummaryService {
                 daily(config, window, repository.aggregateByHour(window.start(), window.end())),
                 slices(repository.aggregateByProcess(window.start(), window.end()), cache),
                 slices(repository.aggregateByModel(window.start(), window.end()), cache));
+    }
+
+    @Transactional(readOnly = true)
+    public MonthSummaryResponse month(Instant now) {
+        PlanConfig config = configService.current();
+        boolean cache = config.isCountCacheReads();
+        ZoneId zone = ZoneId.of(config.getTimezone());
+        CycleWindow window = MonthCalculator.windowAt(zone, now);
+        LocalDate firstDay = MonthCalculator.firstDay(zone, now);
+        int daysInMonth = firstDay.lengthOfMonth();
+
+        var totals = repository.total(window.start(), window.end());
+        long used = totals.counted(cache);
+        boolean estimated = config.getMonthlyLimitTokens() == null;
+        long limit = estimated ? Math.round(config.getWeeklyLimitTokens() * daysInMonth / 7.0)
+                : config.getMonthlyLimitTokens();
+
+        double elapsedPct = pct(Duration.between(window.start(), now).getSeconds(),
+                Duration.between(window.start(), window.end()).getSeconds());
+        var period = new MonthSummaryResponse.Period(window.start(), window.end(), daysInMonth,
+                now.atZone(zone).getDayOfMonth(), Math.max(0, Duration.between(now, window.end()).getSeconds()),
+                elapsedPct);
+
+        return new MonthSummaryResponse(ConfigService.toDto(config), period, limit, estimated, used,
+                Math.max(0, limit - used), pct(used, limit),
+                new Totals(totals.input(), totals.output(), totals.cacheCreation(), totals.cacheRead(),
+                        totals.messages()),
+                projection(used, limit, window, now),
+                dailyOfMonth(zone, firstDay, daysInMonth, cache,
+                        repository.aggregateByHour(window.start(), window.end())),
+                slices(repository.aggregateByProcess(window.start(), window.end()), cache),
+                slices(repository.aggregateByModel(window.start(), window.end()), cache));
+    }
+
+    /** Um item por dia civil do mês (dia 1..N), com acumulado. */
+    static List<Day> dailyOfMonth(ZoneId zone, LocalDate firstDay, int daysInMonth, boolean cache,
+            List<HourUsage> hours) {
+        long[] perDay = new long[daysInMonth];
+        for (HourUsage h : hours) {
+            int idx = (int) ChronoUnit.DAYS.between(firstDay, h.hour().atZone(zone).toLocalDate());
+            perDay[Math.min(daysInMonth - 1, Math.max(0, idx))] += h.counted(cache);
+        }
+        List<Day> out = new ArrayList<>();
+        long cumulative = 0;
+        for (int i = 0; i < daysInMonth; i++) {
+            cumulative += perDay[i];
+            out.add(new Day(i + 1, firstDay.plusDays(i), perDay[i], cumulative));
+        }
+        return out;
     }
 
     @Transactional(readOnly = true)
