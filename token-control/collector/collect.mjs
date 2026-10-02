@@ -133,7 +133,11 @@ async function run(args) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const args = parseArgs(process.argv.slice(2));
-  const once = () => run(args).catch((e) => console.error(`erro: ${e.message}`));
+  const once = () =>
+    run(args).catch((e) => {
+      console.error(`erro: ${e.message}`);
+      if (!args.watch) process.exitCode = 1; // execução única: falha precisa ser visível para scripts (código != 0)
+    });
   await once();
   if (args.watch > 0) setInterval(once, args.watch * 1000);
   else if (process.exitCode === undefined) process.exitCode = 0;

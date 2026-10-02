@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import { collect, parseLine, send } from "../collect.mjs";
 
@@ -97,4 +98,18 @@ test("send envia em lotes com X-API-Key e soma os resultados; erro HTTP interrom
   assert.deepEqual(r, { received: 1200, inserted: 1197, duplicates: 3 });
   await assert.rejects(send(entries, { url, apiKey: "errada" }), /401/);
   await new Promise((r) => server.close(r));
+});
+
+test("execução única sai com código 1 quando o envio falha (e 0 no dry-run)", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tc-exit-"));
+  await mkdir(join(root, "p"));
+  await writeFile(join(root, "p", "a.jsonl"), line());
+  const script = new URL("../collect.mjs", import.meta.url).pathname;
+  const env = { ...process.env, TOKEN_CONTROL_URL: "http://127.0.0.1:1", TOKEN_CONTROL_API_KEY: "k" };
+  const fail = spawnSync(process.execPath, [script, "--dir", root, "--days", "36500"], { env, encoding: "utf8" });
+  assert.equal(fail.status, 1);
+  assert.match(fail.stderr, /erro:/);
+  const dry = spawnSync(process.execPath, [script, "--dir", root, "--days", "36500", "--dry-run"], { env, encoding: "utf8" });
+  assert.equal(dry.status, 0);
+  assert.match(dry.stdout, /1 mensagens/);
 });
