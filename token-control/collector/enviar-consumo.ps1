@@ -72,8 +72,16 @@ if ($FetchKeyViaSsh) {
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
 }
 if ($key.Length -ne 64 -or $key -notmatch "^[0-9a-fA-F]+$") {
-    $key = $null
-    Fail "chave invalida: deve ter exatamente 64 caracteres (0-9 e a-f). Confira se nao colou espaco ou linha a mais."
+    # Colou texto a mais (varias linhas da VPS, prompt, comando...)? Se houver EXATAMENTE uma sequencia de 64 hexadecimais, usa so ela.
+    $pasted = $key.Length
+    $found = [regex]::Matches($key, "(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
+    if ($found.Count -eq 1) {
+        $key = $found[0].Value
+        Write-Host "      Foram coladas $pasted caracteres; extrai a unica sequencia de 64 hexadecimais (a chave)."
+    } else {
+        $key = $null
+        Fail "chave invalida: foram colados $pasted caracteres e achei $($found.Count) sequencias de 64 hexadecimais (preciso de exatamente 1). Copie SOMENTE a linha da chave na VPS."
+    }
 }
 
 # 4b) Mostra so o inicio e o fim da chave (para comparar com a da VPS) e TESTA a chave antes de enviar:
