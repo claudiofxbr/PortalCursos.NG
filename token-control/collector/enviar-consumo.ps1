@@ -50,6 +50,25 @@ if ($key.Length -ne 64 -or $key -notmatch "^[0-9a-fA-F]+$") {
     Fail "chave invalida: deve ter exatamente 64 caracteres (0-9 e a-f). Confira se nao colou espaco ou linha a mais."
 }
 
+# 4b) Mostra so o inicio e o fim da chave (para comparar com a da VPS) e TESTA a chave antes de enviar:
+#     POST com lote vazio -> 400 = chave aceita (lote vazio e invalido, mas a chave passou) ; 401 = chave recusada.
+Write-Host ("      Chave recebida: {0}...{1}  (compare com a da VPS: inicio e fim devem ser iguais)" -f $key.Substring(0, 4), $key.Substring(60))
+function Get-KeyStatus([string]$baseUrl, [string]$apiKey) {
+    try {
+        $r = Invoke-WebRequest -Uri "$baseUrl/api/tokens/usage" -Method Post -Headers @{ "X-API-Key" = $apiKey } `
+            -ContentType "application/json" -Body '{"entries":[]}' -UseBasicParsing
+        return [int]$r.StatusCode
+    } catch {
+        if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode }
+        return 0
+    }
+}
+$status = Get-KeyStatus $Url $key
+if ($status -eq 401) { $key = $null; Fail "o app RECUSOU esta chave (401). Provavelmente e a chave antiga ou uma copia errada. Pegue de novo na VPS (comeca com 21db e termina com c6e4)." }
+if ($status -eq 0)   { $key = $null; Fail "nao consegui falar com $Url (rede/endereco). Abra a URL no navegador para conferir." }
+if ($status -ne 400 -and $status -ne 200) { $key = $null; Fail "resposta inesperada do app no teste da chave: HTTP $status." }
+Write-Host "      Chave aceita pelo app (teste HTTP $status)." -ForegroundColor Green
+
 # 5) Confirmacao
 if (-not $SkipConfirm) {
     $r = Read-Host "[5/6] Enviar o consumo para $Url ? (s/N)"
