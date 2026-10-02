@@ -22,6 +22,13 @@ Browser ──Basic auth──► Next.js (BFF + dashboard, recharts) ──X-AP
 - `token_usage_entries`: uma linha por resposta do assistente. `message_id` **UNIQUE** (idempotência), `hour_bucket` (hora UTC, p/ agregação barata), índices em `occurred_at` e `(process, occurred_at)`, CHECK de não-negativos. Sem conteúdo de conversa (sem PII).
 - `token_plan_config`: linha única (`CHECK id=1`): dia/hora/fuso do reset, orçamento semanal, flag `count_cache_reads`.
 
+## Controle do banco Neon
+Skills oficiais instaladas em `.claude/skills/` (`neon`, `neon-postgres`, via `npx neon@latest skills -s neon -s neon-postgres -y`; `skills-lock.json` fixa as versões). Aplicado ao app:
+- **Pooled × direto**: a aplicação usa a URL `-pooler`; o Flyway usa `NEON_DIRECT_URL` (conexão direta, recomendada pelo Neon para migrations). Sem `NEON_DIRECT_URL`, usa a mesma URL.
+- **`GET /api/tokens/db`** (card "Banco de dados Neon"): conectividade e latência, versão do Postgres, tamanho do banco, conexões (total/ativas/máx), estado do Flyway (`OK/FAILED/UNKNOWN`), linhas e tamanho das tabelas do app, e endpoint/região/pooled extraídos da URL **sem credenciais**. Banco fora do ar → `connected:false` (200), nunca 500. Aviso na tela se estiver em conexão direta.
+- **API de gestão do Neon (opcional, somente leitura)**: com `NEON_API_KEY` + `NEON_PROJECT_ID`, mostra consumo do período (computação, dados escritos, transferência), branches e computes. Cache de 60 s; erro vira `HTTP <status>` sem vazar a chave. ⚠️ **Não verificado contra a API real** (a documentação/API do Neon não são acessíveis do ambiente de desenvolvimento): os campos são lidos de forma tolerante (ausente → `—`), e há teste com servidor simulado. Validar uma vez com a chave real.
+- Operações que alteram o Neon (branch, restore, apagar) ficam **fora** do app: são manuais ou via CLI `neon`, com confirmação.
+
 ## Regras de negócio
 - **Ciclo** = `[último reset, próximo reset)` no fuso configurado; aritmética em data local (seguro contra DST); o instante exato do reset pertence ao novo ciclo.
 - **Tokens contados** = input + output + cache_creation (+ cache_read se `count_cache_reads`). Leituras de cache ficam fora por padrão (são baratas e inflariam o número).
@@ -48,10 +55,10 @@ Browser ──Basic auth──► Next.js (BFF + dashboard, recharts) ──X-AP
 ## Verificação executada
 | Camada | Comando | Resultado |
 |---|---|---|
-| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 15 testes ✅ |
-| Migration em Postgres 16 real | backend contra Postgres local | V1 aplicada ✅ (Testcontainers não disponível: sem Docker no ambiente) |
+| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 26 testes ✅ (25 + sonda Postgres real) |
+| Sonda do banco + migration V1 em Postgres 16 real | `TC_TEST_PG_URL=… mvn verify` (`PostgresDbProbeTest`; no CI via service postgres) | ✅ (Testcontainers não disponível: sem Docker no ambiente) |
 | Collector | `cd collector && npm test` | 5 testes ✅; ingestão real de 31 msgs, reenvio = 31 duplicadas ✅ |
-| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 20 testes ✅, build ✅ |
+| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 23 testes ✅, build ✅ |
 | E2E navegador (Chromium) | `e2e/dashboard.e2e.mjs` | login, KPIs, 11 SVGs, salvar config, sem erros de console ✅ |
 | Carga/estresse | `load-test/load.mjs` | ver abaixo |
 

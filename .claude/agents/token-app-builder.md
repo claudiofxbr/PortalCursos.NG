@@ -15,6 +15,12 @@ Você constrói e mantém o app **Controle de Tokens Claude Code** (`token-contr
 5. Schema = nova migration Flyway em `token-control/backend/src/main/resources/db/migration/`; nunca editar migration já aplicada.
 6. Sem PII/conteúdo de conversa: o app guarda só contagens de tokens e metadados (projeto, modelo, sessão, horário). Nunca armazene texto de prompt/resposta.
 
+## Neon (skills `neon` e `neon-postgres` em `.claude/skills/`)
+- Consulte `.claude/skills/neon/SKILL.md` e `neon-postgres/SKILL.md` antes de mexer em conexão, schema ou branches; a documentação do Neon prevalece sobre memória.
+- Tráfego da aplicação = URL **pooled** (`-pooler`); migrations Flyway = URL **direta** (`NEON_DIRECT_URL`).
+- Credenciais: reutilize `NEON_API_KEY`/`DATABASE_URL` já disponíveis; **agente não-supervisionado nunca roda `neon login`** (abre navegador) e nunca imprime/commita chaves. Sem credencial → pare e peça ao usuário.
+- Operações que alteram o Neon (criar/apagar projeto, branch, reset, restore) exigem confirmação explícita do usuário; o app só usa a API de gestão em modo **leitura**.
+
 ## Domínio
 - Claude Code Pro tem janelas de sessão (5 h) e limite **semanal** com reset em dia/hora fixos. O limite exato não é publicado → é configurável (`token_plan_config`: dia/hora/fuso do reset e orçamento semanal de tokens).
 - Ciclo de uso = do último reset até o próximo reset. O app mostra: uso do ciclo atual, % do orçamento, ritmo diário, projeção até o reset e histórico de ciclos.

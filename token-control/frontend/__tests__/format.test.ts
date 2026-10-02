@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDay, formatDuration, formatPct, formatTokens, severity } from "@/lib/format";
+import { formatBytes, formatDay, formatDuration, formatPct, formatTokens, severity } from "@/lib/format";
 
 describe("format", () => {
   it("formata tokens em mil/mi/bi", () => {
@@ -17,6 +17,11 @@ describe("format", () => {
   it("formata percentual e dia sem deslocar fuso", () => {
     expect(formatPct(12.34)).toBe("12,3%");
     expect(formatDay("2026-09-28")).toBe("28/09");
+  });
+  it("formata bytes", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(1536)).toBe("1,5 KB");
+    expect(formatBytes(52_428_800)).toBe("50 MB");
   });
   it("classifica severidade", () => {
     expect(severity(10)).toBe("ok");

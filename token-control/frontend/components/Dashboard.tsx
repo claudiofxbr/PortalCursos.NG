@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getHistory, getSummary, saveConfig } from "@/lib/api";
+import { getDbStatus, getHistory, getSummary, saveConfig } from "@/lib/api";
 import {
   formatDateTime, formatDuration, formatPct, formatTokens, severity, WEEKDAYS,
 } from "@/lib/format";
-import type { HistoryEntry, PlanConfig, Summary } from "@/lib/types";
+import type { DbStatus, HistoryEntry, PlanConfig, Summary } from "@/lib/types";
 import ConfigForm from "./ConfigForm";
+import NeonCard from "./NeonCard";
 import { CumulativeChart, DailyChart, HistoryChart, ModelChart, ProcessChart, SERIES } from "./charts";
 
 const REFRESH_MS = 60_000;
@@ -26,6 +27,8 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [db, setDb] = useState<DbStatus | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
 
   const load = useCallback(async () => {
@@ -36,6 +39,13 @@ export default function Dashboard() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar");
+    }
+    // banco em chamada separada: falha aqui não derruba o painel de consumo (e vice-versa)
+    try {
+      setDb(await getDbStatus());
+      setDbError(null);
+    } catch (e) {
+      setDbError(e instanceof Error ? e.message : "Falha ao consultar o banco");
     }
   }, []);
 
@@ -165,6 +175,8 @@ export default function Dashboard() {
         <h2>Histórico dos últimos ciclos</h2>
         <HistoryChart history={history} timeZone={config.timezone} />
       </section>
+
+      <NeonCard db={db} error={dbError} />
     </main>
   );
 }

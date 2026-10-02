@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "@/components/Dashboard";
-import type { HistoryEntry, Summary } from "@/lib/types";
+import type { DbStatus, HistoryEntry, Summary } from "@/lib/types";
 
 // Recharts depende de layout real (ResponsiveContainer = 0px no jsdom); aqui validamos dados/estado, não SVG.
 vi.mock("recharts", async () => {
@@ -25,6 +25,15 @@ const summary: Summary = {
 };
 const history: HistoryEntry[] = [{ start: "2026-09-28T12:00:00Z", end: "2026-10-05T12:00:00Z", used: 720_000, limit: 1_000_000, usedPct: 72, current: true }];
 
+const db: DbStatus = {
+  connected: true, latencyMs: 12, version: "17.2", databaseSizeBytes: 52_428_800,
+  connections: { total: 3, active: 1, max: 100 },
+  endpoint: { neon: true, pooled: false, endpointId: "ep-cool-1", region: "sa-east-1" },
+  migrations: { status: "OK", latest: "1", failed: 0 },
+  tables: [{ name: "token_usage_entries", rows: 1200, sizeBytes: 2_097_152 }],
+  neonApi: { enabled: false, ok: false, error: null, project: null, branches: [], endpoints: [] },
+};
+
 function mockFetch(responses: Record<string, unknown>, status = 200) {
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     const key = Object.keys(responses).find((k) => String(url).includes(k));
@@ -36,7 +45,7 @@ describe("Dashboard", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("mostra uso, tempo até o reset, projeção e detalhe por processo", async () => {
-    mockFetch({ "tokens/summary": summary, "tokens/history": history });
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/db": db });
     render(<Dashboard />);
     await screen.findByText(/Uso do ciclo atual/);
     expect(screen.getByText("Atenção")).toBeInTheDocument(); // 72% → warn
@@ -53,11 +62,40 @@ describe("Dashboard", () => {
     mockFetch({
       "tokens/summary": { ...summary, used: 0, usedPct: 0, projection: null, totals: { ...summary.totals, messages: 0 }, byProcess: [], byModel: [] },
       "tokens/history": history,
+      "tokens/db": db,
     });
     render(<Dashboard />);
     await screen.findByText(/Nenhum consumo neste ciclo/);
     expect(screen.getByText("Dentro do ritmo")).toBeInTheDocument();
     expect(screen.getByText(/aguardando 1h de dados/)).toBeInTheDocument();
+  });
+
+  it("card do Neon mostra saúde, aviso de conexão direta e orientação da API do Neon", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/db": db });
+    render(<Dashboard />);
+    const card = await screen.findByRole("region", { name: "Banco de dados Neon" });
+    expect(within(card).getByText("Conectado")).toBeInTheDocument();
+    expect(within(card).getByText(/ep-cool-1 · sa-east-1 · direto/)).toBeInTheDocument();
+    expect(within(card).getByText(/50 MB/)).toBeInTheDocument();
+    expect(within(card).getByRole("note")).toHaveTextContent("-pooler");
+    expect(within(card).getByText(/NEON_API_KEY/)).toBeInTheDocument();
+    expect(within(card).getByRole("table", { name: "Tabelas do app" })).toBeInTheDocument();
+  });
+
+  it("banco desconectado ou migration falha vira alerta vermelho; falha do /db não derruba o painel de consumo", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/db": { ...db, connected: false, migrations: { status: "UNKNOWN", latest: null, failed: 0 } } });
+    const { unmount } = render(<Dashboard />);
+    const card = await screen.findByRole("region", { name: "Banco de dados Neon" });
+    expect(within(card).getByText("Desconectado")).toBeInTheDocument();
+    unmount();
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
+      String(url).includes("tokens/db")
+        ? new Response(JSON.stringify({ error: "backend_unavailable" }), { status: 502 })
+        : new Response(JSON.stringify(String(url).includes("summary") ? summary : history), { status: 200 })));
+    render(<Dashboard />);
+    await screen.findByText(/Uso do ciclo atual/);
+    await screen.findByText(/Falha ao consultar o banco: backend_unavailable/);
   });
 
   it("erro do backend aparece como alerta, sem quebrar", async () => {

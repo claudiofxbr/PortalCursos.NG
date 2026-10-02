@@ -27,6 +27,10 @@ await page.getByRole("progressbar").waitFor();
 for (const t of ["Próximo reset", "Últimas 5 horas", "Projeção até o reset", "Consumo por dia do ciclo", "Consumo por processo", "Consumo por modelo", "Histórico dos últimos ciclos"]) {
   await page.getByText(t, { exact: false }).first().waitFor();
 }
+const neon = page.getByRole("region", { name: "Banco de dados Neon" });
+await neon.getByText("Conectado").waitFor();
+await neon.getByText("OK · v1").waitFor();
+await neon.getByRole("table", { name: "Tabelas do app" }).waitFor();
 await page.waitForSelector("svg.recharts-surface");
 const charts = await page.locator("svg.recharts-surface").count();
 assert.ok(charts >= 5, `esperava ≥5 gráficos SVG, achei ${charts}`);

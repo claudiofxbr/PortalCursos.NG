@@ -12,6 +12,18 @@ permissions:
 jobs:
   test-token-backend:
     runs-on: ubuntu-latest
+    # Postgres real: exercita a sonda do banco (pg_stat_activity/pg_database_size) e a migration V1
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: tcit }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TC_TEST_PG_URL: jdbc:postgresql://localhost:5432/tcit
+      TC_TEST_PG_USER: postgres
+      TC_TEST_PG_PASSWORD: ci
     defaults: { run: { working-directory: token-control/backend } }
     steps:
       - uses: actions/checkout@v7

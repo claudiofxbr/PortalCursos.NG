@@ -7,6 +7,8 @@ import com.portalcursos.tokencontrol.dto.SummaryResponse;
 import com.portalcursos.tokencontrol.dto.UsageBatchRequest;
 import com.portalcursos.tokencontrol.service.ConfigService;
 import com.portalcursos.tokencontrol.service.IngestService;
+import com.portalcursos.tokencontrol.neon.DbStatus;
+import com.portalcursos.tokencontrol.neon.DbStatusService;
 import com.portalcursos.tokencontrol.service.SummaryService;
 import jakarta.validation.Valid;
 import java.time.Clock;
@@ -26,10 +28,12 @@ public class TokenController {
     private final IngestService ingestService;
     private final SummaryService summaryService;
     private final ConfigService configService;
+    private final DbStatusService dbStatusService;
     private final Clock clock;
 
     public TokenController(IngestService ingestService, SummaryService summaryService, ConfigService configService,
-            Clock clock) {
+            DbStatusService dbStatusService, Clock clock) {
+        this.dbStatusService = dbStatusService;
         this.ingestService = ingestService;
         this.summaryService = summaryService;
         this.configService = configService;
@@ -50,6 +54,11 @@ public class TokenController {
     public List<HistoryEntry> history(@RequestParam(defaultValue = "8") int cycles) {
         int bounded = Math.min(Math.max(cycles, 1), 26);
         return summaryService.history(clock.instant(), bounded);
+    }
+
+    @GetMapping("/db")
+    public DbStatus db() {
+        return dbStatusService.status();
     }
 
     @GetMapping("/config")

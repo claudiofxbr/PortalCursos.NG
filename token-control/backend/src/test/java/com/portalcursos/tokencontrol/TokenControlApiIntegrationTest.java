@@ -85,6 +85,16 @@ class TokenControlApiIntegrationTest {
     }
 
     @Test
+    void dbStatusDegradaParaDisconnectedSem500QuandoNaoEPostgres() throws Exception {
+        // H2 não tem as views de catálogo do Postgres: a sonda falha e o endpoint responde 200 com connected=false
+        mvc.perform(get("/api/tokens/db").header("X-API-Key", KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.connected").value(false))
+                .andExpect(jsonPath("$.neonApi.enabled").value(false));
+        mvc.perform(get("/api/tokens/db")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void validacaoRejeitaPayloadInvalido() throws Exception {
         String bad = batch(entry("m-bad", Instant.now(), "p", "m", -5, 0, 0, 0));
         mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)

@@ -50,3 +50,29 @@ export interface HistoryEntry {
   usedPct: number;
   current: boolean;
 }
+
+export interface NeonApiInfo {
+  enabled: boolean;
+  ok: boolean;
+  error: string | null;
+  project: {
+    name: string | null; regionId: string | null; pgVersion: number | null; computeTimeSeconds: number | null;
+    activeTimeSeconds: number | null; writtenDataBytes: number | null; dataTransferBytes: number | null;
+    syntheticStorageBytes: number | null; consumptionPeriodStart: string | null; consumptionPeriodEnd: string | null;
+  } | null;
+  branches: { name: string | null; state: string | null; primary: boolean; logicalSizeBytes: number | null }[];
+  endpoints: { id: string | null; state: string | null; minCu: number | null; maxCu: number | null;
+    suspendTimeoutSeconds: number | null; poolerEnabled: boolean | null }[];
+}
+
+export interface DbStatus {
+  connected: boolean;
+  latencyMs: number;
+  version: string | null;
+  databaseSizeBytes: number;
+  connections: { total: number; active: number; max: number };
+  endpoint: { neon: boolean; pooled: boolean; endpointId: string | null; region: string | null };
+  migrations: { status: "OK" | "FAILED" | "UNKNOWN"; latest: string | null; failed: number };
+  tables: { name: string; rows: number; sizeBytes: number }[];
+  neonApi: NeonApiInfo | null;
+}

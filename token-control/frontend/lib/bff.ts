@@ -5,6 +5,7 @@ const RULES: Rule[] = [
   { method: "GET", path: "summary" },
   { method: "GET", path: "history" },
   { method: "GET", path: "config" },
+  { method: "GET", path: "db" },
   { method: "PUT", path: "config" },
   { method: "POST", path: "usage" },
 ];

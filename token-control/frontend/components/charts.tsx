@@ -20,7 +20,7 @@ export function DailyChart({ daily }: { daily: Day[] }) {
         <BarChart data={data}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS} />
-          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={56} />
+          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={68} />
           <Tooltip {...tip} formatter={(v) => [tokenFmt(v), "Tokens"]} />
           <Bar isAnimationActive={false} dataKey="tokens" name="Tokens/dia" fill="var(--s1)" radius={[4, 4, 0, 0]} />
         </BarChart>
@@ -42,7 +42,7 @@ export function CumulativeChart({ daily, limit, todayIndex }: { daily: Day[]; li
         <ComposedChart data={data}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS} />
-          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={56} domain={[0, Math.max(limit, 1)]} />
+          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={68} domain={[0, Math.max(limit, 1)]} />
           <Tooltip {...tip} formatter={(v) => tokenFmt(v)} />
           <Legend />
           <ReferenceLine y={limit} stroke="var(--danger)" strokeDasharray="4 4" label={{ value: "Limite", fill: "var(--danger)", fontSize: 12, position: "insideTopLeft" }} />
@@ -98,7 +98,7 @@ export function HistoryChart({ history, timeZone }: { history: HistoryEntry[]; t
         <BarChart data={data}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis dataKey="name" tick={AXIS} />
-          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={56} />
+          <YAxis tick={AXIS} tickFormatter={tokenFmt} width={68} />
           <Tooltip {...tip} formatter={(v, _n, item) => [`${tokenFmt(v)} (${formatPct(item.payload.pct)})`, "Usado"]} labelFormatter={(l) => `Ciclo iniciado em ${l}`} />
           {limit > 0 && <ReferenceLine y={limit} stroke="var(--danger)" strokeDasharray="4 4" />}
           <Bar isAnimationActive={false} dataKey="tokens" radius={[4, 4, 0, 0]}>

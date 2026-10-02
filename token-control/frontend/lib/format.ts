@@ -49,3 +49,15 @@ export function severity(usedPct: number): "ok" | "warn" | "danger" {
   if (usedPct >= 70) return "warn";
   return "ok";
 }
+
+/** 1536 -> "1,5 KB"; 52_428_800 -> "50 MB". */
+export function formatBytes(n: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let v = Math.max(0, n);
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: i === 0 ? 0 : 1 }).format(v)} ${units[i]}`;
+}

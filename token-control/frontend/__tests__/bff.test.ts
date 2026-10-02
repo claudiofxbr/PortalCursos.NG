@@ -8,6 +8,8 @@ describe("allowlist do BFF", () => {
   it("permite só as rotas usadas", () => {
     expect(isAllowed("GET", ["summary"])).toBe(true);
     expect(isAllowed("PUT", ["config"])).toBe(true);
+    expect(isAllowed("GET", ["db"])).toBe(true);
+    expect(isAllowed("POST", ["db"])).toBe(false);
     expect(isAllowed("POST", ["usage"])).toBe(true);
     expect(isAllowed("DELETE", ["summary"])).toBe(false);
     expect(isAllowed("GET", ["usage"])).toBe(false);
