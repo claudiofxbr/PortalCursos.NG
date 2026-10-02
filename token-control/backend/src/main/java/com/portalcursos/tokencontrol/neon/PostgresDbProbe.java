@@ -1,6 +1,8 @@
 package com.portalcursos.tokencontrol.neon;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +16,17 @@ public class PostgresDbProbe implements DbProbe {
 
     private final JdbcTemplate jdbc;
 
-    public PostgresDbProbe(JdbcTemplate jdbc) {
+    private final String historyTable;
+
+    @Autowired
+    public PostgresDbProbe(JdbcTemplate jdbc,
+            @Value("${spring.flyway.table:flyway_schema_history}") String historyTable) {
+        // interpolado em SQL: só identificador simples (vem de configuração, nunca de requisição)
+        if (!historyTable.matches("[a-z_][a-z0-9_]*")) {
+            throw new IllegalArgumentException("spring.flyway.table inválido");
+        }
         this.jdbc = jdbc;
+        this.historyTable = historyTable;
     }
 
     @Override
@@ -53,10 +64,10 @@ public class PostgresDbProbe implements DbProbe {
 
     private DbStatus.Migrations migrations() {
         try {
-            Long failed = jdbc.queryForObject("select count(*) from flyway_schema_history where success = false",
+            Long failed = jdbc.queryForObject("select count(*) from " + historyTable + " where success = false",
                     Long.class);
             List<String> latest = jdbc.queryForList(
-                    "select version from flyway_schema_history where success = true and version is not null "
+                    "select version from " + historyTable + " where success = true and version is not null "
                             + "order by installed_rank desc limit 1", String.class);
             long f = failed == null ? 0 : failed;
             return new DbStatus.Migrations(f > 0 ? "FAILED" : "OK", latest.isEmpty() ? null : latest.get(0), f);

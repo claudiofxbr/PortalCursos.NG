@@ -20,10 +20,17 @@ class PostgresDbProbeTest {
         String url = System.getenv("TC_TEST_PG_URL");
         String user = System.getenv().getOrDefault("TC_TEST_PG_USER", "postgres");
         String pass = System.getenv().getOrDefault("TC_TEST_PG_PASSWORD", "");
-        Flyway.configure().dataSource(url, user, pass).cleanDisabled(false).load().migrate();
+        // banco "sujo": simula um clone do PortalCursos.NG (schema não-vazio + histórico Flyway alheio)
+        JdbcTemplate dirty = new JdbcTemplate(new DriverManagerDataSource(url, user, pass));
+        dirty.execute("drop table if exists flyway_schema_history cascade");
+        dirty.execute("drop table if exists token_control_schema_history, token_usage_entries, token_plan_config cascade");
+        dirty.execute("create table flyway_schema_history (installed_rank int, version varchar(50), success boolean)");
+        dirty.execute("insert into flyway_schema_history values (1, '22', true)");
+        Flyway.configure().dataSource(url, user, pass).table("token_control_schema_history")
+                .baselineOnMigrate(true).baselineVersion("0").load().migrate();
 
         JdbcTemplate jdbc = new JdbcTemplate(new DriverManagerDataSource(url, user, pass));
-        DbStatus s = new PostgresDbProbe(jdbc).probe(DbEndpointInfo.parse(url), NeonApiInfo.disabled());
+        DbStatus s = new PostgresDbProbe(jdbc, "token_control_schema_history").probe(DbEndpointInfo.parse(url), NeonApiInfo.disabled());
 
         assertThat(s.connected()).isTrue();
         assertThat(s.version()).matches("\\d+(\\.\\d+)?.*");
@@ -31,7 +38,7 @@ class PostgresDbProbeTest {
         assertThat(s.connections().total()).isPositive();
         assertThat(s.connections().max()).isPositive();
         assertThat(s.migrations().status()).isEqualTo("OK");
-        assertThat(s.migrations().latest()).isEqualTo("1");
+        assertThat(s.migrations().latest()).isEqualTo("1"); // histórico próprio: ignora a "v22" do PortalCursos
         assertThat(s.tables()).extracting(DbStatus.TableInfo::name)
                 .containsExactly("token_plan_config", "token_usage_entries");
         // contagem exata em tabela pequena: config tem a linha id=1 da migration, mesmo sem ANALYZE
