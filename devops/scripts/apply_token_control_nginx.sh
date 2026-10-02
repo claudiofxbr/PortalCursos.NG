@@ -23,12 +23,18 @@ if ! grep -q 'portalcursos-extra.d' "$SITE"; then
   sed -i "0,/ssl_prefer_server_ciphers off;/s##ssl_prefer_server_ciphers off;\n\n$INCLUDE#" "$SITE"
 fi
 
+revert() { cp -p "$BACKUP" "$SITE"; rm -f "$EXTRA_DIR/token-control.conf"; nginx -t || true; }
+
 if nginx -t; then
-  nginx -s reload
-  echo "OK: nginx recarregado. Backup do site: $BACKUP"
-  echo "Rollback: cp -p $BACKUP $SITE && rm -f $EXTRA_DIR/token-control.conf && nginx -t && nginx -s reload"
+  # reload pode falhar por motivo alheio ao config (ex.: pidfile vazio): tenta o systemd; se nada recarregar, REVERTE
+  if nginx -s reload || systemctl reload nginx; then
+    echo "OK: nginx recarregado. Backup do site: $BACKUP"
+    echo "Rollback: cp -p $BACKUP $SITE && rm -f $EXTRA_DIR/token-control.conf && nginx -t && nginx -s reload"
+  else
+    echo "ERRO: não foi possível recarregar o nginx — revertendo o config (nada fica pendente para o próximo reload)"
+    revert; exit 1
+  fi
 else
   echo "ERRO: nginx -t falhou — restaurando backup, sem reload"
-  cp -p "$BACKUP" "$SITE"; rm -f "$EXTRA_DIR/token-control.conf"; nginx -t || true
-  exit 1
+  revert; exit 1
 fi
