@@ -26,6 +26,15 @@ class DbEndpointInfoTest {
     }
 
     @Test
+    void hostComSegmentoExtraCdoisAindaAcharARegiao() {
+        DbEndpointInfo i = DbEndpointInfo.parse(
+                "jdbc:postgresql://ep-gentle-wild-abc123-pooler.c-2.sa-east-1.aws.neon.tech/neondb?sslmode=require");
+        assertThat(i.pooled()).isTrue();
+        assertThat(i.endpointId()).isEqualTo("ep-gentle-wild-abc123");
+        assertThat(i.region()).isEqualTo("sa-east-1");
+    }
+
+    @Test
     void naoNeonOuInvalidoRetornaVazio() {
         assertThat(DbEndpointInfo.parse("jdbc:postgresql://localhost:5432/x").neon()).isFalse();
         assertThat(DbEndpointInfo.parse("jdbc:h2:mem:tc").neon()).isFalse();

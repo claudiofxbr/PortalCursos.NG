@@ -29,6 +29,8 @@ parse_conn() {
     DB_PASS="$(urldecode "${BASH_REMATCH[3]}")"
     DB_HOST="${BASH_REMATCH[4]}"
     local port="${BASH_REMATCH[5]}" db="${BASH_REMATCH[6]}" q="${BASH_REMATCH[8]:-sslmode=require}"
+    # channel_binding é parâmetro do libpq/psql; o driver JDBC não o usa — fora da URL JDBC
+    q="$(sed -E 's/(^|&)channel_binding=[^&]*//g; s/^&//' <<< "$q")"; q="${q:-sslmode=require}"
     JDBC_URL="jdbc:postgresql://${DB_HOST}${port}/${db}?${q}"
     CONN_DB="$db"
 }

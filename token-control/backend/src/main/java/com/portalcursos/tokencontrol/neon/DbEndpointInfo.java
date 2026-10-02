@@ -21,6 +21,14 @@ public record DbEndpointInfo(boolean neon, boolean pooled, String endpointId, St
         String[] labels = host.split("\\.");
         boolean pooled = labels[0].endsWith("-pooler");
         String endpoint = pooled ? labels[0].substring(0, labels[0].length() - "-pooler".length()) : labels[0];
-        return new DbEndpointInfo(true, pooled, endpoint, labels.length > 1 ? labels[1] : null);
+        // hosts atuais têm um segmento extra (ep-xxx.c-2.sa-east-1.aws.neon.tech): a região é o rótulo no formato aa-bbbb-N
+        String region = null;
+        for (int i = 1; i < labels.length; i++) {
+            if (labels[i].matches("[a-z]{2}-[a-z]+-\\d+")) {
+                region = labels[i];
+                break;
+            }
+        }
+        return new DbEndpointInfo(true, pooled, endpoint, region);
     }
 }
