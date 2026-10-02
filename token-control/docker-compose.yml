@@ -40,3 +40,28 @@ services:
     ports:
       - "127.0.0.1:3110:3010"
     mem_limit: 256m
+    # Edge atual = Traefik do EasyPanel (rede "easypanel"), mesmo padrão do PortalCursos.NG. Só o frontend é exposto;
+    # o backend fica na rede interna do compose. Sem healthcheck no Traefik: a rota exige login (401 sem credencial).
+    networks: [default, easypanel]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=easypanel"
+      - "traefik.http.routers.tokencontrol-fe.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/tokencontrol`)"
+      - "traefik.http.routers.tokencontrol-fe.entrypoints=https"
+      - "traefik.http.routers.tokencontrol-fe.tls=true"
+      - "traefik.http.routers.tokencontrol-fe.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.tokencontrol-fe.service=tokencontrol-fe-svc"
+      - "traefik.http.services.tokencontrol-fe-svc.loadbalancer.server.port=3010"
+      - "traefik.http.routers.tokencontrol-fe.middlewares=tokencontrol-security@docker"
+      - "traefik.http.middlewares.tokencontrol-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.tokencontrol-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.tokencontrol-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.tokencontrol-security.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.tokencontrol-security.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.routers.tokencontrol-http.rule=Host(`${DOMAIN_NAME:-xavierbr-vps.tech}`) && PathPrefix(`/tokencontrol`)"
+      - "traefik.http.routers.tokencontrol-http.entrypoints=http"
+      - "traefik.http.routers.tokencontrol-http.middlewares=redirect-to-https@file"
+
+networks:
+  easypanel:
+    external: true

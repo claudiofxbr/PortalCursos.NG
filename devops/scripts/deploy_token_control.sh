@@ -19,6 +19,9 @@ COMPOSE="docker compose -f $SRC_DIR/token-control/docker-compose.yml --env-file 
 free_mb=$(free -m | awk '/^Mem:/{print $7}')
 [ "$free_mb" -gt 700 ] || { echo "ERRO: só ${free_mb}MB de RAM disponível (VPS compartilhada) — abortando"; exit 1; }
 
+# O frontend entra na rede externa "easypanel" (Traefik é o edge atual). Ela precisa existir.
+docker network inspect easypanel >/dev/null 2>&1 || { echo "ERRO: rede docker 'easypanel' não existe — o edge Traefik não está configurado como esperado; abortando"; exit 1; }
+
 # Portas: se não for este stack já rodando, 8190/3110 precisam estar livres
 if ! docker compose -p token-control ps -q 2>/dev/null | grep -q .; then
   for port in 8190 3110; do

@@ -7,7 +7,7 @@ VPS compartilhada com o CVFacil.NG, ~8 GB, ~15 containers. Este app usa ~640 MB 
 1. Neon: banco/branch **dedicado** (de preferência projeto separado). Histórico Flyway próprio (`token_control_schema_history`).
 2. `bash setup_token_control_env.sh` — pede as connection strings (pooled e direta) com digitação oculta, testa, grava `/var/www/token-control/.env` (600). **Nunca cole a string do Neon em chat/issue/commit.** Confirme que `NEON_DIRECT_URL` **não** tem `-pooler`.
 3. Containers: `bash devops/scripts/deploy_token_control.sh` (REF padrão = branch de desenvolvimento; após o merge, `REF=main`).
-4. nginx (aditivo, com `nginx -t` como portão e backup automático): `bash devops/scripts/apply_token_control_nginx.sh` — cria `/etc/nginx/portalcursos-extra.d/token-control.conf` e 1 linha `include` no site. A mesma linha foi adicionada ao `devops/scripts/nginx.conf` versionado, para o `apply_nginx.sh` não removê-la.
+4. **Roteamento (edge):** em 2026-10-02 as portas 80/443 da VPS estavam com o `docker-proxy` (Traefik do EasyPanel) e o `nginx.service` do host estava `failed` desde 2026-10-01 06:44 (bind em uso). Por isso o frontend traz rótulos Traefik (`PathPrefix(/tokencontrol)`, rede `easypanel`), como o PortalCursos.NG — não há passo de nginx. `apply_token_control_nginx.sh` (+ `nginx-snippet.conf`) só serve se o nginx do host voltar a ser o edge; **não usar** enquanto o nginx estiver parado (o `reload` falha: pidfile vazio).
 5. URL: `https://xavierbr-vps.tech/tokencontrol` (login Basic: `DASHBOARD_USER`/`DASHBOARD_PASSWORD`).
 6. Máquina local (onde roda o Claude Code): `TOKEN_CONTROL_URL=https://xavierbr-vps.tech/tokencontrol TOKEN_CONTROL_API_KEY=... node token-control/collector/collect.mjs --watch 300`.
 
