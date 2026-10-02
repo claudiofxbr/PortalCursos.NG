@@ -67,3 +67,8 @@ test_env_out.txt
 
 # Notas privadas de infraestrutura (links de console, nomes de recursos — nunca versionar)
 infra-notas-privadas.md
+
+# Controle de Tokens (token-control/)
+token-control/backend/target/
+token-control/frontend/.next/
+token-control/frontend/next-env.d.ts

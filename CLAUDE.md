@@ -81,3 +81,10 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - Escrever sempre o documento `multiagent/live` completo via `ArtifactData` action `set` (mesmo padrão da Torre geral — nunca `update` parcial em array).
 - Ao rodar um sub-agente (`.claude/agents/*.md` ou `portal-*`) neste projeto, atualizar esse painel: status em "Monitoramento em tempo real", nova linha em "Roteamento de tarefas" e, se houver achado/decisão, nova entrada em "Logs de auditoria".
 - **"Monitoramento em tempo real" só lista processos ativos ou em conclusão** (campo `monitor`, separado de `agents`) — igual à regra da Torre geral (itens concluídos somem da lista ao vivo). O roster completo de agentes ("Gerenciamento de agentes") continua sempre visível por inteiro (é inventário, não status ao vivo); "Roteamento de tarefas" e "Logs de auditoria" continuam históricos completos (append-only), nunca podados.
+
+## Controle de Tokens Claude Code (`token-control/`, 2026-10-02)
+
+- App **isolado** (Java 21/Spring Boot + Next.js + collector Node + Neon) que mostra o consumo do Claude Code Pro por semana e até o reset, com gráficos. Docs: `token-control/docs/ARQUITETURA.md` e `DEPLOY.md`. CI próprio: `.github/workflows/token-control-ci.yml` (não mexe no `deploy.yml`).
+- Agentes: `token-solution-designer` (desenho + testes, portão sequencial), `token-app-builder` (implementação) e `agent-manager` (gestão do roster; processo só avança com zero erros).
+- Deploy na VPS **não executado** — `devops/scripts/deploy_token_control.sh` + nginx exigem confirmação explícita. Não usar o banco Neon do PortalCursos.NG.
+- Armadilha corrigida: com `basePath`, o `matcher` do `proxy.ts` do Next precisa incluir `"/"` explicitamente, senão a página raiz abre sem login.

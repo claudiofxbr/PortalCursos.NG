@@ -1,0 +1,39 @@
+# Controle de Tokens Claude Code — stack própria (não compartilha nada com portalcursos/cvfacil).
+# Portas só em 127.0.0.1: quem expõe é o nginx do host (ver docs/DEPLOY.md).
+name: token-control
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?defina no .env}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?defina no .env}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?defina no .env}
+      TOKEN_CONTROL_API_KEY: ${TOKEN_CONTROL_API_KEY:?defina no .env}
+    ports:
+      - "127.0.0.1:8090:8090"
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8090
+      TOKEN_CONTROL_API_KEY: ${TOKEN_CONTROL_API_KEY:?defina no .env}
+      DASHBOARD_USER: ${DASHBOARD_USER:-admin}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?defina no .env}
+    ports:
+      - "127.0.0.1:3010:3010"
+    mem_limit: 256m

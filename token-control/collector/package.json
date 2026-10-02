@@ -1,0 +1,12 @@
+{
+  "name": "token-control-collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lê os transcritos do Claude Code e envia só contagens de tokens ao backend Controle de Tokens",
+  "scripts": {
+    "collect": "node collect.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": { "node": ">=20" }
+}

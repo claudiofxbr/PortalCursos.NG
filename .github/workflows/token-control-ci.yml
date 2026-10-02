@@ -1,0 +1,41 @@
+name: Token Control CI
+
+on:
+  push:
+    paths: ['token-control/**', '.github/workflows/token-control-ci.yml']
+  pull_request:
+    paths: ['token-control/**', '.github/workflows/token-control-ci.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test-token-backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: token-control/backend } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      - run: mvn -B verify
+
+  test-token-frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: token-control/frontend } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24', cache: npm, cache-dependency-path: token-control/frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:run
+      - run: npm run build
+
+  test-token-collector:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: token-control/collector } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - run: npm test
