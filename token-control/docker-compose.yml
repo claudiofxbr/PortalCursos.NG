@@ -1,5 +1,5 @@
 # Controle de Tokens Claude Code — stack própria (não compartilha nada com portalcursos/cvfacil).
-# Portas só em 127.0.0.1: quem expõe é o nginx do host (ver docs/DEPLOY.md).
+# Portas do host 8190/3110 (8090/3010/8091/3011 são do PortalCursos.NG). Só em 127.0.0.1: quem expõe é o nginx do host (ver docs/DEPLOY.md).
 name: token-control
 services:
   backend:
@@ -14,7 +14,7 @@ services:
       NEON_API_KEY: ${NEON_API_KEY:-}
       NEON_PROJECT_ID: ${NEON_PROJECT_ID:-}
     ports:
-      - "127.0.0.1:8090:8090"
+      - "127.0.0.1:8190:8090"
     mem_limit: 384m
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/actuator/health"]
@@ -38,5 +38,5 @@ services:
       DASHBOARD_USER: ${DASHBOARD_USER:-admin}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?defina no .env}
     ports:
-      - "127.0.0.1:3010:3010"
+      - "127.0.0.1:3110:3010"
     mem_limit: 256m
