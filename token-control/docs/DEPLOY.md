@@ -12,3 +12,7 @@ VPS compartilhada com o CVFacil.NG, ~8 GB, ~15 containers. Este app usa ~640 MB 
 6. Máquina local (onde roda o Claude Code): `TOKEN_CONTROL_URL=https://xavierbr-vps.tech/tokencontrol TOKEN_CONTROL_API_KEY=... node token-control/collector/collect.mjs --watch 300`.
 
 Rollback: `docker compose -p token-control down` (dados ficam no Neon); no nginx, o comando de rollback impresso por `apply_token_control_nginx.sh`.
+
+## Verificação e envio automatizados
+- **VPS:** `bash devops/scripts/verificar_token_control.sh` — só leitura, sem digitar senha (lê o `.env`). Confere permissões do `.env`, URLs pooled/direta, containers, se o container usa a mesma chave do `.env`, se o app aceita a chave (POST com lote vazio: 400 = aceita, 401 = recusada), login do dashboard, `/month`, Neon/migrations e o PortalCursos.NG. Imprime um relatório com `[OK]/[FALHA]`, grava em `/root/verificacao.txt` e sai com código 1 se algo falhar.
+- **Computador (Windows):** `enviar-consumo.ps1 -Update -FetchKeyViaSsh` — atualiza o collector, busca a chave por SSH (nunca exibida), testa a chave antes de enviar e envia o consumo.
