@@ -23,7 +23,7 @@ async function forward(req: Request, ctx: { params: Promise<{ path: string[] }> 
       headers: { "X-API-Key": key, ...(hasBody ? { "Content-Type": "application/json" } : {}) },
       body: hasBody ? await req.text() : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(60_000),
     });
     return new Response(await upstream.text(), {
       status: upstream.status,

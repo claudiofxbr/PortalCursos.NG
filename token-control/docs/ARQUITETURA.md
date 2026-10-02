@@ -35,6 +35,9 @@ Skills oficiais instaladas em `.claude/skills/` (`neon`, `neon-postgres`, via `n
 - Mês civil no fuso configurado `[dia 1 00:00, dia 1 do mês seguinte)`, com aritmética em data local (virada de mês e DST testadas).
 - O frontend usa um único `PeriodPanel` para as duas abas (semana e mês): mesma tela, só mudam janela, rótulos e limite. O histórico de ciclos aparece só na aba semanal.
 
+## Desempenho da ingestão com latência até o Neon
+Achado em produção (2026-10-02): o primeiro envio real (lotes de 500) deu **502**. Causa: gravação com `saveAll` + `IDENTITY` = **um INSERT por mensagem** (o Hibernate desliga o batch com IDENTITY); com ~120 ms de latência VPS→Neon, 500 mensagens levavam **~62 s** e estouravam o timeout do BFF (15 s). O Postgres local dos testes não tem latência e escondia o problema. Correção: `JdbcTemplate.batchUpdate` numa transação + `reWriteBatchedInserts=true` (multi-row, 1 round-trip) → **~0,8 s** para 500 mensagens com a mesma latência simulada (proxy TCP com +60 ms/direção); timeout do BFF subiu para 60 s por segurança. Idempotência mantida (checagem prévia + retry em violação de unicidade).
+
 ## Regras de negócio
 - **Ciclo** = `[último reset, próximo reset)` no fuso configurado; aritmética em data local (seguro contra DST); o instante exato do reset pertence ao novo ciclo.
 - **Tokens contados** = input + output + cache_creation (+ cache_read se `count_cache_reads`). Leituras de cache ficam fora por padrão (são baratas e inflariam o número).
