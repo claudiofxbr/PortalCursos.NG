@@ -51,7 +51,13 @@ public class IngestService {
             // outro collector gravou as mesmas mensagens entre o SELECT e o INSERT — reavalia uma vez
             inserted = insertMissing(unique);
         }
+        touchLastIngest();
         return new IngestResult(requests.size(), inserted, requests.size() - inserted);
+    }
+
+    /** Marca a sincronização (mesmo sem linhas novas): é o que a Torre usa para saber se o collector está ativo. */
+    private void touchLastIngest() {
+        jdbc.update("update token_plan_config set last_ingest_at = ? where id = 1", OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
     }
 
     /**

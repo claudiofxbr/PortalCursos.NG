@@ -29,7 +29,7 @@ for (const t of ["Próximo reset", "Últimas 5 horas", "Projeção até o reset"
 }
 const neon = page.getByRole("region", { name: "Banco de dados Neon" });
 await neon.getByText("Conectado").waitFor();
-await neon.getByText("OK · v2").waitFor();
+await neon.getByText("OK · v3").waitFor();
 await neon.getByRole("table", { name: "Tabelas do app" }).waitFor();
 await page.waitForSelector("svg.recharts-surface");
 const charts = await page.locator("svg.recharts-surface").count();

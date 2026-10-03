@@ -115,6 +115,16 @@ class TowerServiceTest {
     }
 
     @Test
+    void sincronizacaoSemLinhasNovasContaComoColetorAtivo() {
+        // última linha gravada há 3 dias, mas o collector sincronizou há 20 min (tudo duplicado): coletor OK
+        when(repo.lastIngestedAt()).thenReturn(NOW.minus(Duration.ofDays(3)));
+        config.markIngested(NOW.minus(Duration.ofMinutes(20)));
+        Item i = item(tower.tower(NOW), "collector");
+        assertThat(i.status()).isEqualTo("ok");
+        assertThat(i.detail()).startsWith("Última sincronização há 20min").contains("última atividade do Claude Code");
+    }
+
+    @Test
     void semNenhumEnvioColetorFicaNaFilaENaoDegradaOGeral() {
         when(repo.lastIngestedAt()).thenReturn(null);
         TowerResponse r = tower.tower(NOW);

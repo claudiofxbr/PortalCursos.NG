@@ -60,7 +60,7 @@ public class TowerService {
         alerts(items, week, month, zone);
         pendencies(items, config, db);
         health(items, db);
-        automatic(items, now, week, month, zone);
+        automatic(items, now, week, month, zone, config);
 
         Counts counts = count(items);
         String overall = counts.danger() > 0 ? "danger" : counts.warn() > 0 ? "warn" : "ok";
@@ -129,8 +129,9 @@ public class TowerService {
     }
 
     // ---- processos automáticos/recorrentes (sempre visíveis)
-    private void automatic(List<Item> out, Instant now, SummaryResponse week, MonthSummaryResponse month, ZoneId zone) {
-        out.add(collector(now));
+    private void automatic(List<Item> out, Instant now, SummaryResponse week, MonthSummaryResponse month, ZoneId zone,
+            PlanConfig config) {
+        out.add(collector(now, config));
         out.add(new Item("cycle-week", "auto", "Ciclo semanal (" + dayLabel(week.config().resetDayOfWeek()) + " " + week.config().resetTime() + ")",
                 severity(week.usedPct()), tokens(week.used()) + " de " + tokens(week.limit()) + " (" + pct(week.usedPct())
                         + ") · reset em " + human(Duration.ofSeconds(week.cycle().secondsRemaining()))));
@@ -139,16 +140,17 @@ public class TowerService {
                         + pct(month.usedPct()) + ") · fim do mês em " + human(Duration.ofSeconds(month.period().secondsRemaining()))));
     }
 
-    private Item collector(Instant now) {
-        Instant lastIngest = repository.lastIngestedAt();
+    private Item collector(Instant now, PlanConfig config) {
+        // última sincronização (cada envio, mesmo sem novidades); cai para a última linha gravada em bancos antigos
+        Instant lastIngest = config.getLastIngestAt() != null ? config.getLastIngestAt() : repository.lastIngestedAt();
         if (lastIngest == null) {
             return new Item("collector", "auto", "Coletor de consumo (Claude Code)", "queued",
-                    "Nenhum envio recebido ainda. Rode o enviar-consumo.ps1 no computador onde o Claude Code roda.");
+                    "Nenhuma sincronização recebida ainda. Rode o enviar-consumo.ps1 no computador onde o Claude Code roda.");
         }
         Duration age = Duration.between(lastIngest, now);
         String status = age.toHours() < COLLECTOR_OK_HOURS ? "ok" : age.toHours() < COLLECTOR_WARN_HOURS ? "warn" : "danger";
         Instant lastUse = repository.lastOccurredAt();
-        String detail = "Último envio há " + human(age) + (lastUse != null ? " · última atividade registrada há "
+        String detail = "Última sincronização há " + human(age) + (lastUse != null ? " · última atividade do Claude Code registrada há "
                 + human(Duration.between(lastUse, now)) : "");
         if (!"ok".equals(status)) {
             detail += " · o painel pode estar desatualizado; rode o enviar-consumo.ps1.";

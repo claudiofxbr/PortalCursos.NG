@@ -40,6 +40,9 @@ public class PlanConfig {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "last_ingest_at")
+    private Instant lastIngestAt;
+
     protected PlanConfig() {}
 
     public PlanConfig(String planName, int resetDayOfWeek, LocalTime resetTime, String timezone,
@@ -72,4 +75,6 @@ public class PlanConfig {
     public Long getMonthlyLimitTokens() { return monthlyLimitTokens; }
     public boolean isCountCacheReads() { return countCacheReads; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Instant getLastIngestAt() { return lastIngestAt; }
+    public void markIngested(Instant at) { this.lastIngestAt = at; }
 }

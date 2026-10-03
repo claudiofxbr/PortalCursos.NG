@@ -27,6 +27,7 @@ class TokenControlApiIntegrationTest {
     @org.junit.jupiter.api.BeforeEach
     void limpaConsumo() {
         jdbc.update("delete from token_usage_entries"); // isolamento: cada teste parte do banco sem consumo
+        jdbc.update("update token_plan_config set last_ingest_at = null where id = 1");
     }
 
     private String entry(String id, Instant at, String process, String model, long in, long out, long cc, long cr) {
@@ -161,6 +162,26 @@ class TokenControlApiIntegrationTest {
                 .andExpect(jsonPath("$.sections[3].table.rows[0][0]").value("proj-relatorio"))
                 .andExpect(jsonPath("$.sections[5].title").value("Recomendações"))
                 .andExpect(jsonPath("$.sections[5].bullets").isNotEmpty());
+    }
+
+    @Test
+    void reenvioSoComDuplicadasAtualizaASincronizacaoDoColetor() throws Exception {
+        Instant old = Instant.now().minusSeconds(3 * 86_400);
+        // linha gravada há 3 dias (created_at antigo) e nenhuma sincronização registrada → coletor crítico
+        jdbc.update("update token_plan_config set last_ingest_at = null where id = 1");
+        jdbc.update("""
+            insert into token_usage_entries (message_id, occurred_at, hour_bucket, session_id, process, model, input_tokens, output_tokens,
+                cache_creation_tokens, cache_read_tokens, created_at) values ('antiga-1', ?, ?, 's', 'proj-antigo', 'm', 1, 1, 0, 0, ?)""",
+                java.sql.Timestamp.from(old), java.sql.Timestamp.from(old), java.sql.Timestamp.from(old));
+        mvc.perform(get("/api/tokens/tower").header("X-API-Key", KEY))
+                .andExpect(jsonPath("$.items[?(@.id=='collector')].status").value("danger"));
+
+        // o collector reenvia a MESMA mensagem: 0 novas, mas a sincronização é registrada → coletor OK
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("antiga-1", old, "proj-antigo", "m", 1, 1, 0, 0))))
+                .andExpect(jsonPath("$.inserted").value(0)).andExpect(jsonPath("$.duplicates").value(1));
+        mvc.perform(get("/api/tokens/tower").header("X-API-Key", KEY))
+                .andExpect(jsonPath("$.items[?(@.id=='collector')].status").value("ok"));
     }
 
     @Test
