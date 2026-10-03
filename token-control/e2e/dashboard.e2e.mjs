@@ -47,6 +47,18 @@ if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SC
 await page.getByRole("tab", { name: "Semana (ciclo)" }).click();
 await page.getByText("Uso do ciclo atual").first().waitFor();
 
+// aba "Torre de Controle" (processos): estado geral, seções e o selo no cabeçalho
+await page.getByRole("tab", { name: "Torre de Controle" }).click();
+const tower = page.getByRole("tabpanel", { name: "Torre de Controle dos Processos" });
+await tower.getByText("Torre de Controle dos Processos").first().waitFor();
+for (const t of ["Em andamento", "Fila / pendências", "Saúde do sistema", "Processos automáticos recorrentes", "Coletor de consumo", "Banco de dados Neon", "Ciclo semanal", "Mês atual"]) {
+  await tower.getByText(t, { exact: false }).first().waitFor();
+}
+await page.getByRole("button", { name: /^Torre:/ }).waitFor();
+if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SCREENSHOT.replace(".png", "-torre.png"), fullPage: true });
+await page.getByRole("tab", { name: "Semana (ciclo)" }).click();
+await page.getByText("Uso do ciclo atual").first().waitFor();
+
 // configuração: alterar orçamento e ver refletido
 await page.getByRole("button", { name: "Configurar plano" }).click();
 await page.getByLabel("Orçamento semanal (tokens)").fill("40000000");

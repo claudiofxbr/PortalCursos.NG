@@ -1,4 +1,4 @@
-import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Summary } from "./types";
+import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Summary, Tower } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -20,6 +20,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const getSummary = () => request<Summary>("summary");
 export const getDbStatus = () => request<DbStatus>("db");
 export const getMonth = () => request<MonthSummary>("month");
+export const getTower = () => request<Tower>("tower");
 export const getHistory = (cycles = 8) => request<HistoryEntry[]>(`history?cycles=${cycles}`);
 export const saveConfig = (config: PlanConfig) =>
   request<PlanConfig>("config", {

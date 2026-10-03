@@ -9,6 +9,8 @@ describe("allowlist do BFF", () => {
     expect(isAllowed("GET", ["summary"])).toBe(true);
     expect(isAllowed("PUT", ["config"])).toBe(true);
     expect(isAllowed("GET", ["db"])).toBe(true);
+    expect(isAllowed("GET", ["tower"])).toBe(true);
+    expect(isAllowed("POST", ["tower"])).toBe(false);
     expect(isAllowed("POST", ["db"])).toBe(false);
     expect(isAllowed("POST", ["usage"])).toBe(true);
     expect(isAllowed("DELETE", ["summary"])).toBe(false);

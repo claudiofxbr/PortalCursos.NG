@@ -45,4 +45,18 @@ public interface UsageRepository extends JpaRepository<UsageEntry, Long> {
             coalesce(sum(e.cacheCreationTokens), 0L), coalesce(sum(e.cacheReadTokens), 0L), count(e))
         from UsageEntry e where e.occurredAt >= :start and e.occurredAt < :end""")
     UsageAggregate total(@Param("start") Instant start, @Param("end") Instant end);
+
+    @Query("select max(e.createdAt) from UsageEntry e")
+    Instant lastIngestedAt();
+
+    @Query("select max(e.occurredAt) from UsageEntry e")
+    Instant lastOccurredAt();
+
+    @Query("""
+        select new com.portalcursos.tokencontrol.repository.ProcessActivity(
+            e.process, sum(e.inputTokens), sum(e.outputTokens), sum(e.cacheCreationTokens),
+            sum(e.cacheReadTokens), count(e), max(e.occurredAt))
+        from UsageEntry e where e.occurredAt >= :start and e.occurredAt < :end
+        group by e.process""")
+    List<ProcessActivity> activityByProcess(@Param("start") Instant start, @Param("end") Instant end);
 }

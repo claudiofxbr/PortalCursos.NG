@@ -124,6 +124,30 @@ class TokenControlApiIntegrationTest {
     }
 
     @Test
+    void torreDeControleListaProcessosEReagePeloEstadoReal() throws Exception {
+        mvc.perform(get("/api/tokens/tower")).andExpect(status().isUnauthorized());
+
+        // banco de testes sem consumo: coletor na fila; H2 não é Postgres → banco "crítico"; geral crítico
+        mvc.perform(get("/api/tokens/tower").header("X-API-Key", KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[?(@.id=='collector')].status").value("queued"))
+                .andExpect(jsonPath("$.items[?(@.id=='database')].status").value("danger"))
+                .andExpect(jsonPath("$.items[?(@.id=='api')].status").value("ok"))
+                .andExpect(jsonPath("$.items[?(@.id=='cycle-week')]").exists())
+                .andExpect(jsonPath("$.items[?(@.id=='cycle-month')]").exists())
+                .andExpect(jsonPath("$.overall").value("danger"));
+
+        // após um envio: coletor OK e o processo aparece "em andamento"
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("torre-1", Instant.now().minusSeconds(60), "proj-torre", "claude-sonnet-5-5", 10, 5, 0, 0))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tokens/tower").header("X-API-Key", KEY))
+                .andExpect(jsonPath("$.items[?(@.id=='collector')].status").value("ok"))
+                .andExpect(jsonPath("$.items[?(@.id=='work-proj-torre')].category").value("work"))
+                .andExpect(jsonPath("$.counts.active").value(1));
+    }
+
+    @Test
     void dbStatusDegradaParaDisconnectedSem500QuandoNaoEPostgres() throws Exception {
         // H2 não tem as views de catálogo do Postgres: a sonda falha e o endpoint responde 200 com connected=false
         mvc.perform(get("/api/tokens/db").header("X-API-Key", KEY))

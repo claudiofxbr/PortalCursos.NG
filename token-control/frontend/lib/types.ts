@@ -92,3 +92,21 @@ export interface MonthSummary {
   byProcess: Slice[];
   byModel: Slice[];
 }
+
+export type TowerStatus = "ok" | "active" | "queued" | "warn" | "danger";
+export type TowerCategory = "work" | "queue" | "health" | "auto";
+
+export interface TowerItem {
+  id: string;
+  category: TowerCategory;
+  label: string;
+  status: TowerStatus;
+  detail: string;
+}
+
+export interface Tower {
+  generatedAt: string;
+  overall: "ok" | "warn" | "danger";
+  counts: { ok: number; active: number; queued: number; warn: number; danger: number };
+  items: TowerItem[];
+}

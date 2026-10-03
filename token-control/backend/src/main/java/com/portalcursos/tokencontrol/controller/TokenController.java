@@ -5,12 +5,14 @@ import com.portalcursos.tokencontrol.dto.HistoryEntry;
 import com.portalcursos.tokencontrol.dto.IngestResult;
 import com.portalcursos.tokencontrol.dto.MonthSummaryResponse;
 import com.portalcursos.tokencontrol.dto.SummaryResponse;
+import com.portalcursos.tokencontrol.dto.TowerResponse;
 import com.portalcursos.tokencontrol.dto.UsageBatchRequest;
 import com.portalcursos.tokencontrol.service.ConfigService;
 import com.portalcursos.tokencontrol.service.IngestService;
 import com.portalcursos.tokencontrol.neon.DbStatus;
 import com.portalcursos.tokencontrol.neon.DbStatusService;
 import com.portalcursos.tokencontrol.service.SummaryService;
+import com.portalcursos.tokencontrol.service.TowerService;
 import jakarta.validation.Valid;
 import java.time.Clock;
 import java.util.List;
@@ -30,10 +32,12 @@ public class TokenController {
     private final SummaryService summaryService;
     private final ConfigService configService;
     private final DbStatusService dbStatusService;
+    private final TowerService towerService;
     private final Clock clock;
 
     public TokenController(IngestService ingestService, SummaryService summaryService, ConfigService configService,
-            DbStatusService dbStatusService, Clock clock) {
+            DbStatusService dbStatusService, TowerService towerService, Clock clock) {
+        this.towerService = towerService;
         this.dbStatusService = dbStatusService;
         this.ingestService = ingestService;
         this.summaryService = summaryService;
@@ -49,6 +53,11 @@ public class TokenController {
     @GetMapping("/summary")
     public SummaryResponse summary() {
         return summaryService.summary(clock.instant());
+    }
+
+    @GetMapping("/tower")
+    public TowerResponse tower() {
+        return towerService.tower(clock.instant());
     }
 
     @GetMapping("/month")

@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getDbStatus, getHistory, getMonth, getSummary, saveConfig } from "@/lib/api";
+import { getDbStatus, getHistory, getMonth, getSummary, getTower, saveConfig } from "@/lib/api";
 import { formatPct, WEEKDAYS } from "@/lib/format";
-import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Summary } from "@/lib/types";
+import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Summary, Tower } from "@/lib/types";
 import ConfigForm from "./ConfigForm";
 import { HistoryChart } from "./charts";
 import NeonCard from "./NeonCard";
 import PeriodPanel, { type PeriodView } from "./PeriodPanel";
+import TowerPanel, { OVERALL_TITLE } from "./TowerPanel";
 
 const REFRESH_MS = 60_000;
 
-type Tab = "week" | "month";
+type Tab = "week" | "month" | "tower";
 
 function weekView(s: Summary): PeriodView {
   const todayIndex = Math.min(7, Math.max(1, Math.ceil((s.cycle.elapsedPct / 100) * 7) || 1));
@@ -41,6 +42,8 @@ export default function Dashboard() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [month, setMonth] = useState<MonthSummary | null>(null);
   const [monthError, setMonthError] = useState<string | null>(null);
+  const [tower, setTower] = useState<Tower | null>(null);
+  const [towerError, setTowerError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("week");
   const [error, setError] = useState<string | null>(null);
   const [db, setDb] = useState<DbStatus | null>(null);
@@ -55,6 +58,13 @@ export default function Dashboard() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar");
+    }
+    // torre em chamada separada: falha aqui não derruba as demais abas
+    try {
+      setTower(await getTower());
+      setTowerError(null);
+    } catch (e) {
+      setTowerError(e instanceof Error ? e.message : "Falha ao carregar a torre");
     }
     // mês em chamada separada: falha aqui não derruba a aba semanal
     try {
@@ -95,13 +105,19 @@ export default function Dashboard() {
   }
 
   const { config } = summary;
-  const view = tab === "week" ? weekView(summary) : month ? monthView(month) : null;
+  const view = tab === "week" ? weekView(summary) : tab === "month" && month ? monthView(month) : null;
 
   return (
     <main className="wrap">
       <header className="top">
         <div>
-          <h1>Controle de Tokens Claude Code</h1>
+          <h1>Controle de Tokens Claude Code{tower && (
+            <button className={`badge ${tower.overall === "danger" ? "danger" : tower.overall === "warn" ? "warn" : "ok"}`}
+              style={{ marginLeft: 12, background: "transparent", cursor: "pointer", verticalAlign: "middle" }}
+              onClick={() => setTab("tower")} title="Abrir a Torre de Controle dos Processos" aria-label={`Torre: ${OVERALL_TITLE[tower.overall]}`}>
+              Torre: {OVERALL_TITLE[tower.overall]}
+            </button>
+          )}</h1>
           <div className="sub">
             {config.planName} · ciclo semanal reseta {WEEKDAYS[config.resetDayOfWeek]} {config.resetTime} ({config.timezone})
           </div>
@@ -127,9 +143,18 @@ export default function Dashboard() {
       <div role="tablist" aria-label="Período" style={{ display: "flex", gap: 8, marginTop: 16 }}>
         <button role="tab" aria-selected={tab === "week"} className={`btn ${tab === "week" ? "" : "ghost"}`} onClick={() => setTab("week")}>Semana (ciclo)</button>
         <button role="tab" aria-selected={tab === "month"} className={`btn ${tab === "month" ? "" : "ghost"}`} onClick={() => setTab("month")}>Mês atual</button>
+        <button role="tab" aria-selected={tab === "tower"} className={`btn ${tab === "tower" ? "" : "ghost"}`} onClick={() => setTab("tower")}>Torre de Controle</button>
       </div>
 
-      {view ? (
+      {tab === "tower" ? (
+        tower ? (
+          <TowerPanel tower={tower} timeZone={config.timezone} />
+        ) : (
+          <p className={towerError ? "error" : "empty"} role={towerError ? "alert" : undefined}>
+            {towerError ? `Não foi possível carregar a torre: ${towerError}` : "Carregando a torre…"}
+          </p>
+        )
+      ) : view ? (
         <div role="tabpanel" aria-label={tab === "week" ? "Semana (ciclo)" : "Mês atual"}>
           <PeriodPanel v={view} />
         </div>

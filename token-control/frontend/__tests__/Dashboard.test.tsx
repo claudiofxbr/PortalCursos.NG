@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "@/components/Dashboard";
-import type { DbStatus, HistoryEntry, MonthSummary, Summary } from "@/lib/types";
+import type { DbStatus, HistoryEntry, MonthSummary, Summary, Tower } from "@/lib/types";
 
 // Recharts depende de layout real (ResponsiveContainer = 0px no jsdom); aqui validamos dados/estado, não SVG.
 vi.mock("recharts", async () => {
@@ -34,6 +34,15 @@ const monthData: MonthSummary = {
   daily: Array.from({ length: 31 }, (_, i) => ({ index: i + 1, date: `2026-10-${String(i + 1).padStart(2, "0")}`, tokens: i < 2 ? 175_000 : 0, cumulative: Math.min(i + 1, 2) * 175_000 })),
   byProcess: [{ name: "token-control", tokens: 350_000, messages: 9, pct: 100 }],
   byModel: [{ name: "claude-sonnet-5-5", tokens: 350_000, messages: 9, pct: 100 }],
+};
+
+const towerData: Tower = {
+  generatedAt: "2026-10-02T18:00:00Z", overall: "danger",
+  counts: { ok: 2, active: 0, queued: 1, warn: 0, danger: 1 },
+  items: [
+    { id: "database", category: "health", label: "Banco de dados Neon (Postgres)", status: "danger", detail: "Sem conexão com o banco." },
+    { id: "collector", category: "auto", label: "Coletor de consumo (Claude Code)", status: "queued", detail: "Nenhum envio recebido ainda." },
+  ],
 };
 
 const db: DbStatus = {
@@ -101,6 +110,28 @@ describe("Dashboard", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Semana (ciclo)" }));
     expect(await screen.findByText(/Uso do ciclo atual/)).toBeInTheDocument();
+  });
+
+  it("Torre: selo no cabeçalho em qualquer aba e aba própria com os processos", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/tower": towerData, "tokens/db": db });
+    render(<Dashboard />);
+    const badge = await screen.findByRole("button", { name: "Torre: Crítico" }); // visível já na aba Semana
+    fireEvent.click(badge);
+    const panel = await screen.findByRole("tabpanel", { name: "Torre de Controle dos Processos" });
+    expect(within(panel).getByText("Banco de dados Neon (Postgres)")).toBeInTheDocument();
+    expect(within(panel).getByText("Sem conexão com o banco.")).toBeInTheDocument();
+    expect(screen.queryByText(/Histórico dos últimos ciclos/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Semana (ciclo)" }));
+    expect(await screen.findByText(/Uso do ciclo atual/)).toBeInTheDocument();
+  });
+
+  it("falha só em /tower aparece na aba da torre e não derruba as outras", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/db": db });
+    render(<Dashboard />);
+    await screen.findByText(/Uso do ciclo atual/);
+    expect(screen.queryByRole("button", { name: /Torre:/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Torre de Controle" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a torre");
   });
 
   it("falha só no /month aparece na aba do mês e não derruba a semana", async () => {

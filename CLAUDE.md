@@ -89,3 +89,4 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 - Agentes: `token-solution-designer` (desenho + testes, portão sequencial), `token-app-builder` (implementação) e `agent-manager` (gestão do roster; processo só avança com zero erros).
 - Deploy na VPS **não executado** — `devops/scripts/deploy_token_control.sh` + nginx exigem confirmação explícita. Não usar o banco Neon do PortalCursos.NG.
 - Armadilha corrigida: com `basePath`, o `matcher` do `proxy.ts` do Next precisa incluir `"/"` explicitamente, senão a página raiz abre sem login.
+- **Torre de Controle dos Processos DENTRO do app** (aba + selo no cabeçalho, `GET /api/tokens/tower`, spec em `token-control/docs/TORRE.md`): somente leitura, sem tabelas novas. Distinta das Torres do `claude.ai` (artifacts), que não leem o app porque o ambiente cloud bloqueia `xavierbr-vps.tech`. Nome do app: **"Controle de Tokens Claude Code"**.
