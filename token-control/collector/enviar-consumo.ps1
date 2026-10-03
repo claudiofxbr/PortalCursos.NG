@@ -62,7 +62,8 @@ if ($FetchKeyViaSsh) {
     if (-not (Get-Command ssh -ErrorAction SilentlyContinue)) { Fail "ssh nao encontrado (Windows 10/11: Configuracoes > Aplicativos > Recursos opcionais > Cliente OpenSSH)." }
     Write-Host "[4/6] Buscando a chave em ${SshTarget}:$EnvFileOnVps via SSH (a chave nao sera exibida)..."
     $remote = "grep -m1 '^TOKEN_CONTROL_API_KEY=' $EnvFileOnVps | cut -d= -f2-"
-    $raw = & ssh $SshTarget $remote
+    # stderr descartado: banners/profile da VPS nao podem vazar para a tela nem misturar com a chave (stdout).
+    $raw = & ssh -o LogLevel=ERROR $SshTarget $remote 2>$null
     if ($LASTEXITCODE -ne 0) { Fail "ssh falhou (acesso a $SshTarget). Rode sem -FetchKeyViaSsh e cole a chave." }
     $key = ($raw | Out-String).Trim()
 } else {
@@ -98,7 +99,7 @@ function Get-KeyStatus([string]$baseUrl, [string]$apiKey) {
     }
 }
 $status = Get-KeyStatus $Url $key
-if ($status -eq 401) { $key = $null; Fail "o app RECUSOU esta chave (401). Provavelmente e a chave antiga ou uma copia errada. Pegue de novo na VPS (comeca com 21db e termina com c6e4)." }
+if ($status -eq 401) { $key = $null; Fail "o app RECUSOU esta chave (401). Provavelmente e a chave antiga ou uma copia errada. Na VPS, rode verificar_token_control.sh: ele mostra inicio/fim da chave do .env e se o container usa a mesma." }
 if ($status -eq 0)   { $key = $null; Fail "nao consegui falar com $Url (rede/endereco). Abra a URL no navegador para conferir." }
 if ($status -ne 400 -and $status -ne 200) { $key = $null; Fail "resposta inesperada do app no teste da chave: HTTP $status." }
 Write-Host "      Chave aceita pelo app (teste HTTP $status)." -ForegroundColor Green
