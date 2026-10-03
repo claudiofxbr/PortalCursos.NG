@@ -4,6 +4,7 @@ import com.portalcursos.tokencontrol.dto.ConfigDto;
 import com.portalcursos.tokencontrol.dto.HistoryEntry;
 import com.portalcursos.tokencontrol.dto.IngestResult;
 import com.portalcursos.tokencontrol.dto.MonthSummaryResponse;
+import com.portalcursos.tokencontrol.dto.ReportResponse;
 import com.portalcursos.tokencontrol.dto.SummaryResponse;
 import com.portalcursos.tokencontrol.dto.TowerResponse;
 import com.portalcursos.tokencontrol.dto.UsageBatchRequest;
@@ -11,6 +12,7 @@ import com.portalcursos.tokencontrol.service.ConfigService;
 import com.portalcursos.tokencontrol.service.IngestService;
 import com.portalcursos.tokencontrol.neon.DbStatus;
 import com.portalcursos.tokencontrol.neon.DbStatusService;
+import com.portalcursos.tokencontrol.service.ReportService;
 import com.portalcursos.tokencontrol.service.SummaryService;
 import com.portalcursos.tokencontrol.service.TowerService;
 import jakarta.validation.Valid;
@@ -33,11 +35,13 @@ public class TokenController {
     private final ConfigService configService;
     private final DbStatusService dbStatusService;
     private final TowerService towerService;
+    private final ReportService reportService;
     private final Clock clock;
 
     public TokenController(IngestService ingestService, SummaryService summaryService, ConfigService configService,
-            DbStatusService dbStatusService, TowerService towerService, Clock clock) {
+            DbStatusService dbStatusService, TowerService towerService, ReportService reportService, Clock clock) {
         this.towerService = towerService;
+        this.reportService = reportService;
         this.dbStatusService = dbStatusService;
         this.ingestService = ingestService;
         this.summaryService = summaryService;
@@ -53,6 +57,11 @@ public class TokenController {
     @GetMapping("/summary")
     public SummaryResponse summary() {
         return summaryService.summary(clock.instant());
+    }
+
+    @GetMapping("/report")
+    public ReportResponse report() {
+        return reportService.report(clock.instant());
     }
 
     @GetMapping("/tower")

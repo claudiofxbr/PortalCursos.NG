@@ -148,6 +148,22 @@ class TokenControlApiIntegrationTest {
     }
 
     @Test
+    void relatorioDeAnaliseEmPortuguesComTabelaDeProcessos() throws Exception {
+        mvc.perform(get("/api/tokens/report")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("rel-1", Instant.now().minusSeconds(60), "proj-relatorio", "claude-sonnet-5-5", 1000, 500, 0, 0))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tokens/report").header("X-API-Key", KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Relatório de análise — Controle de Tokens Claude Code"))
+                .andExpect(jsonPath("$.sections.length()").value(6))
+                .andExpect(jsonPath("$.sections[0].title").value("Resumo executivo"))
+                .andExpect(jsonPath("$.sections[3].table.rows[0][0]").value("proj-relatorio"))
+                .andExpect(jsonPath("$.sections[5].title").value("Recomendações"))
+                .andExpect(jsonPath("$.sections[5].bullets").isNotEmpty());
+    }
+
+    @Test
     void dbStatusDegradaParaDisconnectedSem500QuandoNaoEPostgres() throws Exception {
         // H2 não tem as views de catálogo do Postgres: a sonda falha e o endpoint responde 200 com connected=false
         mvc.perform(get("/api/tokens/db").header("X-API-Key", KEY))

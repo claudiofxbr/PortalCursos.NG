@@ -70,3 +70,15 @@ table.proc { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-
 table.proc th, table.proc td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border); }
 table.proc td.num, table.proc th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+/* Relatório de análise (painel) + impressão */
+.report-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow: auto; z-index: 50; }
+.report-print { width: 100%; max-width: 860px; outline: none; }
+.report-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+@media print {
+  body * { visibility: hidden; }
+  .report-overlay, .report-overlay * { visibility: visible; }
+  .report-overlay { position: absolute; inset: 0; background: none; padding: 0; overflow: visible; display: block; }
+  .report-print { max-width: none; border: 0; box-shadow: none; }
+  .no-print { display: none !important; }
+}

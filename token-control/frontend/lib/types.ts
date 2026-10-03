@@ -110,3 +110,23 @@ export interface Tower {
   counts: { ok: number; active: number; queued: number; warn: number; danger: number };
   items: TowerItem[];
 }
+
+export interface ReportTable {
+  caption: string;
+  headers: string[];
+  rows: string[][];
+}
+
+export interface ReportSection {
+  title: string;
+  paragraphs: string[];
+  bullets: string[];
+  table: ReportTable | null;
+}
+
+export interface Report {
+  generatedAt: string;
+  title: string;
+  timezone: string;
+  sections: ReportSection[];
+}

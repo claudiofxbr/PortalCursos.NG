@@ -54,6 +54,7 @@ Achado em produção (2026-10-02): o primeiro envio real (lotes de 500) deu **50
 |---|---|---|
 | POST | `/api/tokens/usage` | `{entries:[≤1000]}` → `{received, inserted, duplicates}`. 400 se inválido. |
 | GET | `/api/tokens/summary` | Ciclo, uso, %, projeção, últimas 5 h, diário, por processo/modelo. |
+| GET | `/api/tokens/report` | **Relatório de análise** em português (6 seções com texto, marcadores e tabela) — ver `RELATORIO.md`. |
 | GET | `/api/tokens/tower` | **Torre de Controle dos Processos** (ver `TORRE.md`): estado geral + itens por categoria (work/queue/health/auto). |
 | GET | `/api/tokens/month` | **Mês atual** (dia 1 até hoje, fuso configurado): uso, restante, projeção até o fim do mês, diário (1 item por dia civil), por processo/modelo. `limitEstimated=true` quando não há orçamento mensal. |
 | GET | `/api/tokens/history?cycles=8` | Uso dos últimos ciclos (1–26). |
@@ -69,10 +70,10 @@ Achado em produção (2026-10-02): o primeiro envio real (lotes de 500) deu **50
 ## Verificação executada
 | Camada | Comando | Resultado |
 |---|---|---|
-| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 43 testes ✅ (inclui sonda Postgres real, V2, mês atual e Torre) |
+| Unitário + integração backend (H2/Flyway) | `cd backend && mvn -B verify` | 54 testes ✅ (inclui sonda Postgres real, V2, mês atual, Torre e relatório) |
 | Sonda do banco + migration V1 em Postgres 16 real | `TC_TEST_PG_URL=… mvn verify` (`PostgresDbProbeTest`; no CI via service postgres) | ✅ (Testcontainers não disponível: sem Docker no ambiente) |
 | Collector | `cd collector && npm test` | 5 testes ✅; ingestão real de 31 msgs, reenvio = 31 duplicadas ✅ |
-| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 30 testes ✅, build ✅ |
+| Frontend | `npm run lint && npm run test:run && npm run build` | lint ✅, 34 testes ✅, build ✅ |
 | E2E navegador (Chromium) | `e2e/dashboard.e2e.mjs` | login, KPIs, 11 SVGs, salvar config, sem erros de console ✅ |
 | Carga/estresse | `load-test/load.mjs` | ver abaixo |
 

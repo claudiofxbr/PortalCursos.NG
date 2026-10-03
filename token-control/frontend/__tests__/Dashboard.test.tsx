@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "@/components/Dashboard";
-import type { DbStatus, HistoryEntry, MonthSummary, Summary, Tower } from "@/lib/types";
+import type { DbStatus, HistoryEntry, MonthSummary, Report, Summary, Tower } from "@/lib/types";
 
 // Recharts depende de layout real (ResponsiveContainer = 0px no jsdom); aqui validamos dados/estado, não SVG.
 vi.mock("recharts", async () => {
@@ -42,6 +42,16 @@ const towerData: Tower = {
   items: [
     { id: "database", category: "health", label: "Banco de dados Neon (Postgres)", status: "danger", detail: "Sem conexão com o banco." },
     { id: "collector", category: "auto", label: "Coletor de consumo (Claude Code)", status: "queued", detail: "Nenhum envio recebido ainda." },
+  ],
+};
+
+const reportData: Report = {
+  generatedAt: "2026-10-03T15:00:00Z", title: "Relatório de análise — Controle de Tokens Claude Code", timezone: "America/Sao_Paulo",
+  sections: [
+    { title: "Resumo executivo", paragraphs: ["Estado geral da operação: operação normal."], bullets: [], table: null },
+    { title: "Quem consome (mês atual)", paragraphs: [], bullets: ["Por modelo: claude-sonnet-5-5 350 mil (100%)."],
+      table: { caption: "Consumo por processo no mês (top 8)", headers: ["Processo", "Tokens", "%", "Mensagens"], rows: [["token-control", "350 mil", "100%", "9"]] } },
+    { title: "Recomendações", paragraphs: [], bullets: ["Ajuste o limite semanal para o valor real do seu plano."], table: null },
   ],
 };
 
@@ -110,6 +120,57 @@ describe("Dashboard", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Semana (ciclo)" }));
     expect(await screen.findByText(/Uso do ciclo atual/)).toBeInTheDocument();
+  });
+
+  it("botão Gerar relatório de análise: um clique abre o relatório em português com imprimir, baixar e fechar", async () => {
+    mockFetch({ "tokens/summary": summary, "tokens/history": history, "tokens/report": reportData, "tokens/db": db });
+    const createUrl = vi.fn(() => "blob:fake");
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() }));
+    const clicked: string[] = [];
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) { clicked.push(this.download); };
+    try {
+      render(<Dashboard />);
+      const button = await screen.findByRole("button", { name: "Gerar relatório de análise" });
+      fireEvent.click(button);
+
+      const dialog = await screen.findByRole("dialog", { name: "Relatório de análise" });
+      expect(await within(dialog).findByText("Resumo executivo")).toBeInTheDocument();
+      expect(within(dialog).getByText("Recomendações")).toBeInTheDocument();
+      expect(within(dialog).getByRole("table", { name: "Consumo por processo no mês (top 8)" })).toBeInTheDocument();
+      expect(within(dialog).getByText(/Ajuste o limite semanal/)).toBeInTheDocument();
+
+      fireEvent.click(within(dialog).getByRole("button", { name: "Baixar (.md)" }));
+      expect(createUrl).toHaveBeenCalledTimes(1);
+      expect(clicked).toEqual(["relatorio-controle-de-tokens-2026-10-03.md"]);
+
+      fireEvent.keyDown(document, { key: "Escape" });
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    } finally {
+      HTMLAnchorElement.prototype.click = orig;
+    }
+  });
+
+  it("relatório com falha mostra o erro e permite tentar novamente; Fechar fecha o painel", async () => {
+    let calls = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const u = String(url);
+      if (u.includes("tokens/report")) {
+        calls++;
+        return calls === 1 ? new Response(JSON.stringify({ error: "backend_unavailable" }), { status: 502 }) : new Response(JSON.stringify(reportData), { status: 200 });
+      }
+      const body = u.includes("summary") ? summary : u.includes("history") ? history : u.includes("tokens/db") ? db : { error: "x" };
+      return new Response(JSON.stringify(body), { status: 200 });
+    }));
+    render(<Dashboard />);
+    fireEvent.click(await screen.findByRole("button", { name: "Gerar relatório de análise" }));
+    const dialog = await screen.findByRole("dialog", { name: "Relatório de análise" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Não foi possível gerar o relatório: backend_unavailable");
+    expect(within(dialog).getByRole("button", { name: "Baixar (.md)" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tentar novamente" }));
+    expect(await within(dialog).findByText("Resumo executivo")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Fechar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("Torre: selo no cabeçalho em qualquer aba e aba própria com os processos", async () => {

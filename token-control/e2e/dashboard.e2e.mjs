@@ -59,6 +59,24 @@ if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SC
 await page.getByRole("tab", { name: "Semana (ciclo)" }).click();
 await page.getByText("Uso do ciclo atual").first().waitFor();
 
+// botão "Gerar relatório de análise": um clique, relatório em português, download do .md e fechar
+await page.getByRole("button", { name: "Gerar relatório de análise" }).click();
+const dialog = page.getByRole("dialog", { name: "Relatório de análise" });
+await dialog.getByText("Resumo executivo").first().waitFor();
+for (const t of ["Ciclo semanal", "Mês atual", "Quem consome (mês atual)", "Pontos de atenção", "Recomendações"]) {
+  await dialog.getByRole("heading", { name: t, exact: false }).first().waitFor();
+}
+await dialog.getByRole("table", { name: /Consumo por processo no mês/ }).waitFor();
+if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SCREENSHOT.replace(".png", "-relatorio.png"), fullPage: false });
+const [download] = await Promise.all([page.waitForEvent("download"), dialog.getByRole("button", { name: "Baixar (.md)" }).click()]);
+assert.match(download.suggestedFilename(), /^relatorio-controle-de-tokens-\d{4}-\d{2}-\d{2}\.md$/);
+const { readFile } = await import("node:fs/promises");
+const md = await readFile(await download.path(), "utf8");
+assert.ok(md.startsWith("# Relatório de análise — Controle de Tokens Claude Code"), "markdown com título");
+assert.ok(md.includes("## Recomendações"), "markdown com recomendações");
+await dialog.getByRole("button", { name: "Fechar" }).click();
+await dialog.waitFor({ state: "detached" });
+
 // configuração: alterar orçamento e ver refletido
 await page.getByRole("button", { name: "Configurar plano" }).click();
 await page.getByLabel("Orçamento semanal (tokens)").fill("40000000");

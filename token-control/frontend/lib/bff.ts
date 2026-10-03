@@ -8,6 +8,7 @@ const RULES: Rule[] = [
   { method: "GET", path: "db" },
   { method: "GET", path: "month" },
   { method: "GET", path: "tower" },
+  { method: "GET", path: "report" },
   { method: "PUT", path: "config" },
   { method: "POST", path: "usage" },
 ];

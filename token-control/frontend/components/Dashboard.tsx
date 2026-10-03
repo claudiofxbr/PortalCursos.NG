@@ -8,6 +8,7 @@ import ConfigForm from "./ConfigForm";
 import { HistoryChart } from "./charts";
 import NeonCard from "./NeonCard";
 import PeriodPanel, { type PeriodView } from "./PeriodPanel";
+import ReportDialog from "./ReportDialog";
 import TowerPanel, { OVERALL_TITLE } from "./TowerPanel";
 
 const REFRESH_MS = 60_000;
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [tower, setTower] = useState<Tower | null>(null);
   const [towerError, setTowerError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("week");
+  const [showReport, setShowReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [db, setDb] = useState<DbStatus | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -123,6 +125,8 @@ export default function Dashboard() {
           </div>
         </div>
         <div>
+          <button className="btn" aria-haspopup="dialog" onClick={() => setShowReport(true)}
+            title="Gera uma análise do uso e da operação do app, em português">Gerar relatório de análise</button>{" "}
           <button className="btn ghost" onClick={() => setShowConfig((v) => !v)}>
             {showConfig ? "Fechar configuração" : "Configurar plano"}
           </button>{" "}
@@ -172,6 +176,7 @@ export default function Dashboard() {
       )}
 
       <NeonCard db={db} error={dbError} />
+      {showReport && <ReportDialog onClose={() => setShowReport(false)} />}
     </main>
   );
 }

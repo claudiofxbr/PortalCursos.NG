@@ -1,4 +1,4 @@
-import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Summary, Tower } from "./types";
+import type { DbStatus, HistoryEntry, MonthSummary, PlanConfig, Report, Summary, Tower } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -21,6 +21,7 @@ export const getSummary = () => request<Summary>("summary");
 export const getDbStatus = () => request<DbStatus>("db");
 export const getMonth = () => request<MonthSummary>("month");
 export const getTower = () => request<Tower>("tower");
+export const getReport = () => request<Report>("report");
 export const getHistory = (cycles = 8) => request<HistoryEntry[]>(`history?cycles=${cycles}`);
 export const saveConfig = (config: PlanConfig) =>
   request<PlanConfig>("config", {
