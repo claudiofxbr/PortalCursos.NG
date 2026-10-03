@@ -73,6 +73,19 @@ if [ -n "$DP" ]; then
   [ "${SUM%%|*}" = "OK" ] && ok "Neon: ${SUM#*|}" || bad "Neon: ${SUM#*|}"
   MS=$(printf 'user = "%s:%s"\n' "$DU" "$DP" | curl -sk -K - --max-time 20 "$PUBLIC_URL/api/tokens/month" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('mensagens no mês: %s | usado: %s | limite: %s (%s)'%(d['totals']['messages'],d['used'],d['limit'],'estimado' if d['limitEstimated'] else 'configurado'))" 2>/dev/null)
   [ -n "$MS" ] && ok "$MS" || bad "resposta inválida de /month"
+  TW=$(printf 'user = "%s:%s"\n' "$DU" "$DP" | curl -sk -K - --max-time 20 "$PUBLIC_URL/api/tokens/tower" 2>/dev/null)
+  TS=$(echo "$TW" | python3 -c "
+import sys,json
+d=json.load(sys.stdin); c=d['counts']
+print('%s|Torre: geral=%s | ok=%s ativos=%s fila=%s atencao=%s critico=%s'%(d['overall'],d['overall'],c['ok'],c['active'],c['queued'],c['warn'],c['danger']))
+for i in d['items']:
+    if i['status'] in ('warn','danger'): print('ITEM|  %s [%s] %s — %s'%(i['status'].upper(),i['category'],i['label'],i['detail']))
+" 2>/dev/null)
+  if [ -z "$TS" ]; then bad "resposta inválida de /tower (Torre de Controle)"; else
+    HEAD=$(echo "$TS" | head -1); LVL="${HEAD%%|*}"
+    [ "$LVL" = "danger" ] && bad "${HEAD#*|}" || ok "${HEAD#*|}"
+    echo "$TS" | grep '^ITEM|' | cut -d'|' -f2- | while IFS= read -r l; do report "$l"; done
+  fi
 else skip "DASHBOARD_PASSWORD ausente no .env"; fi
 
 report; report "5) PortalCursos.NG (não pode ter sido afetado)"
