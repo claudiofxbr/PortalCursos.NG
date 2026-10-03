@@ -34,7 +34,12 @@ if [ ! -f "$ENV_FILE" ]; then bad "$ENV_FILE não existe"; else
   DIRECT=$(envval NEON_DIRECT_URL); POOLED=$(envval SPRING_DATASOURCE_URL)
   [[ "$POOLED" == *-pooler* ]] && ok "URL da aplicação é pooled" || bad "SPRING_DATASOURCE_URL sem -pooler"
   [[ -n "$DIRECT" && "$DIRECT" != *-pooler* ]] && ok "URL das migrations é direta (sem -pooler)" || bad "NEON_DIRECT_URL ausente ou com -pooler"
-  [ -n "$(envval NEON_PROJECT_ID)" ] && { [[ "$(envval NEON_PROJECT_ID)" == br-* ]] && bad "NEON_PROJECT_ID começa com 'br-' (isso é ID de BRANCH, não de projeto)" || ok "NEON_PROJECT_ID parece de projeto"; } || skip "NEON_PROJECT_ID vazio (card de consumo do Neon desligado)"
+  NPID=$(envval NEON_PROJECT_ID)
+  if [ -z "$NPID" ]; then skip "NEON_PROJECT_ID vazio (card de consumo do Neon desligado)"
+  elif [[ "$NPID" == br-* ]]; then bad "NEON_PROJECT_ID='$NPID' começa com 'br-': isso é ID de BRANCH, não de projeto"
+  elif [[ "$NPID" =~ ^[a-z]+(-[a-z]+)+-[0-9]+$ ]]; then ok "NEON_PROJECT_ID no formato de projeto ($NPID)"
+  else bad "NEON_PROJECT_ID='$NPID' não parece ID de projeto do Neon (esperado algo como nome-nome-12345678) — foi colado o texto de exemplo?"
+  fi
 fi
 
 report; report "2) Containers"
