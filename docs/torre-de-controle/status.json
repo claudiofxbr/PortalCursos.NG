@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr115-monitor",
+      "label": "#115 — chore(deps): bump next from 16.3.4 to 16.3.8 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr114-monitor",
       "label": "#114 — chore(deps): bump org.apache.maven:apache-maven from 3.9.16 to 3.10.0 in /backend",
       "detail": "CI ok.",
@@ -127,5 +134,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-08T03:46:02Z"
+  "updatedAt": "2026-10-08T04:36:22Z"
 }
