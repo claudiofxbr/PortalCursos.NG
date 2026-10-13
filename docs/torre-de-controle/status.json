@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 0c3a04b)",
+      "detail": "último run em main: success (commit 48c9845)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 0c3a04b)",
-      "status": "active"
+      "detail": "último run em main: failure (commit 48c9845)",
+      "status": "failed"
     },
     {
       "category": "auto",
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr120-monitor",
-      "label": "#120 — chore(deploy): tagueia imagens com o SHA do commit",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -148,5 +141,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-13T16:16:31Z"
+  "updatedAt": "2026-10-13T16:24:05Z"
 }
