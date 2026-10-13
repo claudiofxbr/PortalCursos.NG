@@ -93,6 +93,13 @@ log "Buildando imagens Docker..."
 $COMPOSE build backend frontend
 ok "Build concluido"
 
+# `latest` continua sendo o que o compose e o rollback usam; a tag com o SHA e
+# so rastreabilidade (qual commit gerou cada imagem: `docker images`).
+IMAGE_SHA=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD)
+docker tag portalcursos-ng-backend:latest "portalcursos-ng-backend:${IMAGE_SHA}"
+docker tag portalcursos-ng-frontend:latest "portalcursos-ng-frontend:${IMAGE_SHA}"
+ok "Imagens tagueadas com o commit ${IMAGE_SHA}"
+
 BACKEND_READY=false
 FRONTEND_READY=false
 
