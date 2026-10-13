@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr121-monitor",
+      "label": "#121 — fix(deploy): usa o Traefik do EasyPanel como edge no blue-green",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr119-monitor",
       "label": "#119 — chore(deps): bump maven from 3.9.11-eclipse-temurin-21 to 3.9-eclipse-temurin-26 in /backend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -141,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-13T16:24:05Z"
+  "updatedAt": "2026-10-13T16:38:59Z"
 }
