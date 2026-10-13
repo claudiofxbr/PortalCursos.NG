@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr120-monitor",
+      "label": "#120 — chore(deploy): tagueia imagens com o SHA do commit",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr119-monitor",
       "label": "#119 — chore(deps): bump maven from 3.9.11-eclipse-temurin-21 to 3.9-eclipse-temurin-26 in /backend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -141,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-13T09:16:12Z"
+  "updatedAt": "2026-10-13T16:16:31Z"
 }
