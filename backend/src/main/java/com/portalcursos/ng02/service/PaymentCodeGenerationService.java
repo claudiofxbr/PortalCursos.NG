@@ -1,18 +1,26 @@
 package com.portalcursos.ng02.service;
 
+import com.portalcursos.ng02.dto.PixGenerationResponse;
+import com.portalcursos.ng02.dto.PixOrderResult;
+import com.portalcursos.ng02.exception.BusinessException;
+import com.portalcursos.ng02.exception.PaymentGatewayException;
 import com.portalcursos.ng02.model.EPaymentMethod;
+import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.InvalidKeyException;
 
 /**
- * Geração simulada de código de pagamento (PIX/boleto) — extraída de
- * {@code FinancialController} (Lote E, item F3 da auditoria). Puro código movido, sem
- * mudança de comportamento: mesma lógica de geração, mesmo formato de código.
+ * Geração de código de pagamento (PIX real via PagBank / boleto simulado) — extraída de
+ * {@code FinancialController} (Lote E, item F3 da auditoria).
  *
  * <p>Busca da fatura (404) e checagem de ownership (403) continuam no controller —
  * mesmo critério usado nos demais itens do Lote E: aqui fica só a ação de domínio
@@ -22,12 +30,62 @@ import java.math.RoundingMode;
 @RequiredArgsConstructor
 public class PaymentCodeGenerationService {
 
-    private final PaymentRepository paymentRepository;
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
 
-    public Payment generatePix(Payment payment) {
+    private final PaymentRepository paymentRepository;
+    private final PagBankPixGatewayService pagBankPixGatewayService;
+
+    @Value("${pagseguro.webhook.secret}")
+    private String webhookSecret;
+
+    @Value("${portalcursos.public-api-url}")
+    private String publicApiUrl;
+
+    /**
+     * Gera um PIX real via PagBank e persiste o pedido na fatura. Falha (400) se a
+     * fatura já estiver paga; falha (502, via {@link com.portalcursos.ng02.exception.PaymentGatewayException})
+     * se o gateway não puder ser contatado.
+     */
+    public PixGenerationResponse generatePix(Payment payment) {
+        if (payment.getStatus() == EPaymentStatus.PAID) {
+            throw new BusinessException("Fatura já paga, não é possível gerar novo PIX");
+        }
+
+        String webhookToken = computeWebhookToken(payment.getId());
+        String webhookUrl = publicApiUrl + "/api/finance/pix/webhook/" + payment.getId() + "/" + webhookToken;
+
+        PixOrderResult result = pagBankPixGatewayService.createPixOrder(payment, webhookToken, webhookUrl);
+
         payment.setMethod(EPaymentMethod.PIX);
-        payment.setPaymentCode(buildSimulatedPixCode(payment));
-        return paymentRepository.save(payment);
+        payment.setPaymentCode(result.copiaECola());
+        payment.setPspOrderId(result.pspOrderId());
+        Payment saved = paymentRepository.save(payment);
+
+        return new PixGenerationResponse(saved, result.qrCodeImageUrl());
+    }
+
+    /**
+     * HMAC-SHA256 determinístico de {@code paymentId + ":" + secret}, hex-encoded — usado
+     * como token de URL do webhook. Determinístico (não um UUID aleatório persistido) para
+     * que {@code PixWebhookController} possa recalcular e comparar sem precisar de coluna
+     * nova no banco.
+     */
+    public String computeWebhookToken(Long paymentId) {
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            throw new PaymentGatewayException("Gateway de pagamento não configurado");
+        }
+        try {
+            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+            mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
+            byte[] rawHmac = mac.doFinal((paymentId + ":" + webhookSecret).getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(rawHmac.length * 2);
+            for (byte b : rawHmac) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+            throw new IllegalStateException("Falha ao calcular token de webhook", ex);
+        }
     }
 
     public Payment generateBoleto(Payment payment) {
@@ -37,28 +95,9 @@ public class PaymentCodeGenerationService {
     }
 
     /**
-     * SIMULAÇÃO — não há integração com um PSP (gateway de pagamento) real.
-     * O código gerado varia por fatura (id, valor e vencimento) para evitar que
-     * todas as cobranças recebam o mesmo "QR Code", mas não é um payload BR Code
-     * válido para uso bancário real. Substituir por integração real (ex: Mercado
-     * Pago, PagSeguro) antes de processar pagamentos de produção.
+     * SIMULAÇÃO — o boleto continua fora de escopo desta integração (só o PIX foi
+     * substituído por gateway real). Não altere sem pedido explícito.
      */
-    private String buildSimulatedPixCode(Payment p) {
-        BigDecimal amount = p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO;
-        String amountDigits = amount.setScale(2, RoundingMode.HALF_UP)
-                .movePointRight(2)
-                .toBigInteger()
-                .toString();
-        String txid = String.format("PORTAL%010d", p.getId());
-        // "%08s" era inválido (o flag '0' não existe para conversão %s em Java — lança
-        // FormatFlagsConversionMismatchException) e fazia generatePix falhar sempre com 500,
-        // nunca coberto por teste até a extração para este service. "%8s" + replace faz o
-        // zero-padding pretendido (espaço à esquerda -> '0').
-        return "00020126580014BR.GOV.BCB.PIX0136" + txid
-                + "5204000053039865802BR5913PortalCursos6008BRASILIA62070503***6304"
-                + String.format("%8s", amountDigits).replace(" ", "0");
-    }
-
     private String buildSimulatedBoletoUrl(Payment p) {
         return "https://portalcursos.edu.br/financeiro/boletos/download/SIM-" + p.getId()
                 + "-" + p.getDueDate();

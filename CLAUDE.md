@@ -68,7 +68,8 @@ Este arquivo complementa o `CLAUDE.md` global do usuário (`~/.claude/CLAUDE.md`
 ## Torre de Controle dos Processos
 
 - Painel ao vivo dos processos do PortalCursos.NG: **https://claude.ai/code/artifact/5571a2a0-087b-4ff3-9cbe-15d76b05564e** (artifact; doc `status/current` no banco do artifact, via `ArtifactData`).
-- **Só processos do PortalCursos.NG.** Processos automáticos/recorrentes (Dependabot, CI/CD, blue-green, etc.) ficam sempre visíveis; itens que concluem com sucesso são **removidos** da lista.
+- **Processos do PortalCursos.NG e do CVFacil.NG** (decisão do usuário em 2026-10-09; os do CVFacil.NG levam o prefixo "CVFacil.NG — " no label). Processos automáticos/recorrentes (Dependabot, CI/CD, blue-green, etc.) ficam sempre visíveis.
+- **Rotina primordial (automática, sem intervenção manual):** todo processo concluído (categoria `done` ou status `done`, PR mergeado/fechado) é **removido** da Torre sempre; todo processo novo do CVFacil.NG (workflow, PR aberto, pendência) entra sozinho. Executada por rotina agendada na nuvem (de hora em hora); ao concluir qualquer trabalho manualmente, aplicar a mesma regra no ato.
 - Ao criar um processo automático novo (workflow, rotina, monitor), registrá-lo no painel no mesmo passo.
 - Escrever sempre a lista `processes` completa via `ArtifactData` action `set` — nunca `update` parcial (não faz merge dentro de arrays).
 - Quando a própria Torre está operacional (writes no `status/current` funcionando) **e** o PortalCursos.NG está saudável (`/api/health` = `UP`, Neon `CONNECTED`, `migrations` OK), registrar essa confirmação no painel.
