@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
-import { collect, parseLine, send } from "../collect.mjs";
+import { collect, parseLine, send, totals } from "../collect.mjs";
 
 const line = (over = {}, msg = {}) =>
   JSON.stringify({
@@ -95,7 +95,7 @@ test("send envia em lotes com X-API-Key e soma os resultados; erro HTTP interrom
   const r = await send(entries, { url, apiKey: "k" });
   assert.deepEqual(seen.map((s) => s.n), [500, 500, 200]);
   assert.equal(seen[0].url, "/api/tokens/usage");
-  assert.deepEqual(r, { received: 1200, inserted: 1197, duplicates: 3 });
+  assert.deepEqual(r, { received: 1200, inserted: 1197, duplicates: 3, updated: 0 });
   await assert.rejects(send(entries, { url, apiKey: "errada" }), /401/);
   await new Promise((r) => server.close(r));
 });
@@ -112,4 +112,12 @@ test("execução única sai com código 1 quando o envio falha (e 0 no dry-run)"
   const dry = spawnSync(process.execPath, [script, "--dir", root, "--days", "36500", "--dry-run"], { env, encoding: "utf8" });
   assert.equal(dry.status, 0);
   assert.match(dry.stdout, /1 mensagens/);
+});
+
+test("totals soma por componente (conferência contra o total do app)", () => {
+  const t = totals([
+    { inputTokens: 1, outputTokens: 2, cacheCreationTokens: 3, cacheReadTokens: 4 },
+    { inputTokens: 10, outputTokens: 20, cacheCreationTokens: 30, cacheReadTokens: 40 },
+  ]);
+  assert.deepEqual(t, { input: 11, output: 22, cacheCreation: 33, cacheRead: 44 });
 });

@@ -185,6 +185,30 @@ class TokenControlApiIntegrationTest {
     }
 
     @Test
+    void reenvioMaisCompletoCorrigeMensagemSincronizadaPelaMetade() throws Exception {
+        Instant at = Instant.now().minusSeconds(60);
+        // 1ª sincronização no meio do streaming: output parcial
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("stream-1", at, "proj", "m", 10, 5, 100, 1000))))
+                .andExpect(jsonPath("$.inserted").value(1)).andExpect(jsonPath("$.updated").value(0));
+        // reenvio com a mensagem completa: não duplica, mas corrige os valores
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("stream-1", at, "proj", "m", 10, 900, 100, 1000))))
+                .andExpect(jsonPath("$.inserted").value(0)).andExpect(jsonPath("$.duplicates").value(1))
+                .andExpect(jsonPath("$.updated").value(1));
+        org.junit.jupiter.api.Assertions.assertEquals(900L,
+                jdbc.queryForObject("select output_tokens from token_usage_entries where message_id='stream-1'", Long.class));
+        // reenvio de valor igual ou menor nunca reduz a contagem
+        mvc.perform(post("/api/tokens/usage").header("X-API-Key", KEY).contentType(MediaType.APPLICATION_JSON)
+                .content(batch(entry("stream-1", at, "proj", "m", 10, 5, 100, 1000))))
+                .andExpect(jsonPath("$.updated").value(0));
+        org.junit.jupiter.api.Assertions.assertEquals(900L,
+                jdbc.queryForObject("select output_tokens from token_usage_entries where message_id='stream-1'", Long.class));
+        org.junit.jupiter.api.Assertions.assertEquals(1L,
+                jdbc.queryForObject("select count(*) from token_usage_entries where message_id='stream-1'", Long.class));
+    }
+
+    @Test
     void dbStatusDegradaParaDisconnectedSem500QuandoNaoEPostgres() throws Exception {
         // H2 não tem as views de catálogo do Postgres: a sonda falha e o endpoint responde 200 com connected=false
         mvc.perform(get("/api/tokens/db").header("X-API-Key", KEY))

@@ -26,6 +26,18 @@ export async function* walk(dir) {
   }
 }
 
+/** Soma por componente (para conferir contra o total que o app exibe). */
+export function totals(entries) {
+  const t = { input: 0, output: 0, cacheCreation: 0, cacheRead: 0 };
+  for (const e of entries) {
+    t.input += e.inputTokens;
+    t.output += e.outputTokens;
+    t.cacheCreation += e.cacheCreationTokens;
+    t.cacheRead += e.cacheReadTokens;
+  }
+  return t;
+}
+
 /** Converte uma linha do transcrito em entrada de uso, ou null se não houver uso contabilizável. */
 export function parseLine(line, fallbackProcess = "desconhecido") {
   if (!line || !line.includes('"usage"')) return null;
@@ -88,7 +100,7 @@ export async function collect(root, since) {
 }
 
 export async function send(entries, { url, apiKey, fetchImpl = fetch }) {
-  const total = { received: 0, inserted: 0, duplicates: 0 };
+  const total = { received: 0, inserted: 0, duplicates: 0, updated: 0 };
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
     const res = await fetchImpl(`${url.replace(/\/$/, "")}/api/tokens/usage`, {
       method: "POST",
@@ -100,6 +112,7 @@ export async function send(entries, { url, apiKey, fetchImpl = fetch }) {
     total.received += r.received;
     total.inserted += r.inserted;
     total.duplicates += r.duplicates;
+    total.updated += r.updated ?? 0;
   }
   return total;
 }
@@ -122,13 +135,16 @@ async function run(args) {
   const entries = await collect(root, since);
   if (args.dryRun) {
     console.log(`[dry-run] ${entries.length} mensagens com uso desde ${since.toISOString()} em ${root}`);
+    const t = totals(entries);
+    console.log(`[dry-run] entrada=${t.input} saida=${t.output} criacao_cache=${t.cacheCreation} leitura_cache=${t.cacheRead}`);
+    console.log(`[dry-run] contado SEM leitura de cache=${t.input + t.output + t.cacheCreation} | COM leitura de cache=${t.input + t.output + t.cacheCreation + t.cacheRead}`);
     return;
   }
   const url = process.env.TOKEN_CONTROL_URL;
   const apiKey = process.env.TOKEN_CONTROL_API_KEY;
   if (!url || !apiKey) throw new Error("Defina TOKEN_CONTROL_URL e TOKEN_CONTROL_API_KEY");
   const r = await send(entries, { url, apiKey });
-  console.log(`enviadas=${r.received} novas=${r.inserted} duplicadas=${r.duplicates}`);
+  console.log(`enviadas=${r.received} novas=${r.inserted} duplicadas=${r.duplicates} corrigidas=${r.updated}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

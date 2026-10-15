@@ -44,6 +44,7 @@ Achado em produção (2026-10-02): o primeiro envio real (lotes de 500) deu **50
 ## Regras de negócio
 - **Ciclo** = `[último reset, próximo reset)` no fuso configurado; aritmética em data local (seguro contra DST); o instante exato do reset pertence ao novo ciclo.
 - **Tokens contados** = input + output + cache_creation (+ cache_read se `count_cache_reads`). Leituras de cache ficam fora por padrão (são baratas e inflariam o número).
+- **Mensagem sincronizada pela metade**: o reenvio de um `message_id` já gravado com `output_tokens` MAIOR corrige a linha (resposta `updated`); nunca reduz e nunca duplica. O `--dry-run` do collector imprime a soma por componente (entrada/saída/criação/leitura de cache, com e sem leitura) para conferir contra o total do app.
 - **Orçamento semanal é configurável**: a Anthropic não publica o limite exato do Pro. O valor inicial (50 mi) é *placeholder* — ajuste conforme o `/usage` do Claude Code.
 - **Projeção** = ritmo médio do ciclo extrapolado até o reset; só após 1 h de ciclo. Informa horário estimado de esgotamento.
 - **Processo** = diretório do projeto (`cwd`); sub-agentes aparecem como `<projeto> · subagente`. Top 12 + "Outros".

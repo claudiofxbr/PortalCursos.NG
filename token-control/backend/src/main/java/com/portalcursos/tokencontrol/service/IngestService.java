@@ -26,6 +26,12 @@ public class IngestService {
             input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, created_at)
         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
 
+    // Mensagem sincronizada no meio do streaming fica com output parcial; reenvio mais completo (output maior) corrige.
+    private static final String REFRESH = """
+        update token_usage_entries
+           set input_tokens = ?, output_tokens = ?, cache_creation_tokens = ?, cache_read_tokens = ?
+         where message_id = ? and output_tokens < ?""";
+
     private final UsageRepository repository;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
@@ -45,14 +51,19 @@ public class IngestService {
             unique.putIfAbsent(r.messageId(), r);
         }
         int inserted;
+        int updated;
         try {
-            inserted = insertMissing(unique);
+            Set<String> existing = repository.findExistingMessageIds(unique.keySet());
+            inserted = insertMissing(unique, existing);
+            updated = refreshExisting(unique, existing);
         } catch (DataIntegrityViolationException race) {
             // outro collector gravou as mesmas mensagens entre o SELECT e o INSERT — reavalia uma vez
-            inserted = insertMissing(unique);
+            Set<String> existing = repository.findExistingMessageIds(unique.keySet());
+            inserted = insertMissing(unique, existing);
+            updated = refreshExisting(unique, existing);
         }
         touchLastIngest();
-        return new IngestResult(requests.size(), inserted, requests.size() - inserted);
+        return new IngestResult(requests.size(), inserted, requests.size() - inserted, updated);
     }
 
     /** Marca a sincronização (mesmo sem linhas novas): é o que a Torre usa para saber se o collector está ativo. */
@@ -65,8 +76,7 @@ public class IngestService {
      * Antes era um INSERT por mensagem (IDENTITY desliga o batch do Hibernate): com ~120 ms de latência até o
      * Neon, 500 mensagens levavam ~60 s e estouravam o timeout do BFF (502).
      */
-    private int insertMissing(Map<String, UsageEntryRequest> unique) {
-        Set<String> existing = repository.findExistingMessageIds(unique.keySet());
+    private int insertMissing(Map<String, UsageEntryRequest> unique, Set<String> existing) {
         OffsetDateTime now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         List<UsageEntryRequest> toSave = unique.values().stream().filter(r -> !existing.contains(r.messageId())).toList();
         if (toSave.isEmpty()) {
@@ -86,5 +96,28 @@ public class IngestService {
             ps.setObject(11, now);
         }));
         return toSave.size();
+    }
+
+    /** Corrige mensagens já gravadas com contagem parcial (output menor que o reenviado). Retorna quantas mudaram. */
+    private int refreshExisting(Map<String, UsageEntryRequest> unique, Set<String> existing) {
+        List<UsageEntryRequest> candidates = unique.values().stream().filter(r -> existing.contains(r.messageId())).toList();
+        if (candidates.isEmpty()) {
+            return 0;
+        }
+        int[][] counts = tx.execute(status -> jdbc.batchUpdate(REFRESH, candidates, candidates.size(), (ps, r) -> {
+            ps.setLong(1, r.inputTokens());
+            ps.setLong(2, r.outputTokens());
+            ps.setLong(3, r.cacheCreationTokens());
+            ps.setLong(4, r.cacheReadTokens());
+            ps.setString(5, r.messageId());
+            ps.setLong(6, r.outputTokens());
+        }));
+        int changed = 0;
+        for (int[] batch : counts) {
+            for (int c : batch) {
+                changed += Math.max(c, 0); // SUCCESS_NO_INFO (-2) não conta
+            }
+        }
+        return changed;
     }
 }
