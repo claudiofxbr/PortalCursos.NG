@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr123-monitor",
+      "label": "#123 — chore(deps): bump brace-expansion in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr122-monitor",
       "label": "#122 — chore(deps): bump source-map-js from 1.2.1 to 1.2.2 in /frontend",
       "detail": "CI ok.",
@@ -148,5 +155,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-18T10:09:00Z"
+  "updatedAt": "2026-10-18T12:56:51Z"
 }
