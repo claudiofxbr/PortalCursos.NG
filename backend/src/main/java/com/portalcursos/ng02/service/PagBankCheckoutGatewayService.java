@@ -62,6 +62,14 @@ public class PagBankCheckoutGatewayService {
                 .build();
     }
 
+    /** Total da fatura (com juros se vencida) em centavos inteiros. */
+    public static long amountInCents(Payment payment) {
+        return payment.getTotalAmount()
+                .setScale(2, RoundingMode.HALF_UP)
+                .movePointRight(2)
+                .longValueExact();
+    }
+
     /** Referência do checkout no PagBank; o webhook a recalcula a partir da fatura para conferir. */
     public static String referenceFor(Long paymentId) {
         return "PORTAL-CARD-" + paymentId;
@@ -79,10 +87,7 @@ public class PagBankCheckoutGatewayService {
             Payment payment, String redirectUrl, String notificationUrl, boolean includeDebit) {
         requireConfiguredToken();
 
-        long amountInCents = payment.getTotalAmount()
-                .setScale(2, RoundingMode.HALF_UP)
-                .movePointRight(2)
-                .longValueExact();
+        long amountInCents = amountInCents(payment);
         if (amountInCents <= 0) {
             throw new PaymentGatewayException("Valor da fatura inválido para cobrança");
         }
