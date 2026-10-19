@@ -2,6 +2,9 @@ package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.model.*;
 import com.portalcursos.ng02.repository.PaymentRepository;
+import com.portalcursos.ng02.service.CardCheckoutRateLimiter;
+import com.portalcursos.ng02.service.CardCheckoutService;
+import com.portalcursos.ng02.service.PagBankEnvironmentPolicy;
 import com.portalcursos.ng02.service.PaymentAuthorizationService;
 import com.portalcursos.ng02.service.PaymentCodeGenerationService;
 import com.portalcursos.ng02.service.PaymentService;
@@ -26,6 +29,9 @@ public class FinancialController {
     private final PaymentAuthorizationService authorizationService;
     private final PaymentService paymentService;
     private final PaymentCodeGenerationService paymentCodeGenerationService;
+    private final CardCheckoutService cardCheckoutService;
+    private final CardCheckoutRateLimiter cardCheckoutRateLimiter;
+    private final PagBankEnvironmentPolicy environmentPolicy;
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
@@ -116,6 +122,36 @@ public class FinancialController {
         }
 
         return ResponseEntity.ok(paymentCodeGenerationService.generatePix(p));
+    }
+
+    /**
+     * Cria (ou reaproveita) o checkout hospedado de cartão da fatura. Não devolve "aprovado": a baixa
+     * só ocorre pelo webhook. Fora de produção só administrador/testador paga (cartão de teste é público).
+     */
+    @PostMapping("/generate-card-checkout/{paymentId}")
+    @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
+    public ResponseEntity<?> generateCardCheckout(@PathVariable @NonNull Long paymentId) {
+        Payment p = paymentRepository.findByIdWithCreatorAndStudent(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fatura não encontrada para pagamento por cartão"));
+
+        boolean elevated = authorizationService.hasElevatedPrivileges();
+        if (!elevated && !authorizationService.ownsPayment(p)) {
+            return ResponseEntity.status(403)
+                .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
+        }
+
+        if (!environmentPolicy.canPay(elevated, authorizationService.currentUserEmail())) {
+            return ResponseEntity.status(403)
+                .body(new MessageResponse("Pagamento por cartão em breve."));
+        }
+
+        if (!cardCheckoutRateLimiter.tryAcquire(authorizationService.currentUserKey())) {
+            return ResponseEntity.status(429)
+                .header("Retry-After", "600")
+                .body(new MessageResponse("Muitas tentativas de pagamento. Aguarde alguns minutos."));
+        }
+
+        return ResponseEntity.ok(cardCheckoutService.generate(p));
     }
 
     @PostMapping("/generate-boleto/{paymentId}")

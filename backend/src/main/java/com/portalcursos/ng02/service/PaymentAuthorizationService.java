@@ -41,6 +41,18 @@ public class PaymentAuthorizationService {
             .orElse(false);
     }
 
+    /** Identificador estável do usuário autenticado (username), ou null se não houver autenticação. */
+    public String currentUserKey() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.isAuthenticated() ? auth.getName() : null;
+    }
+
+    /** E-mail do usuário autenticado, ou null se não houver principal reconhecido. */
+    public String currentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getPrincipal() instanceof UserDetailsImpl u ? u.getEmail() : null;
+    }
+
     /** true se o pagamento pertence ao aluno (graduação ou pós) autenticado. */
     public boolean ownsPayment(Payment payment) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

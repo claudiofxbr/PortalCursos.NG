@@ -97,6 +97,21 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ResponseEntity<?> handlePaymentGatewayException(PaymentGatewayException ex, WebRequest request) {
+        // Detalhe técnico (motivo real da falha do PSP) fica só no log — nunca vaza ao cliente.
+        logger.error("[502 PAYMENT GATEWAY] Falha ao comunicar com o gateway de pagamento: {}", ex.getMessage());
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_GATEWAY.value());
+        body.put("error", "Bad Gateway");
+        body.put("message", "Não foi possível gerar o PIX no momento. Tente novamente em instantes.");
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_GATEWAY);
+    }
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrityException(org.springframework.dao.DataIntegrityViolationException ex, WebRequest request) {
         logger.warn("[SUPREME-WARN] Violação de integridade nos dados: {}", ex.getMostSpecificCause().getMessage());

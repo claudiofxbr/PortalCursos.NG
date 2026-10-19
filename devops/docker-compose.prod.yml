@@ -28,6 +28,16 @@ x-backend: &backend-common
     APP_ROOT_PASSWORD: ${APP_ROOT_PASSWORD:-}
     APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
     APP_SECURE_COOKIES: ${APP_SECURE_COOKIES:-true}
+    # PagBank: sem valor real aqui (vêm do .env da VPS). Padrões mantêm o comportamento anterior:
+    # token vazio = gateway "não configurado"; base-url padrão = produção; ambiente padrão = sandbox.
+    PAGSEGURO_API_TOKEN: ${PAGSEGURO_API_TOKEN:-}
+    PAGSEGURO_API_BASE_URL: ${PAGSEGURO_API_BASE_URL:-https://api.pagseguro.com}
+    PAGSEGURO_WEBHOOK_SECRET: ${PAGSEGURO_WEBHOOK_SECRET:-}
+    PORTALCURSOS_PUBLIC_API_URL: ${PORTALCURSOS_PUBLIC_API_URL:-https://xavierbr-vps.tech}
+    PAGBANK_ENV: ${PAGBANK_ENV:-sandbox}
+    PAGBANK_SANDBOX_TESTERS: ${PAGBANK_SANDBOX_TESTERS:-}
+    PAGBANK_DEBIT_ENABLED: ${PAGBANK_DEBIT_ENABLED:-false}
+    PORTALCURSOS_PUBLIC_APP_URL: ${PORTALCURSOS_PUBLIC_APP_URL:-https://xavierbr-vps.tech/portalcursos.ng}
   healthcheck:
     test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
     interval: 30s

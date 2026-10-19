@@ -7,6 +7,7 @@ import { useAuditCRUD } from '../hooks/useAuditCRUD';
 import { AuditStamp } from '../components/AuditStamp';
 import { PixQrCode } from '../components/PixQrCode';
 import { toast } from 'sonner';
+import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdFromSearch } from './cardCheckout';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
 
@@ -45,6 +46,50 @@ export default function FinancePage() {
   useEffect(() => {
     fetchFinanceData();
   }, [activeTab]);
+
+  // Retorno do checkout de cartão do PagBank (?payment=<id>). A baixa só acontece pelo webhook; aqui apenas
+  // acompanhamos o histórico por alguns instantes e avisamos, sem nunca afirmar pagamento sem confirmação.
+  const [returnedPaymentId, setReturnedPaymentId] = useState<number | null>(null);
+  const [returnConfirmed, setReturnConfirmed] = useState(false);
+
+  useEffect(() => {
+    const id = paymentIdFromSearch(window.location.search);
+    if (id !== null) {
+      // URL só existe no navegador: ler depois da montagem evita divergência de hidratação com o servidor.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReturnedPaymentId(id);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (returnedPaymentId === null) return;
+    let attempts = 0;
+    let cancelled = false;
+    const check = async () => {
+      attempts += 1;
+      const [grad, post] = await Promise.all(
+        (['GRADUATION', 'POSTGRADUATE'] as AcademicLevel[]).map(level =>
+          api.get(`/finance/history/${level}`).then(r => r.data).catch(() => [])
+        )
+      );
+      if (cancelled) return;
+      const paid = [...(Array.isArray(grad) ? grad : []), ...(Array.isArray(post) ? post : [])]
+        .some((h: { id?: number } | null) => h?.id === returnedPaymentId);
+      if (paid) {
+        setReturnConfirmed(true);
+        toast.success('Pagamento confirmado!');
+        fetchFinanceData();
+        return;
+      }
+      if (attempts < 6) timer = setTimeout(check, 5000);
+    };
+    let timer: ReturnType<typeof setTimeout> = setTimeout(check, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [returnedPaymentId]);
 
   useEffect(() => {
     const searchStudent = async () => {
@@ -112,6 +157,21 @@ export default function FinancePage() {
       } catch (err: any) {
           const msg = err?.response?.data?.message || `Não foi possível gerar o ${method === 'PIX' ? 'código Pix' : 'boleto'}. Tente novamente.`;
           alert(msg);
+      }
+  };
+
+  const handleCardCheckout = async (id: number) => {
+      try {
+          const res = await api.post(`/finance/generate-card-checkout/${id}`);
+          const url = res?.data?.url;
+          if (!isSafePayUrl(url)) {
+              toast.error(cardCheckoutErrorMessage());
+              return;
+          }
+          window.location.assign(url);
+      } catch (err: unknown) {
+          const response = (err as { response?: { status?: number; data?: { message?: unknown } } })?.response;
+          toast.error(cardCheckoutErrorMessage(response?.status, response?.data?.message));
       }
   };
 
@@ -202,6 +262,14 @@ export default function FinancePage() {
           >📘 Pós-Graduação</button>
       </div>
 
+      {returnedPaymentId !== null && (
+        <div role="status" className="glass-panel" style={{ backgroundColor: returnConfirmed ? '#f0fff4' : '#fffbea', color: '#333', padding: '1rem', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+          {returnConfirmed
+            ? <><strong>Pagamento confirmado.</strong> A fatura #{returnedPaymentId} foi baixada.</>
+            : <><strong>Aguardando confirmação do pagamento da fatura #{returnedPaymentId}.</strong> A confirmação do banco pode levar alguns instantes; esta tela se atualiza sozinha.</>}
+        </div>
+      )}
+
       {error && (
         <div className="glass-panel" style={{ backgroundColor: '#fff5f5', color: '#c53030', padding: '1rem', marginBottom: '1.5rem', border: '1px solid #feb2b2' }}>
           <strong>Erro:</strong> {error}
@@ -265,6 +333,9 @@ export default function FinancePage() {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => handleGeneratePayment(invoice.id, 'PIX')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f0faff', color: '#0288d1', fontSize: '0.8rem' }}>Pix</button>
+                        {cardPaymentsEnabled() && (
+                            <button onClick={() => handleCardCheckout(invoice.id)} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f3f0ff', color: '#5b3cc4', fontSize: '0.8rem' }}>Cartão</button>
+                        )}
                         <button onClick={() => handleGeneratePayment(invoice.id, 'BOLETO')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f5f5f5', color: '#333', fontSize: '0.8rem' }}>Boleto</button>
                     </div>
                 </div>

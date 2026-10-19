@@ -47,6 +47,17 @@ public class Payment extends BaseAuditEntity {
 
     private String paymentCode; // URL do Boleto ou QR Code do Pix
 
+    // Sem @Column explícito: a convenção padrão do Hibernate (CamelCase ->
+    // snake_case) já resolve para "psp_order_id" (mesmo padrão usado por
+    // studentPhotoUrl); confirmado contra a migração V23.
+    private String pspOrderId; // id do pedido/cobrança PIX no gateway (PSP), para reconciliação via webhook
+
+    // Pagamento por cartão (checkout hospedado): id do checkout (CHEC_...) e valor em centavos
+    // fixado na criação do checkout, que é o que a baixa compara com o valor efetivamente pago.
+    private String pspCheckoutId;
+
+    private Long chargedAmountCents;
+
     /**
      * Referencia tanto alunos de graduação quanto de pós — PostgradStudent é uma
      * subclasse de Student (single-table inheritance), então uma única FK basta;
