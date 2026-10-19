@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.CardCheckoutResult;
+import com.portalcursos.ng02.dto.CardPaymentFacts;
 import com.portalcursos.ng02.exception.PaymentGatewayException;
 import com.portalcursos.ng02.model.Payment;
 import org.slf4j.Logger;
@@ -43,6 +44,8 @@ public class PagBankCheckoutGatewayService {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     // psp_checkout_id é VARCHAR(64)
     private static final Pattern CHECKOUT_ID = Pattern.compile("^[A-Za-z0-9_-]{4,64}$");
+    private static final Pattern ORDER_ID = Pattern.compile("^ORDE_[A-Za-z0-9-]{4,70}$");
+    private static final int MAX_CHECKOUT_ORDERS = 5;
 
     private final String apiToken;
     private final RestClient restClient;
@@ -159,6 +162,95 @@ public class PagBankCheckoutGatewayService {
             return "https".equals(uri.getScheme()) && uri.getHost() != null && uri.getUserInfo() == null;
         } catch (IllegalArgumentException ex) {
             return false;
+        }
+    }
+
+    /**
+     * Reconsulta o checkout no PagBank e devolve os fatos de pagamento. O checkout NÃO traz {@code charges}
+     * e continua ACTIVE mesmo depois de pago (confirmado no sandbox do CVFacil.NG); por isso cada pedido de
+     * {@code orders[]} (até 5) é consultado e as cobranças PAID são somadas. Só entram pedidos cujo
+     * reference_id é o do checkout.
+     *
+     * @return fatos, ou {@code null} se o checkout ainda não tem pedidos (não pago) ou não é resolvível
+     * @throws PaymentGatewayException falha de rede/PSP (o chamador deve responder 503 para o PagBank reenviar)
+     */
+    public CardPaymentFacts resolveCheckoutFacts(String checkoutId) {
+        requireConfiguredToken();
+        if (checkoutId == null || !CHECKOUT_ID.matcher(checkoutId).matches()) {
+            return null;
+        }
+
+        Map<String, Object> checkout = get("/checkouts/{id}", checkoutId);
+        Object ref = checkout == null ? null : checkout.get("reference_id");
+        String referenceId = ref instanceof String s ? s : "";
+        List<String> orderIds = new java.util.ArrayList<>();
+        if (checkout != null && checkout.get("orders") instanceof List<?> orders) {
+            for (Object o : orders) {
+                if (o instanceof Map<?, ?> m && m.get("id") instanceof String id && ORDER_ID.matcher(id).matches()
+                        && orderIds.size() < MAX_CHECKOUT_ORDERS) {
+                    orderIds.add(id);
+                }
+            }
+        }
+        if (referenceId.isEmpty() || orderIds.isEmpty()) {
+            return null;
+        }
+
+        boolean paid = false;
+        boolean allKnown = true;
+        long total = 0;
+        String methodType = null;
+        int considered = 0;
+        for (String orderId : orderIds) {
+            Map<String, Object> order = get("/orders/{id}", orderId);
+            if (order == null || !referenceId.equals(order.get("reference_id"))
+                    || !(order.get("charges") instanceof List<?> charges)) {
+                continue;
+            }
+            considered++;
+            for (Object c : charges) {
+                if (!(c instanceof Map<?, ?> charge) || !"PAID".equals(charge.get("status"))) {
+                    continue;
+                }
+                paid = true;
+                Long value = chargeValue(charge);
+                if (value == null) {
+                    allKnown = false;
+                } else {
+                    total += value;
+                }
+                if (methodType == null && charge.get("payment_method") instanceof Map<?, ?> pm
+                        && pm.get("type") instanceof String t) {
+                    methodType = t;
+                }
+            }
+        }
+        if (considered == 0) {
+            return null;
+        }
+        return new CardPaymentFacts(referenceId, paid, paid && allKnown ? total : null, methodType);
+    }
+
+    private Long chargeValue(Map<?, ?> charge) {
+        if (charge.get("amount") instanceof Map<?, ?> amount
+                && (amount.get("value") instanceof Integer || amount.get("value") instanceof Long)) {
+            return ((Number) amount.get("value")).longValue();
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> get(String uri, String id) {
+        try {
+            return restClient.get()
+                    .uri(uri, id)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiToken)
+                    .retrieve()
+                    .body(Map.class);
+        } catch (RestClientException ex) {
+            logger.warn("[PAGBANK] Falha ao consultar {} no PagBank", uri.startsWith("/checkouts") ? "checkout" : "pedido");
+            logger.debug("[PAGBANK] Detalhe técnico da falha de consulta", ex);
+            throw new PaymentGatewayException("Falha ao comunicar com o gateway de pagamento", ex);
         }
     }
 

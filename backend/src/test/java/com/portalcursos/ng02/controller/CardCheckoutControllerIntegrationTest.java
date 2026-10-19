@@ -129,6 +129,18 @@ class CardCheckoutControllerIntegrationTest {
         verifyNoInteractions(checkoutGateway);
     }
 
+    // O webhook é público (permitAll): chamado pelo PagBank, autenticado pelo HMAC no caminho.
+    // Sem token válido o resultado é 404 genérico, nunca 401/403 de sessão, e o PagBank não é consultado.
+    @Test
+    void webhookDeCartaoEPublicoMasRecusaTokenInvalidoCom404() throws Exception {
+        when(paymentRepository.findById(10L)).thenReturn(Optional.of(pending(10L)));
+
+        mockMvc.perform(post("/api/finance/card/webhook/10/token-errado").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+
+        verifyNoInteractions(checkoutGateway);
+    }
+
     @Test
     void semAutenticacaoNaoPassa() throws Exception {
         mockMvc.perform(post("/api/finance/generate-card-checkout/10").contentType(MediaType.APPLICATION_JSON))
