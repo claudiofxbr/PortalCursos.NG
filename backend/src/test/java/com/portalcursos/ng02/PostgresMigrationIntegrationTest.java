@@ -218,6 +218,39 @@ class PostgresMigrationIntegrationTest {
         assertEquals(1, count, "O pagamento deve continuar na tabela, só marcado como inativo");
     }
 
+    // V24: colunas de checkout por cartão e novos métodos de pagamento persistem contra Postgres real;
+    // faturas antigas (sem as colunas novas) continuam válidas e o CHECK rejeita valor cobrado não positivo.
+    @Test
+    void faturaPorCartaoPersisteCamposDeCheckoutContraPostgresReal() {
+        Payment saved = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("150.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(10))
+                .status(EPaymentStatus.PENDING)
+                .method(com.portalcursos.ng02.model.EPaymentMethod.CREDIT_CARD)
+                .pspCheckoutId("CHEC_00000000-0000-0000-0000-000000000000")
+                .chargedAmountCents(15000L)
+                .build());
+        entityManager.clear();
+
+        Payment loaded = paymentRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(com.portalcursos.ng02.model.EPaymentMethod.CREDIT_CARD, loaded.getMethod());
+        assertEquals("CHEC_00000000-0000-0000-0000-000000000000", loaded.getPspCheckoutId());
+        assertEquals(15000L, loaded.getChargedAmountCents());
+
+        Payment legacy = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("10.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(1))
+                .status(EPaymentStatus.PENDING)
+                .method(com.portalcursos.ng02.model.EPaymentMethod.PIX)
+                .build());
+        assertNull(legacy.getPspCheckoutId());
+        assertNull(legacy.getChargedAmountCents());
+
+        assertThrows(DataIntegrityViolationException.class, () -> {
+            jdbcTemplate.update("UPDATE payments SET charged_amount_cents = 0 WHERE id = ?", saved.getId());
+        }, "CHECK deve recusar valor cobrado zerado");
+    }
+
     // Regressão do achado P1: RepairController.deleteTicket fazia hard-delete real
     // (repairRepository.delete(ticket)), inconsistente com o padrão de soft-delete usado no
     // resto do sistema (Payment/Student/StaffMember) e apagando o histórico/auditoria do
