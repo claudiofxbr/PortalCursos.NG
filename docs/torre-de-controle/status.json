@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr130-monitor",
+      "label": "#130 — fix(ui): páginas legíveis no tema claro (formulário acadêmico e auditoria de contraste)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr123-monitor",
       "label": "#123 — chore(deps): bump brace-expansion in /frontend",
       "detail": "CI ok.",
@@ -148,5 +155,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T14:58:06Z"
+  "updatedAt": "2026-10-20T15:55:12Z"
 }
