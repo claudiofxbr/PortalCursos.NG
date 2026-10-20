@@ -19,7 +19,7 @@ public final class ChargePriceDtos {
 
     /** Uma linha da tabela, já com o que o perfil atual pode fazer nela. */
     public record RowDto(Long id, String code, String category, String name, ChargePrice.Scope academicScope,
-                         UUID courseId, BigDecimal currentValue, Long version,
+                         UUID courseId, String courseName, BigDecimal currentValue, Long version,
                          boolean canEdit, boolean canPropose, PendingDto pending) {
     }
 
