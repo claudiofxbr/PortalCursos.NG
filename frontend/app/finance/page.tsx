@@ -8,6 +8,8 @@ import { AuditStamp } from '../components/AuditStamp';
 import { PixQrCode } from '../components/PixQrCode';
 import { toast } from 'sonner';
 import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdFromSearch } from './cardCheckout';
+import Link from 'next/link';
+import { mayOpenPriceTable } from './prices/priceTable';
 
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
 
@@ -211,6 +213,9 @@ export default function FinancePage() {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
+          {mayOpenPriceTable(user?.roles) && (
+            <Link href="/finance/prices" className="hover-lift" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, background: '#f3f0ff', color: '#5b3cc4', display: 'flex', alignItems: 'center' }}>Tabela de valores</Link>
+          )}
           <button onClick={() => setShowChargeModal(true)} className="btn-primary hover-lift" style={{ 
             padding: '12px 24px',
             borderRadius: '12px',
