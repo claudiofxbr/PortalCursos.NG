@@ -20,6 +20,7 @@ export interface PriceRow {
   name: string;
   academicScope: 'ALL' | 'GRADUATION' | 'POSTGRAD';
   courseId: string | null;
+  courseName?: string | null;
   currentValue: number | null;
   version: number;
   canEdit: boolean;
@@ -39,6 +40,10 @@ const SCOPE_LABEL: Record<PriceRow['academicScope'], string> = {
 };
 
 export const scopeLabel = (scope: PriceRow['academicScope']): string => SCOPE_LABEL[scope] ?? scope;
+
+/** Nome do curso da linha, ou "Todos" quando o valor é global. */
+export const courseLabel = (row: Pick<PriceRow, 'courseId' | 'courseName'>): string =>
+  !row.courseId ? 'Todos' : row.courseName || `Curso ${row.courseId.slice(0, 8)}…`;
 
 export const roleLabel = (role: PriceRole): string =>
   role === 'ADMIN' ? 'Administrador' : role === 'HEAD' ? 'Chefe de secretaria' : 'Secretaria (somente leitura)';

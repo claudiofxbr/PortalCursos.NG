@@ -6,6 +6,7 @@ import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.ChargePrice;
 import com.portalcursos.ng02.model.ChargePriceChange;
 import com.portalcursos.ng02.model.ChargePriceChange.Status;
+import com.portalcursos.ng02.model.Course;
 import com.portalcursos.ng02.model.StaffCourseScope;
 import com.portalcursos.ng02.repository.ChargePriceChangeRepository;
 import com.portalcursos.ng02.repository.ChargePriceRepository;
@@ -27,6 +28,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -57,9 +60,10 @@ public class ChargePriceService {
                 ? priceRepository.findAllActive()
                 : priceRepository.findVisibleTo(access.courseIds());
         Map<Long, ChargePriceChange> pending = pendingByPrice(prices.stream().map(ChargePrice::getId).toList());
+        Map<UUID, String> courseNames = courseNames(prices);
         List<RowDto> rows = prices.stream()
                 .filter(access::canSee)
-                .map(p -> toRow(p, access, pending.get(p.getId())))
+                .map(p -> toRow(p, access, pending.get(p.getId()), courseNames))
                 .toList();
         return new TableDto(access.level().name(), rows);
     }
@@ -98,7 +102,7 @@ public class ChargePriceService {
             changeRepository.save(c);
         });
         logger.info("[PRICES] valor alterado pelo administrador: priceId={} por={}", priceId, access.actor());
-        return toRow(price, access, null);
+        return toRow(price, access, null, courseNames(List.of(price)));
     }
 
     /** Cria o valor de um curso a partir de uma linha global (ou de outro curso). */
@@ -126,7 +130,7 @@ public class ChargePriceService {
         stamp(row, access);
         ChargePrice saved = priceRepository.save(row);
         logger.info("[PRICES] valor por curso criado: priceId={} por={}", saved.getId(), access.actor());
-        return toRow(saved, access, null);
+        return toRow(saved, access, null, courseNames(List.of(saved)));
     }
 
     @Transactional
@@ -141,7 +145,7 @@ public class ChargePriceService {
         decide(change, Status.APPROVED, access, null);
         changeRepository.save(change);
         logger.info("[PRICES] proposta confirmada: changeId={} priceId={} por={}", changeId, price.getId(), access.actor());
-        return toRow(price, access, null);
+        return toRow(price, access, null, courseNames(List.of(price)));
     }
 
     @Transactional
@@ -153,7 +157,7 @@ public class ChargePriceService {
         decide(change, Status.REJECTED, access, request == null ? null : trim(request.reason()));
         changeRepository.save(change);
         logger.info("[PRICES] proposta rejeitada: changeId={} priceId={} por={}", changeId, price.getId(), access.actor());
-        return toRow(price, access, null);
+        return toRow(price, access, null, courseNames(List.of(price)));
     }
 
     // ------------------------------------------------------------------ chefe de secretaria
@@ -179,7 +183,7 @@ public class ChargePriceService {
         change.setReason(trim(request.reason()));
         ChargePriceChange saved = changeRepository.save(change);
         logger.info("[PRICES] proposta criada: changeId={} priceId={} por={}", saved.getId(), priceId, access.actor());
-        return toRow(price, access, saved);
+        return toRow(price, access, saved, courseNames(List.of(price)));
     }
 
     // ------------------------------------------------------------------ escopo (administrador)
@@ -273,12 +277,20 @@ public class ChargePriceService {
         price.setUpdatedBy(access.actor());
     }
 
-    private static RowDto toRow(ChargePrice p, Access access, ChargePriceChange pending) {
+    /** Nomes dos cursos das linhas (uma consulta só), para a tela mostrar o nome em vez do identificador. */
+    private Map<UUID, String> courseNames(Collection<ChargePrice> prices) {
+        Set<UUID> ids = prices.stream().map(ChargePrice::getCourseId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (ids.isEmpty()) return Map.of();
+        return courseRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Course::getId, c -> c.getDenominacaoCurso() == null ? "" : c.getDenominacaoCurso(), (a, b) -> a));
+    }
+
+    private static RowDto toRow(ChargePrice p, Access access, ChargePriceChange pending, Map<UUID, String> courseNames) {
         PendingDto pendingDto = pending == null ? null
                 : new PendingDto(pending.getId(), pending.getProposedValue(), pending.getProposedBy(),
                 pending.getProposedAt(), pending.getReason());
         return new RowDto(p.getId(), p.getCode(), p.getCategory(), p.getName(), p.getAcademicScope(), p.getCourseId(),
-                p.getCurrentValue(), p.getVersion(), access.isAdmin(), access.canPropose(p), pendingDto);
+                p.getCourseId() == null ? null : courseNames.get(p.getCourseId()), p.getCurrentValue(), p.getVersion(), access.isAdmin(), access.canPropose(p), pendingDto);
     }
 
     private static ScopeDto toScope(StaffCourseScope s) {
