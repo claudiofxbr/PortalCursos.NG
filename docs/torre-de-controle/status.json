@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a2b9a53)",
+      "detail": "último run em main: success (commit a23f2e9)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit a2b9a53)",
+      "detail": "último run em main: success (commit a23f2e9)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr126-monitor",
-      "label": "#126 — feat(valores): tela de administração de responsáveis e valores por curso",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -155,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T12:35:51Z"
+  "updatedAt": "2026-10-20T13:02:49Z"
 }
