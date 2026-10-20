@@ -247,10 +247,10 @@ export default function UsersManagementPage() {
             {/* Header */}
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-3px', color: '#fff', marginBottom: '0.5rem' }}>
-                        GOVERNANÇA <span style={{ color: 'var(--secondary-color)' }}>NG</span>
+                    <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-3px', color: 'var(--fg-1)', marginBottom: '0.5rem' }}>
+                        GOVERNANÇA <span style={{ color: 'var(--accent-text)' }}>NG</span>
                     </h1>
-                    <p style={{ opacity: 0.4, fontWeight: 700, letterSpacing: '2px', fontSize: '0.8rem' }}>PROTOCOL V50.0 // HIERARCHICAL ENGINE</p>
+                    <p style={{ opacity: 'var(--dim-4)', fontWeight: 700, letterSpacing: '2px', fontSize: '0.8rem' }}>PROTOCOL V50.0 // HIERARCHICAL ENGINE</p>
                 </div>
                 {opLevel >= 40 && (
                     <button 
@@ -273,7 +273,7 @@ export default function UsersManagementPage() {
             <div style={GLASS_SECTION}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                        <tr style={{ borderBottom: '1px solid var(--field-border)', textAlign: 'left' }}>
                             <th style={TH_STYLE}>Identidade Institucional</th>
                             <th style={TH_STYLE}>Autoridade</th>
                             <th style={{ ...TH_STYLE, textAlign: 'right' }}>Ações de Controle</th>
@@ -281,7 +281,7 @@ export default function UsersManagementPage() {
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', opacity: 0.3 }}>Sincronizando registros da nuvem...</td></tr>
+                            <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', opacity: 'var(--dim-3)' }}>Sincronizando registros da nuvem...</td></tr>
                         ) : users.map(user => {
                             const userLevel = getMaxLevel(user);
                             const canManage = (opLevel > userLevel || opLevel === 100) && user.username !== 'rootmaster' && user.username !== currentUser?.username;
@@ -296,8 +296,8 @@ export default function UsersManagementPage() {
                                                 ) : <div style={AVATAR_PLACEHOLDER}>👤</div>}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>{user.username}</div>
-                                                <div style={{ fontSize: '0.85rem', opacity: 0.4 }}>{user.email}</div>
+                                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fg-1)' }}>{user.username}</div>
+                                                <div style={{ fontSize: '0.85rem', opacity: 'var(--dim-4)' }}>{user.email}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -332,12 +332,12 @@ export default function UsersManagementPage() {
                                             <button 
                                                 onClick={() => { setEditingUser(user); setNewRoles(user.roles.map((r: any) => (typeof r === 'string' ? r : r.name).replace('ROLE_', ''))); }}
                                                 disabled={!canManage}
-                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--secondary-color)' : 'rgba(255,255,255,0.05)' }}
+                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--accent-text)' : 'var(--field-divider)' }}
                                             >ALTERAR</button>
                                             <button 
                                                 onClick={() => handleDelete(user)}
                                                 disabled={!canManage}
-                                                style={{ ...ACTION_BTN, color: canManage ? '#ff4757' : 'rgba(255,255,255,0.05)' }}
+                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--danger-text)' : 'var(--field-divider)' }}
                                             >REMOVER</button>
                                         </div>
                                     </td>
@@ -433,7 +433,7 @@ export default function UsersManagementPage() {
     );
 }
 
-const TH_STYLE = { padding: '1.5rem', opacity: 0.3, fontSize: '0.7rem', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 800 };
+const TH_STYLE = { padding: '1.5rem', opacity: 'var(--dim-3)', fontSize: '0.7rem', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 800 };
 const TR_STYLE = { borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.3s' };
 const BADGE_STYLE = { fontSize: '0.6rem', fontWeight: 900, padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.5px' };
 const AVATAR_CONTAINER = { width: '45px', height: '60px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' };

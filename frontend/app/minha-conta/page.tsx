@@ -5,9 +5,9 @@ import React, { useEffect, useState } from 'react';
 import api from '@/app/services/api';
 
 const GLASS_SECTION: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.02)',
+    background: 'var(--field-surface)',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--field-divider)',
     borderRadius: '24px',
     padding: '2rem',
     marginBottom: '1.5rem',
@@ -56,7 +56,7 @@ export default function MinhaContaPage() {
     };
 
     if (loading) return <div className="fade-in">Carregando seus dados...</div>;
-    if (error) return <div className="fade-in" style={{ color: '#e74c3c' }}>{error}</div>;
+    if (error) return <div className="fade-in" style={{ color: 'var(--danger-text)' }}>{error}</div>;
 
     const account = data?.account || {};
     const academic = data?.academic;
@@ -124,7 +124,7 @@ export default function MinhaContaPage() {
                         style={{
                             padding: '10px 20px',
                             backgroundColor: 'rgba(255, 60, 60, 0.15)',
-                            color: '#ff6b6b',
+                            color: 'var(--danger-text)',
                             border: '1px solid rgba(255, 107, 107, 0.5)',
                             borderRadius: '8px',
                             cursor: requesting ? 'default' : 'pointer',

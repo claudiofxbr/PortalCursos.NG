@@ -357,7 +357,7 @@ export default function FinancePage() {
             </div>
           </div>
         )) : (
-          <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: '#999' }}>
+          <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: 'var(--text-secondary)' }}>
             Nenhuma cobrança pendente para este nível.
           </div>
         )}
@@ -389,7 +389,7 @@ export default function FinancePage() {
                     ))}
                 </tbody>
             </table>
-            {history.length === 0 && <p style={{ textAlign: 'center', padding: '2rem', color: '#ccc' }}>Nenhum histórico disponível.</p>}
+            {history.length === 0 && <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Nenhum histórico disponível.</p>}
         </div>
       </section>
 

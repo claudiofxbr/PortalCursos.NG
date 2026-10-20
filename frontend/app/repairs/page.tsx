@@ -178,7 +178,7 @@ export default function RepairsPage() {
         boxShadow: '0 10px 30px rgba(26, 35, 126, 0.2)'
       }}>
         <div>
-          <h2 style={{ fontSize: '2.2rem', margin: 0, fontWeight: 800 }}>Campus Care 🛠️</h2>
+          <h2 style={{ fontSize: '2.2rem', margin: 0, fontWeight: 800, color: 'white' }}>Campus Care 🛠️</h2>
           <p style={{ opacity: 0.8, marginTop: '0.5rem', fontSize: '1rem' }}>Portal de Manutenção e Infraestrutura do Campus.</p>
         </div>
         
@@ -409,7 +409,7 @@ export default function RepairsPage() {
                 </div>
               );
             }) : (
-              <div style={{ padding: '5rem', textAlign: 'center', color: '#bbb', background: '#fafafa', borderRadius: '20px', border: '2px dashed #eee' }}>
+              <div style={{ padding: '5rem', textAlign: 'center', color: '#6b7280', background: '#fafafa', borderRadius: '20px', border: '2px dashed #eee' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
                 <p style={{ fontSize: '1.1rem' }}>Tudo funcionando perfeitamente por aqui!</p>
               </div>
@@ -566,7 +566,7 @@ export default function RepairsPage() {
                   {/* Foto Principal */}
                   {selectedTicket.mainPhotoUrl && (
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>EVIDÊNCIA PRINCIPAL</p>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>EVIDÊNCIA PRINCIPAL</p>
                       <img
                         src={resolvePhotoUrl(BASE_URL, selectedTicket.mainPhotoUrl) || ''}
                         alt="Evidência principal"
@@ -578,7 +578,7 @@ export default function RepairsPage() {
 
                   {/* Descrição */}
                   <div style={{ marginBottom: '1.8rem' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>DESCRIÇÃO DO PROBLEMA</p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>DESCRIÇÃO DO PROBLEMA</p>
                     <p style={{ fontSize: '1rem', color: '#333', lineHeight: '1.7', background: '#fafafa', borderRadius: '12px', padding: '1rem', margin: 0 }}>
                       {selectedTicket.description}
                     </p>
@@ -587,7 +587,7 @@ export default function RepairsPage() {
                   {/* Galeria de Fotos */}
                   {selectedTicket.photoUrls && selectedTicket.photoUrls.length > 0 && (
                     <div>
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>GALERIA DE EVIDÊNCIAS ({selectedTicket.photoUrls.length}/4)</p>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>GALERIA DE EVIDÊNCIAS ({selectedTicket.photoUrls.length}/4)</p>
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {selectedTicket.photoUrls.map((url: string, idx: number) => (
                           <img
@@ -605,7 +605,7 @@ export default function RepairsPage() {
 
                 {/* Coluna Direita: Carimbo do Responsável */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', letterSpacing: '0.08em', marginBottom: '1rem', textAlign: 'center' }}>RESPONSÁVEL</p>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', letterSpacing: '0.08em', marginBottom: '1rem', textAlign: 'center' }}>RESPONSÁVEL</p>
                   <div style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     padding: '1.5rem 1rem', backgroundColor: 'rgba(26, 35, 126, 0.03)',
