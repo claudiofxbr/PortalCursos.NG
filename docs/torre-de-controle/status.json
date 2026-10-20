@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr137-monitor",
+      "label": "#137 — fix(deps): atualiza sharp para 0.35.5 (alerta Dependabot)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr136-monitor",
       "label": "#136 — chore(deps): bump sharp from 0.35.4 to 0.35.5 in /frontend",
       "detail": "CI ok.",
@@ -134,5 +141,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T17:40:07Z"
+  "updatedAt": "2026-10-20T17:44:08Z"
 }
