@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr138-monitor",
+      "label": "#138 — chore(deps): bump vite from 8.3.0 to 8.3.4 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr119-monitor",
       "label": "#119 — chore(deps): bump maven from 3.9.11-eclipse-temurin-21 to 3.9-eclipse-temurin-26 in /backend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -127,5 +134,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T17:48:57Z"
+  "updatedAt": "2026-10-20T20:54:35Z"
 }
