@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a23f2e9)",
+      "detail": "último run em main: success (commit 861e94c)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit a23f2e9)",
+      "detail": "último run em main: success (commit 861e94c)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr127-monitor",
-      "label": "#127 — fix(api): erros de entrada do cliente deixam de virar HTTP 500 (E-01)",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -155,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T13:45:40Z"
+  "updatedAt": "2026-10-20T13:52:47Z"
 }
