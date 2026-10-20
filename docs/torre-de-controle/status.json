@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr124-monitor",
+      "label": "#124 — docs(pagamentos): especifica a tabela de valores das cobranças (seção 11)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr123-monitor",
       "label": "#123 — chore(deps): bump brace-expansion in /frontend",
       "detail": "CI ok.",
@@ -148,5 +155,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T10:43:11Z"
+  "updatedAt": "2026-10-20T11:26:02Z"
 }
