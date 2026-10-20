@@ -33,8 +33,23 @@ const isLocalhost = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 // Estado Global de conectividade (somente status de rede — nunca armazena tokens)
+interface PcStatus {
+    lastCheck: number;
+    isHealthy: boolean;
+    isBooting: boolean;
+    attempt: number;
+    version: string;
+}
+
+declare global {
+    interface Window {
+        PC_STATUS: PcStatus;
+        RECHECK_HEALTH?: () => void;
+    }
+}
+
 if (typeof window !== 'undefined') {
-    (window as any).PC_STATUS = {
+    window.PC_STATUS = {
         lastCheck: Date.now(),
         isHealthy: false,
         isBooting: false,
@@ -57,7 +72,7 @@ const api = axios.create({
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            const status = (window as any).PC_STATUS;
+            const status = window.PC_STATUS;
             status.isHealthy = true;
             status.isBooting = false;
             window.dispatchEvent(new CustomEvent('OMEGA_HEALTH', { detail: status }));
@@ -81,7 +96,7 @@ api.interceptors.response.use(
                 const delay = Math.min(2000 * Math.pow(1.4, config._retryCount), 9000);
 
                 if (typeof window !== 'undefined') {
-                    const s = (window as any).PC_STATUS;
+                    const s = window.PC_STATUS;
                     s.isBooting = true;
                     s.attempt = config._retryCount;
                     window.dispatchEvent(new CustomEvent('OMEGA_BOOTING', { detail: s }));

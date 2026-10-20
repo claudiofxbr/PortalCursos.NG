@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../app/context/AuthContext';
 import api from '../app/services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 export default function AuthModal() {
     const { isAuthModalOpen, lastUser, loginSuccess } = useAuth();
     const [password, setPassword] = useState('');
@@ -27,7 +28,8 @@ export default function AuthModal() {
             // O backend seta Set-Cookie na resposta; withCredentials no api.ts envia automaticamente.
             loginSuccess(response.data);
             setPassword('');
-        } catch (err: any) {
+        } catch (errCaught: unknown) {
+            const err = asHttpError(errCaught);
             console.error("[AUTH MODAL] Erro no re-login:", err);
             // Distingue falha de rede/DNS (sem response) de credenciais erradas
             // (401/403 do backend), para o usuário saber se deve checar a

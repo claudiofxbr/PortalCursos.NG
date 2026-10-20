@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import api from '@/app/services/api';
 import { toast } from 'sonner';
+import { asHttpError } from '@/app/services/httpError';
 
-const extractUserMessage = (error: any): string => {
-    const serverMsg = error?.response?.data?.message;
+const extractUserMessage = (error: unknown): string => {
+    const { response } = asHttpError(error);
+    const serverMsg = response?.data?.message;
     if (serverMsg && typeof serverMsg === 'string') return serverMsg;
-    const status = error?.response?.status;
+    const status = response?.status;
     if (status === 403) return 'Acesso negado: você não tem permissão para esta ação.';
     if (status === 404) return 'Registro não encontrado.';
     if (status === 409) return 'Conflito: este registro já existe ou há dados duplicados.';
-    if (status >= 500) return 'Erro interno do servidor. Tente novamente em instantes.';
+    if (status !== undefined && status >= 500) return 'Erro interno do servidor. Tente novamente em instantes.';
     return 'Erro ao comunicar com o servidor. Verifique sua conexão.';
 };
 
@@ -21,7 +23,7 @@ export const useAuditCRUD = (endpoint: string) => {
         try {
             const res = await api.get(`${endpoint}${subPath}`, { params });
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error(extractUserMessage(error));
             throw error;
         } finally {
@@ -29,13 +31,13 @@ export const useAuditCRUD = (endpoint: string) => {
         }
     };
 
-    const create = async (data: any, subPath = "") => {
+    const create = async (data: unknown, subPath = "") => {
         setLoading(true);
         try {
             const res = await api.post(`${endpoint}${subPath}`, data);
             toast.success('Registro criado com sucesso!');
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error(extractUserMessage(error));
             throw error;
         } finally {
@@ -43,13 +45,13 @@ export const useAuditCRUD = (endpoint: string) => {
         }
     };
 
-    const update = async (id: number | string, data: any, subPath = "") => {
+    const update = async (id: number | string, data: unknown, subPath = "") => {
         setLoading(true);
         try {
             const res = await api.put(`${endpoint}${subPath}/${id}`, data);
             toast.success('Registro atualizado com sucesso!');
             return res.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error(extractUserMessage(error));
             throw error;
         } finally {
@@ -63,7 +65,7 @@ export const useAuditCRUD = (endpoint: string) => {
             await api.delete(`${endpoint}${subPath}/${id}`);
             toast.success('Registro removido com sucesso!');
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error(extractUserMessage(error));
             throw error;
         } finally {
