@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 9236082)",
+      "detail": "último run em main: success (commit 640eb50)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 9236082)",
+      "detail": "último run em main: success (commit 640eb50)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr124-monitor",
-      "label": "#124 — docs(pagamentos): especifica a tabela de valores das cobranças (seção 11)",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -155,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T11:26:02Z"
+  "updatedAt": "2026-10-20T11:31:30Z"
 }
