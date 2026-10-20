@@ -5,6 +5,7 @@ import api, { BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
+import { asHttpError } from '@/app/services/httpError';
 // Auxiliar para tradução de status vindo do Backend (EN) para o Usuário (PT-BR)
 const statusMap: Record<string, { label: string, color: string }> = {
   'OPEN': { label: 'Pendente', color: '#ff9800' },
@@ -25,9 +26,26 @@ const resolvePhotoUrl = (baseUrl: string, url: string | null | undefined): strin
   return `${baseUrl}/api/uploads/${url}`; // Path relativo do StorageService → URL completa
 };
 
+/** Chamado como a API devolve (só os campos que esta tela usa). */
+interface Ticket {
+  id: number;
+  title?: string;
+  description?: string;
+  location?: string;
+  status: string;
+  photoUrls: string[];
+  mainPhotoUrl?: string;
+  createdAt?: string;
+  resolvedAt?: string;
+  creatorName?: string;
+  creatorPosition?: string;
+  creatorPhotoUrl?: string;
+  reportedByFullName?: string;
+}
+
 export default function RepairsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -36,13 +54,7 @@ export default function RepairsPage() {
   const [newDesc, setNewDesc] = useState('');
   const [mainPhotoFile, setMainPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false); // Proteção anti double-submit
-  const [selectedTicket, setSelectedTicket] = useState<any | null>(null); // Modal de visualização
-
-  useEffect(() => {
-    if (!authLoading) {
-      fetchTickets();
-    }
-  }, [authLoading]);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null); // Modal de visualização
 
   const fetchTickets = async () => {
     if (authLoading || !isAuthenticated) return;
@@ -52,7 +64,8 @@ export default function RepairsPage() {
       setError(null);
       const response = await api.get('/repairs'); 
       setTickets(response.data);
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       if (err.silent) return;
       
       console.error("[CAMPUS-CARE] Erro na infraestrutura:", err);
@@ -69,6 +82,14 @@ export default function RepairsPage() {
       setLoading(false);
     }
   };
+
+  // Declarado depois de fetchTickets: o efeito chama a função, que não pode ser usada antes de existir.
+  useEffect(() => {
+    if (!authLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
+      fetchTickets();
+    }
+  }, [authLoading]);
 
   // Barreira de Segurança Visual V37.7
   const isAuthorized = user?.roles?.some((r: string) => 
@@ -127,7 +148,8 @@ export default function RepairsPage() {
       setNewDesc('');
       setMainPhotoFile(null);
       fetchTickets();
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       const msg = err.response?.data?.message || "Falha técnica ao enviar chamado. Verifique sua conexão.";
       alert(`❌ Erro: ${msg}`);
     } finally {
@@ -142,7 +164,8 @@ export default function RepairsPage() {
       await api.delete(`/repairs/${id}`);
       alert("✅ Chamado removido com sucesso!");
       fetchTickets();
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       alert("❌ Erro ao remover chamado.");
     }
   };
@@ -157,7 +180,8 @@ export default function RepairsPage() {
       });
       alert("✅ Foto adicionada!");
       fetchTickets();
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       const msg = err.response?.data || "Erro ao fazer upload da foto.";
       alert(`❌ ${msg}`);
     }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+import { asHttpError } from '@/app/services/httpError';
 export default function SignInPage() {
   const router = useRouter();
   const { loginSuccess } = useAuth();
@@ -41,7 +42,7 @@ export default function SignInPage() {
     sessionStorage.clear();
     // Usa o motor de purga oficial (sem alert/reload que travam o navegador)
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    var target = window.location.origin + basePath + '/auth/signin?purge=' + Date.now();
+    const target = window.location.origin + basePath + '/auth/signin?purge=' + Date.now();
     window.location.replace(target);
   };
 
@@ -62,7 +63,8 @@ export default function SignInPage() {
           router.replace('/');
         }, 800);
       }
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       let msg = err.message || "Não foi possível conectar ao sistema.";
 
       if (err.response) {

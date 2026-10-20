@@ -5,6 +5,7 @@ import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
 import { AuditStamp } from '@/app/components/AuditStamp';
 
+import { asHttpError } from '@/app/services/httpError';
 interface Course {
     id: string;
     codigoIes: string;
@@ -103,13 +104,15 @@ export default function CoursesPage() {
         try {
             const res = await api.get('v1/courses');
             setCourses(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError('Erro ao carregar cursos.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadCourses(); }, []);
 
     // Seções Colapsáveis
@@ -179,7 +182,8 @@ export default function CoursesPage() {
             setEditingId(null);
             setShowForm(false);
             loadCourses();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao cadastrar curso. Verifique se os campos estão preenchidos corretamente.');
         } finally {
             setSubmitting(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useTheme } from "../app/context/ThemeContext";
+import { useTheme, type Theme } from "../app/context/ThemeContext";
 
 const ThemeSelector: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -27,7 +27,7 @@ const ThemeSelector: React.FC = () => {
   }, [isOpen]);
 
   const handleSelectTheme = (id: string) => {
-    setTheme(id as any);
+    setTheme(id as Theme);
     setIsOpen(false);
   };
 

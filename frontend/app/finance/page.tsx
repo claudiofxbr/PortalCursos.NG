@@ -11,13 +11,40 @@ import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdF
 import Link from 'next/link';
 import { mayOpenPriceTable } from './prices/priceTable';
 
+import { asHttpError } from '@/app/services/httpError';
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
+
+interface StudentRef {
+  fullName?: string;
+  cpf?: string;
+  fotoUrl?: string;
+}
+
+/** Fatura como a API devolve (só os campos que esta tela usa). */
+interface Invoice {
+  id: number;
+  status: string;
+  category?: string;
+  description: string;
+  amount: number;
+  totalAmount?: number;
+  dueDate: string;
+  createdAt?: string;
+  method?: string;
+  paymentCode?: string;
+  secretaryProcessType?: string;
+  student?: StudentRef | null;
+  postgradStudent?: StudentRef | null;
+  creatorName?: string;
+  creatorPosition?: string;
+  creatorPhotoUrl?: string;
+}
 
 export default function FinancePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AcademicLevel>('GRADUATION');
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [history, setHistory] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +54,7 @@ export default function FinancePage() {
   
   // Estados para Modais
   const [showChargeModal, setShowChargeModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState<any | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState<(Invoice & { method: 'PIX' | 'BOLETO'; paymentCode: string }) | null>(null);
   
   // Estado para formulário de nova cobrança
   const [newCharge, setNewCharge] = useState({
@@ -39,13 +66,57 @@ export default function FinancePage() {
     description: ''
   });
   
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentRef | null>(null);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
   
   // Estado para Edição
-  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
+    const searchStudent = async () => {
+        if (!newCharge.studentId || newCharge.studentId.length < 1) {
+            setSelectedStudent(null);
+            return;
+        }
+        
+        setIsSearchingStudent(true);
+        try {
+            const prefix = activeTab === 'GRADUATION' ? 'v1/grad-students' : 'v1/postgrad-students';
+            const res = await api.get(`${prefix}/${newCharge.studentId}`);
+            setSelectedStudent(res.data);
+        } catch (e) {
+            setSelectedStudent(null);
+        } finally {
+            setIsSearchingStudent(false);
+        }
+    };
+
+    const timer = setTimeout(searchStudent, 800);
+    return () => clearTimeout(timer);
+  }, [newCharge.studentId, activeTab]);
+
+  const fetchFinanceData = async () => {
+    try {
+      setLoading(true);
+      const [invoicesData, historyData] = await Promise.all([
+        api.get(`/finance/invoices/${activeTab}`).then(r => r.data).catch(() => []),
+        api.get(`/finance/history/${activeTab}`).then(r => r.data).catch(() => [])
+      ]);
+      
+      setInvoices(invoicesData);
+      setHistory(historyData);
+      setError(null);
+    } catch (err) {
+      console.error("Erro financeiro:", err);
+      toast.error("Não foi possível carregar os dados financeiros.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Declarado depois de fetchFinanceData: o efeito chama a função, que não pode ser usada antes de existir.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga dos dados do servidor ao abrir e ao trocar de aba
     fetchFinanceData();
   }, [activeTab]);
 
@@ -93,48 +164,6 @@ export default function FinancePage() {
     };
   }, [returnedPaymentId]);
 
-  useEffect(() => {
-    const searchStudent = async () => {
-        if (!newCharge.studentId || newCharge.studentId.length < 1) {
-            setSelectedStudent(null);
-            return;
-        }
-        
-        setIsSearchingStudent(true);
-        try {
-            const prefix = activeTab === 'GRADUATION' ? 'v1/grad-students' : 'v1/postgrad-students';
-            const res = await api.get(`${prefix}/${newCharge.studentId}`);
-            setSelectedStudent(res.data);
-        } catch (e) {
-            setSelectedStudent(null);
-        } finally {
-            setIsSearchingStudent(false);
-        }
-    };
-
-    const timer = setTimeout(searchStudent, 800);
-    return () => clearTimeout(timer);
-  }, [newCharge.studentId, activeTab]);
-
-  const fetchFinanceData = async () => {
-    try {
-      setLoading(true);
-      const [invoicesData, historyData] = await Promise.all([
-        api.get(`/finance/invoices/${activeTab}`).then(r => r.data).catch(() => []),
-        api.get(`/finance/history/${activeTab}`).then(r => r.data).catch(() => [])
-      ]);
-      
-      setInvoices(invoicesData);
-      setHistory(historyData);
-      setError(null);
-    } catch (err) {
-      console.error("Erro financeiro:", err);
-      toast.error("Não foi possível carregar os dados financeiros.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -156,7 +185,8 @@ export default function FinancePage() {
           const endpoint = method === 'PIX' ? `/finance/generate-pix/${id}` : `/finance/generate-boleto/${id}`;
           const res = await api.post(endpoint);
           setShowPaymentModal({ ...res.data, method });
-      } catch (err: any) {
+      } catch (errCaught: unknown) {
+          const err = asHttpError(errCaught);
           const msg = err?.response?.data?.message || `Não foi possível gerar o ${method === 'PIX' ? 'código Pix' : 'boleto'}. Tente novamente.`;
           alert(msg);
       }
@@ -189,6 +219,7 @@ export default function FinancePage() {
  
   const handleUpdateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingInvoice) return;
     try {
       await invoicesService.update(editingInvoice.id, editingInvoice);
       setEditingInvoice(null);

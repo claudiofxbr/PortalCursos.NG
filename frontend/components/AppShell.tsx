@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { roleName, type RoleLike } from '@/app/services/roles';
 import ThemeSelector from './ThemeSelector';
 
 // Rotas que NÃO precisam de autenticação
@@ -18,6 +19,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname || '');
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- marca de montagem: evita divergência de hidratação com o servidor
         setIsMounted(true);
 
         // Redireciona para login se não autenticado em rota protegida
@@ -96,9 +98,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         ].filter(item => {
                             if (!item.adminOnly) return true;
                             const userRoles = user?.roles || [];
-                            return userRoles.some((r: any) => {
-                                const roleName = typeof r === 'string' ? r : r.name;
-                                return roleName === 'ROLE_ROOT_MASTER' || roleName === 'ROLE_ADMIN';
+                            return userRoles.some((r: RoleLike) => {
+                                const name = roleName(r);
+                                return name === 'ROLE_ROOT_MASTER' || name === 'ROLE_ADMIN';
                             });
                         }).map(({ href, label }) => (
                             <li key={href} style={{ padding: '0.8rem 0' }}>

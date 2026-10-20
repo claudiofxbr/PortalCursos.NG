@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { asHttpError } from '@/app/services/httpError';
 interface GradStudent {
     id: number;
     fullName: string;
@@ -29,7 +30,8 @@ interface GradStudent {
     currentCourse: string;
     enrollmentStatus: string;
     registrationNumber: string;
-    documents: any[];
+    formaIngresso?: string;
+    documents: unknown[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -83,13 +85,15 @@ export default function GradEnrollPage() {
         try {
             const res = await api.get('v1/grad-students');
             setStudents(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error('Erro ao carregar alunos. Verifique o backend.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadStudents(); }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -121,7 +125,8 @@ export default function GradEnrollPage() {
             setShowForm(false);
             resetForm();
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao realizar matrícula.');
         } finally {
             setSubmitting(false);
@@ -211,7 +216,7 @@ export default function GradEnrollPage() {
                                     <input
                                         name={f.name} type={f.type} required={f.required}
                                         placeholder={f.placeholder}
-                                        value={(formData as any)[f.name]}
+                                        value={(formData as Record<string, string>)[f.name]}
                                         onChange={handleInputChange}
                                         style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--fg-1)', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }}
                                     />
@@ -264,7 +269,7 @@ export default function GradEnrollPage() {
                                         />
                                         <Upload size={16} style={{ marginRight: '0.75rem', opacity: 'var(--dim-5)' }} />
                                         <span style={{ fontSize: '0.8rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {(files as any)[f.name] ? (files as any)[f.name].name : 'Selecionar arquivo...'}
+                                            {files[f.name]?.name || 'Selecionar arquivo...'}
                                         </span>
                                     </div>
                                 </div>
@@ -314,7 +319,7 @@ export default function GradEnrollPage() {
                     <div style={{ padding: '5rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>
                         <GraduationCap size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
                         <p style={{ fontSize: '1.1rem' }}>Nenhuma matrícula encontrada na graduação.</p>
-                        <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Use o botão "Nova Inscrição" para matricular um aluno.</p>
+                        <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Use o botão &quot;Nova Inscrição&quot; para matricular um aluno.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -340,7 +345,7 @@ export default function GradEnrollPage() {
                                         <td style={{ padding: '1.25rem 1.5rem', color: 'var(--fg-2)' }}>{s.cpf}</td>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
                                             <div style={{ fontWeight: 500, color: 'var(--accent-text)' }}>{s.currentCourse}</div>
-                                            <div style={{ fontSize: '0.8rem', opacity: 'var(--dim-5)' }}>{(s as any).formaIngresso || '-'}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 'var(--dim-5)' }}>{s.formaIngresso || '-'}</div>
                                         </td>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
                                             <div style={{ display: 'flex', gap: '6px' }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { asHttpError } from '@/app/services/httpError';
 
 interface User {
     id: number;
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             setLastUser(response.data.username);
         } catch (error: unknown) {
-            const status = (error as any)?.response?.status;
+            const status = asHttpError(error).response?.status;
             // 401/403 = sem sessão válida (também cobre um backend antigo, sem o modo optional); silencioso
             if (status === 401 || status === 403 || status === undefined) {
                 setUser(null);
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Safety timer: garante que isLoading sai de true mesmo se a rede travar
         const safetyTimer = setTimeout(() => setIsLoading(false), 8000);
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
         checkAuth();
 
         const handleBooting = (e: Event) => {

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/app/services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 interface DeletionRequest {
     id: number;
     userId: number;
@@ -44,6 +45,7 @@ export default function PrivacyRequestsPage() {
             .finally(() => setLoading(false));
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { load(); }, []);
 
     const review = async (id: number, status: 'APPROVED' | 'REJECTED') => {
@@ -65,7 +67,8 @@ export default function PrivacyRequestsPage() {
             const res = await api.post(`privacy/data-deletion-requests/${id}/execute`);
             setExecuteMessage({ id, text: res.data?.message || 'Eliminação executada.', ok: true });
             load();
-        } catch (err: any) {
+        } catch (errCaught: unknown) {
+            const err = asHttpError(errCaught);
             setExecuteMessage({ id, text: err.response?.data?.message || 'Não foi possível executar a eliminação.', ok: false });
         } finally {
             setBusyId(null);

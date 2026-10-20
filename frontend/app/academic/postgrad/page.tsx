@@ -8,6 +8,7 @@ import { AuditStamp } from '@/app/components/AuditStamp';
 import { toast } from 'sonner';
 import { User, FileText, Trash2, X, Eye, GraduationCap, Phone, Mail, MapPin, Calendar, ClipboardCheck } from 'lucide-react';
 
+import { asHttpError } from '@/app/services/httpError';
 interface PostgradStudent {
     id: number;
     fullName: string;
@@ -61,11 +62,13 @@ export default function PostgradStudentsPage() {
         try {
             const data = await postgradService.list();
             setStudents(data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error('Erro ao carregar lista de pós-graduandos.');
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadStudents(); }, []);
 
     // Form State (Cadastro)
@@ -113,7 +116,8 @@ export default function PostgradStudentsPage() {
             setFormData({ fullName: '', email: '', cpf: '', phone: '', dateOfBirth: '', address: '', graduationInstitution: '', graduationYear: '', desiredCourse: '' });
             setFiles({ diplomaFile: null, rgCpfFile: null, proofOfAddressFile: null, academicTranscriptFile: null, foto3x4File: null });
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             console.error("[SUPREME-ERROR] Falha no cadastro:", e.response?.data || e);
             const data = e?.response?.data;
             const status = e.response?.status;
@@ -173,7 +177,8 @@ export default function PostgradStudentsPage() {
             toast.success('Registro atualizado com sucesso!');
             setEditingStudent(null);
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao atualizar registro.');
         } finally {
             setSubmitting(false);
@@ -240,7 +245,7 @@ export default function PostgradStudentsPage() {
                                 <input
                                     name={f.name} type={f.type} required={f.required}
                                     placeholder={f.placeholder}
-                                    value={(formData as any)[f.name]}
+                                    value={(formData as Record<string, string>)[f.name]}
                                     onChange={handleInputChange}
                                     style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'inherit', boxSizing: 'border-box' }}
                                 />
@@ -300,7 +305,7 @@ export default function PostgradStudentsPage() {
                 ) : students.length === 0 ? (
                     <div style={{ padding: '3rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>
                         <p>Nenhum aluno cadastrado ainda.</p>
-                        <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Clique em "+ Novo Aluno" para começar.</p>
+                        <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Clique em &quot;+ Novo Aluno&quot; para começar.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -347,7 +352,7 @@ export default function PostgradStudentsPage() {
                                                     { label: '🏠', key: 'proofOfAddressFilePath', title: 'Residência' },
                                                     { label: '📄', key: 'academicTranscriptFilePath', title: 'Histórico' },
                                                 ].map(d => {
-                                                    const path = (s as any)[d.key];
+                                                    const path = s[d.key as keyof PostgradStudent] as string | null;
                                                     return (
                                                         <a
                                                             key={d.key}

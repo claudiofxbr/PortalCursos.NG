@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../../services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 export default function SignUpPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -76,7 +77,8 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push('/auth/signin');
       }, 1200);
-    } catch (err: any) {
+    } catch (errCaught: unknown) {
+        const err = asHttpError(errCaught);
       console.error("Erro no cadastro:", err);
       const msg = err.response?.data?.message || "Não foi possível criar sua conta. Verifique os dados.";
       setError(msg);
