@@ -3,12 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/context/AuthContext';
+import { roleName, type RoleLike } from '@/app/services/roles';
 
 export default function Home() {
   const { user } = useAuth();
-  const isAdmin = user?.roles?.some((r: any) => {
-    const roleName = typeof r === 'string' ? r : r.name;
-    return roleName === 'ROLE_ROOT_MASTER' || roleName === 'ROLE_ADMIN';
+  const isAdmin = user?.roles?.some((r: RoleLike) => {
+    const name = roleName(r);
+    return name === 'ROLE_ROOT_MASTER' || name === 'ROLE_ADMIN';
   });
 
   return (

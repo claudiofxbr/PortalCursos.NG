@@ -4,6 +4,7 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import api from '@/app/services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 const GLASS_SECTION: React.CSSProperties = {
     background: 'var(--field-surface)',
     backdropFilter: 'blur(20px)',
@@ -16,8 +17,29 @@ const GLASS_SECTION: React.CSSProperties = {
 const FIELD_LABEL: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' };
 const FIELD_VALUE: React.CSSProperties = { fontSize: '1rem', marginBottom: '1rem' };
 
+/** Dados pessoais como a API devolve (só os campos que esta tela mostra). */
+interface MyData {
+    account?: {
+        username?: string;
+        email?: string;
+        roles?: string[];
+        privacyConsentAccepted?: boolean;
+        privacyConsentVersion?: string;
+        privacyConsentAt?: string;
+    };
+    academic?: {
+        fullName?: string;
+        registrationNumber?: string;
+        cpf?: string;
+        phone?: string;
+        address?: string;
+        course?: string;
+        enrollmentStatus?: string;
+    };
+}
+
 export default function MinhaContaPage() {
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<MyData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [requestStatus, setRequestStatus] = useState<string | null>(null);
@@ -48,7 +70,8 @@ export default function MinhaContaPage() {
         try {
             const res = await api.post('privacy/data-deletion-request');
             setRequestStatus(res.data?.message || 'Solicitação registrada.');
-        } catch (err: any) {
+        } catch (errCaught: unknown) {
+            const err = asHttpError(errCaught);
             setRequestStatus(err.response?.data?.message || 'Não foi possível registrar a solicitação.');
         } finally {
             setRequesting(false);

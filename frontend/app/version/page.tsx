@@ -11,6 +11,7 @@ export default function VersionPage() {
     const [clientTime, setClientTime] = useState("");
     
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- lê API do navegador (não existe no servidor) depois da montagem
         setClientTime(new Date().toLocaleString());
     }, []);
 
@@ -94,7 +95,7 @@ export default function VersionPage() {
             </div>
 
             <p style={{ marginTop: '20px', fontSize: '0.8rem', opacity: 0.5 }}>
-                Se você não vê "V12" acima, seu servidor Hostinger ainda não atualizou os arquivos.
+                Se você não vê &quot;V12&quot; acima, seu servidor Hostinger ainda não atualizou os arquivos.
             </p>
         </div>
     );

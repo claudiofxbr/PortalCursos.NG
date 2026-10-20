@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
 import { AuditStamp } from '@/app/components/AuditStamp';
+import { asHttpError } from '@/app/services/httpError';
 interface StudentDocument {
     id: number;
     documentType: string;
@@ -107,6 +108,7 @@ export default function GraduationPage() {
 
     // useEffect automático pelo useAuditCRUD
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadStudents(); }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -142,7 +144,8 @@ export default function GraduationPage() {
             setShowForm(false);
             resetForm();
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao realizar matrícula.');
         } finally {
             setSubmitting(false);
@@ -174,7 +177,8 @@ export default function GraduationPage() {
             // Limpar arquivo de update após sucesso
             setFiles(prev => ({ ...prev, foto3x4_update: null }));
             loadStudents();
-        } catch (e: any) { 
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught); 
             toast.error(e?.response?.data?.message || 'Erro ao atualizar registro.'); 
         } finally { 
             setSubmitting(false); 
@@ -201,7 +205,8 @@ export default function GraduationPage() {
             const res = await api.post(`v1/grad-students/${studentId}/generate-fee`);
             toast.success(res.data.message);
             // Opcional: recarregar dados
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao gerar taxa.');
         }
     };
@@ -303,7 +308,7 @@ export default function GraduationPage() {
                                     <input
                                         name={f.name} type={f.type} required={f.required}
                                         placeholder={f.placeholder}
-                                        value={(formData as any)[f.name]}
+                                        value={(formData as Record<string, string>)[f.name]}
                                         onChange={handleInputChange}
                                         style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}
                                     />
@@ -360,7 +365,7 @@ export default function GraduationPage() {
                                         />
                                         <Upload size={16} style={{ marginRight: '0.75rem', opacity: 'var(--dim-4)' }} />
                                         <span style={{ fontSize: '0.8rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {(files as any)[f.name] ? (files as any)[f.name].name : 'Selecionar arquivo...'}
+                                            {files[f.name]?.name || 'Selecionar arquivo...'}
                                         </span>
                                     </div>
                                 </div>
@@ -398,7 +403,7 @@ export default function GraduationPage() {
                 ) : students.length === 0 ? (
                     <div style={{ padding: '8rem', textAlign: 'center' }}>
                         <p style={{ opacity: 'var(--dim-3)', fontSize: '1.2rem' }}>Nenhum aluno matriculado na graduação.</p>
-                        <p style={{ opacity: 0.2, fontSize: '0.9rem', marginTop: '1rem' }}>Clique em "Novo Aluno" para iniciar um processo de matrícula.</p>
+                        <p style={{ opacity: 0.2, fontSize: '0.9rem', marginTop: '1rem' }}>Clique em &quot;Novo Aluno&quot; para iniciar um processo de matrícula.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>

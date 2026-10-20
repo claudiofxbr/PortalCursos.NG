@@ -5,6 +5,8 @@ import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
 import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
+import { asHttpError } from '@/app/services/httpError';
+import { roleName, type RoleLike } from '@/app/services/roles';
 interface Role {
     id: number;
     name: string;
@@ -136,6 +138,7 @@ export default function UsersManagementPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [newRoles, setNewRoles] = useState<string[]>([]);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marca de montagem: evita divergência de hidratação com o servidor
     useEffect(() => { setIsMounted(true); }, []);
 
     const getRoleLevel = (roleName: string) => {
@@ -150,9 +153,9 @@ export default function UsersManagementPage() {
         return 20;
     };
 
-    const getMaxLevel = (user: any) => {
+    const getMaxLevel = (user: { roles?: RoleLike[] } | null | undefined) => {
         if (!user?.roles) return 0;
-        return Math.max(...user.roles.map((r: any) => getRoleLevel(typeof r === 'string' ? r : r.name)));
+        return Math.max(...user.roles.map((r: RoleLike) => getRoleLevel(roleName(r))));
     };
 
     const loadUsers = async () => {
@@ -160,13 +163,15 @@ export default function UsersManagementPage() {
             setIsLoading(true);
             const res = await api.get('v1/users');
             setUsers(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError('⚠️ Falha de rede ou permissão insuficiente para listar governança.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { if (isMounted) loadUsers(); }, [isMounted]);
 
     const [formData, setFormData] = useState({
@@ -204,7 +209,8 @@ export default function UsersManagementPage() {
             setShowForm(false);
             setFormData({ username: '', email: '', password: '', roles: ['ALUNO'], fullName: '', position: '', department: '', foto3x4File: null });
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro na sincronização atômica.');
         } finally {
             setSubmitting(false);
@@ -219,7 +225,8 @@ export default function UsersManagementPage() {
             await api.delete(`v1/users/${user.id}`);
             setSuccess('🗑️ Usuário removido da base institucional.');
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao remover colaborador.');
         }
     };
@@ -231,7 +238,8 @@ export default function UsersManagementPage() {
             setSuccess('🛡️ Nível de acesso atualizado com segurança.');
             setEditingUser(null);
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao redefinir autoridade.');
         } finally {
             setSubmitting(false);
@@ -330,7 +338,7 @@ export default function UsersManagementPage() {
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                             <button 
-                                                onClick={() => { setEditingUser(user); setNewRoles(user.roles.map((r: any) => (typeof r === 'string' ? r : r.name).replace('ROLE_', ''))); }}
+                                                onClick={() => { setEditingUser(user); setNewRoles(user.roles.map((r: RoleLike) => roleName(r).replace('ROLE_', ''))); }}
                                                 disabled={!canManage}
                                                 style={{ ...ACTION_BTN, color: canManage ? 'var(--accent-text)' : 'var(--field-divider)' }}
                                             >ALTERAR</button>
