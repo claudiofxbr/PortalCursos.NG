@@ -226,7 +226,7 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 | **E-01** ✅ **CORRIGIDO** | **Média** | `GlobalExceptionHandler` (backend) | Erros do cliente viram **HTTP 500** ("Exceção não tratada"): (a) id não numérico ou fora do intervalo em `{paymentId}` (`MethodArgumentTypeMismatchException`); (b) método HTTP errado em rota existente (`HttpRequestMethodNotSupportedException`). Cada caso gera um `ERROR` no log do servidor (ruído para alertas). Não vaza stack trace nem segredo (a resposta traz só um protocolo de rastreio). Afeta todas as rotas, não só os webhooks | `POST /api/finance/pix/webhook/abc/x` → 500; `GET /api/finance/pix/webhook/1/x` → 500; `POST /api/finance/card/webhook/99999999999999999999999/x` → 500 | Tratar `MethodArgumentTypeMismatchException` e erros de conversão como 400, `HttpRequestMethodNotSupportedException` como 405 (e `HttpMediaTypeNotSupportedException` como 415), no `GlobalExceptionHandler`, com teste de regressão |
 | E-02 ✅ **CORRIGIDO** | Baixa | nginx do servidor | O cabeçalho `Server: nginx/1.24.0 (Ubuntu)` revela produto e versão (BB-83) | `curl -I https://xavierbr-vps.tech/api/health` | `server_tokens off;` na configuração do nginx (infra, exige autorização) |
 | E-03 ✅ **CORRIGIDO** | Baixa (visual) | Tela "Acesso Restrito" (camada de código de acesso) | Ícone de cadeado sem tamanho definido ocupa toda a largura; textos sem estilo; o envio vazio vai ao servidor e responde "Senha incorreta" | Abrir `/portalcursos.ng/auth/signin` | Definir tamanho do ícone e estilo da camada; validar campo vazio no navegador |
-| E-04 | Informativa | Frontend | Cada carga de página faz `GET /api/auth/me` e registra 401 no console antes do login | Abrir qualquer página sem sessão | Usar um modo "opcional" sem 401 (o CVFacil.NG já faz assim) |
+| E-04 ✅ **CORRIGIDO** | Informativa | Frontend | Cada carga de página faz `GET /api/auth/me` e registra 401 no console antes do login | Abrir qualquer página sem sessão | Usar um modo "opcional" sem 401 (o CVFacil.NG já faz assim) |
 | E-05 | Informativa | Frontend (qualidade) | `eslint` com 82 erros e 57 avisos (maioria `no-explicit-any` já existente) | `npx eslint app` | Reduzir gradualmente; não bloqueia o build |
 | E-06 | Informativa | Ambiente local | O teste de migração em Postgres real não roda sem Docker | `./mvnw test` com Docker desligado | Ligar o Docker local; no CI já roda e passa |
 | E-07 | Observação | Desempenho | `/api/health` com 10 requisições em paralelo: p50 804 ms, p95 1090 ms. A latência do banco no health é ~250 ms (Neon remoto). Sem falhas | Seção 4, BB-102 | Não é defeito; acompanhar se a carga real crescer. Considerar cache curto no health |
@@ -284,6 +284,7 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 | **E-02** cabeçalho `Server` com versão | `server_tokens off;` no nginx do servidor (cópia de segurança de `nginx.conf` feita, `nginx -t` ok, recarga sem queda) | Produção: `Server: nginx` (sem versão); API, login e CVFacil.NG seguem respondendo 200 |
 | **E-03** tela "Acesso Restrito" sem estilo | PR #129 (estilos inline; classes Tailwind não geravam CSS) + validação de campo vazio | Conferido em produção, desktop e celular |
 | `.env` da VPS com permissão `644` (E-08) | `chmod 600` | `stat`: `600`, dono root; deploy e contêineres inalterados |
+| **E-04** 401 no console a cada página antes do login | PR #131: `/api/auth/me?optional=true` devolve 200 `{authenticated:false}` sem sessão (sem o parâmetro continua 401); o frontend usa o modo `optional` e ainda aceita 401 de um backend antigo | Produção: sem parâmetro 401, `optional=true` 200 com `no-store`, `optional=abc` 400, token forjado 200; navegador: consulta 200 e console sem erros |
 | **E-09 (novo)** páginas ilegíveis no tema claro | Variáveis de tema `--fg-*`, `--accent-text`, `--*-text`, `--dim-*` e `--field-*`; ver abaixo | Auditoria automática de contraste antes/depois; 30 testes novos de regressão |
 
 ### E-09 — contraste no tema claro (padrão)
@@ -311,6 +312,7 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 **Pendências deste achado:** o tema escuro tem problemas antigos e independentes destas mudanças (botões com texto preto sobre azul-marinho, título da barra lateral); estados que não foram abertos na auditoria (modais de edição e de visualização) não foram auditados.
 
 ### Observações ainda abertas
-- **E-04:** 401 no console a cada página antes do login (exige modo "opcional" na consulta de sessão).
 - **E-05:** 82 erros de `eslint` antigos (a maioria `no-explicit-any`); nenhum foi introduzido ou removido por estas mudanças.
 - **E-08:** 6 vulnerabilidades do Dependabot e 15 PRs de dependências abertos (não triados; atualizações maiores exigem testes próprios).
+
+**Observação (nova, baixa):** um token JWT malformado enviado a qualquer rota é registrado em nível `ERROR` (`JwtUtils`: "Token malformado"), o que permite a qualquer cliente gerar linhas de erro no log. Sugestão: baixar para `WARN`. Não alterado.
