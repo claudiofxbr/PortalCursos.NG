@@ -18,21 +18,21 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 8feba44)",
+      "detail": "último run em main: success (commit d19d2ea)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 8feba44)",
+      "detail": "último run em main: success (commit d19d2ea)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 8feba44)",
+      "detail": "último run em main: success (commit d19d2ea)",
       "status": "active"
     },
     {
@@ -41,20 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr137-monitor",
-      "label": "#137 — fix(deps): atualiza sharp para 0.35.5 (alerta Dependabot)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr136-monitor",
-      "label": "#136 — chore(deps): bump sharp from 0.35.4 to 0.35.5 in /frontend",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -141,5 +127,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T17:44:08Z"
+  "updatedAt": "2026-10-20T17:48:57Z"
 }
