@@ -207,3 +207,102 @@ Tela administrativa nova (ex.: `frontend/app/finance/procedures/page.tsx`), sem 
 
 ### 10.5 Testes do CRUD
 Unitário (validação e regras), integração com Postgres real (criação, unicidade parcial, exclusão lógica sem erro, carga inicial idempotente: rodar duas vezes não duplica), segurança (aluno não escreve; escrita só com perfil autorizado), regressão (cobranças e faturas existentes inalteradas).
+
+
+## 11. Tabela de valores das cobranças (com controle de acesso e confirmação)
+
+Tabela única com todas as cobranças cobráveis do aluno, para preenchimento dos valores. Faz parte da especificação (nenhum código foi alterado). A lista de linhas é a do cadastro de procedimentos da seção 10, mais as cobranças recorrentes que o sistema já conhece (`EPaymentCategory`).
+
+### 11.1 Perfis e permissões
+
+| Perfil | Ver a tabela | Propor/alterar valor | Confirmar alteração |
+|---|---|---|---|
+| Administrador (`ROLE_ADMIN`, `ROLE_ROOT_MASTER`) | Todas as linhas | Todas as linhas; vale na hora e fica no histórico | Sim, é o único perfil que confirma |
+| Chefe de secretaria | Só as linhas sob sua responsabilidade | Só as suas; gera **proposta pendente** | Não |
+| Secretaria (`ROLE_SECRETARIA`) | Só as linhas do(s) seu(s) curso(s) | Não (somente leitura) | Não |
+| Demais perfis (financeiro, aluno, coordenador, etc.) | **Sem acesso** | Não | Não |
+
+Regra central: **nenhum valor proposto por chefe de secretaria entra em vigor sem a confirmação de um administrador.**
+
+### 11.2 Colunas da tabela
+
+| Coluna | Conteúdo | Quem edita | Depende de confirmação |
+|---|---|---|---|
+| Código | Identificador da cobrança | ninguém (gerado) | n/a |
+| Categoria | Uma das 5 categorias da seção 10 (ou "Cobranças recorrentes") | administrador | não |
+| Cobrança / procedimento | Nome (ex.: "Rematrícula periódica") | administrador | não |
+| Escopo | Graduação, Pós ou Todos | administrador | não |
+| Curso | Curso ao qual o valor se aplica (ou "Todos") | administrador | não |
+| Secretaria responsável | Secretaria/chefia dona da linha | administrador | não |
+| **Valor vigente (R$)** | Valor em vigor, em reais com 2 casas | administrador (direto) | não |
+| **Valor proposto (R$)** | Valor sugerido, ainda não vigente | administrador e chefe de secretaria | **sim**: só vira vigente quando o administrador confirma |
+| Situação | Vigente, Proposta pendente, Rejeitada | sistema | n/a |
+| Proposto por / em | Quem sugeriu e quando | sistema | n/a |
+| Confirmado por / em | Administrador que decidiu e quando | sistema | n/a |
+| Motivo | Justificativa da proposta ou da rejeição | chefe (proposta), administrador (rejeição) | n/a |
+
+Visual por perfil: coluna editável com campo habilitado; coluna só leitura em cinza; "Valor proposto" com selo amarelo "aguardando confirmação"; botões **Confirmar** e **Rejeitar** só para administrador.
+
+### 11.3 Linhas (valores a preencher)
+
+Os valores ficam em branco para preenchimento. "Todos" = graduação e pós.
+
+| # | Categoria | Cobrança | Escopo | Valor vigente (R$) |
+|---|---|---|---|---|
+| 1 | Ingresso e Matrícula | Entrega de documentação civil e escolar | Todos | ______ |
+| 2 | Ingresso e Matrícula | Comprovação de escolaridade anterior | Todos | ______ |
+| 3 | Ingresso e Matrícula | Assinatura do contrato e aceite regimental | Todos | ______ |
+| 4 | Renovação e Ajustes Curriculares | Rematrícula periódica | Todos | ______ |
+| 5 | Renovação e Ajustes Curriculares | Ajuste de matrícula | Todos | ______ |
+| 6 | Renovação e Ajustes Curriculares | Aproveitamento de estudos e equivalências | Todos | ______ |
+| 7 | Renovação e Ajustes Curriculares | Trancamento ou cancelamento de curso | Todos | ______ |
+| 8 | Acompanhamento da Vida Escolar | Atualização cadastral contínua | Todos | ______ |
+| 9 | Acompanhamento da Vida Escolar | Justificativas e regimes especiais | Todos | ______ |
+| 10 | Acompanhamento da Vida Escolar | Protocolos de segunda chamada | Todos | ______ |
+| 11 | Acompanhamento da Vida Escolar | Atividades complementares | Graduação | ______ |
+| 12 | Exigências Específicas da Pós-Graduação | Registro de orientação | Pós | ______ |
+| 13 | Exigências Específicas da Pós-Graduação | Exame de qualificação | Pós | ______ |
+| 14 | Exigências Específicas da Pós-Graduação | Composição de bancas | Pós | ______ |
+| 15 | Exigências Específicas da Pós-Graduação | Comprovação de proficiência em língua estrangeira | Pós | ______ |
+| 16 | Conclusão e Expedição de Documentos | Comprovação de estágio obrigatório e TCC | Todos | ______ |
+| 17 | Conclusão e Expedição de Documentos | Certidão de nada consta | Todos | ______ |
+| 18 | Conclusão e Expedição de Documentos | Requerimento de colação de grau ou diplomação | Todos | ______ |
+| 19 | Cobranças recorrentes | Mensalidade (`TUITION`) | Todos | ______ |
+| 20 | Cobranças recorrentes | Taxa de matrícula (`ENROLLMENT_FEE`) | Todos | ______ |
+| 21 | Cobranças recorrentes | Solicitação de documento (`DOCUMENT_REQUEST`) | Todos | ______ |
+| 22 | Cobranças recorrentes | Taxa de laboratório (`LAB_FEE`) | Todos | ______ |
+| 23 | Cobranças recorrentes | Processo interno (`INTERNAL_PROCESS`) | Todos | ______ |
+| 24 | Cobranças recorrentes | Outras (`OTHER`) | Todos | ______ |
+
+Observação: procedimentos que podem ser gratuitos ficam com `0,00`; o sistema deve aceitar zero e recusar valores negativos.
+
+### 11.4 Modelo de dados (migração aditiva, após as da seção 10)
+
+| Tabela | Campos principais |
+|---|---|
+| `charge_prices` | `id`, `procedure_id` (FK; nulo para recorrentes) ou `charge_category`, `course_id` (nulo = todos), `academic_scope`, `secretariat_id`, `current_value NUMERIC(12,2) CHECK (>= 0)`, `version`, auditoria |
+| `charge_price_changes` | `id`, `charge_price_id` (FK), `proposed_value NUMERIC(12,2) CHECK (>= 0)`, `status` (`PENDING`, `APPROVED`, `REJECTED`), `proposed_by`, `proposed_at`, `reason`, `decided_by`, `decided_at`, `decision_reason` |
+| `staff_course_scope` | `staff_id`, `course_id`, `is_secretariat_head` (diz quem é chefe e de quais cursos) |
+
+Regras: no máximo uma proposta `PENDING` por cobrança (índice único parcial); aprovar atualiza `current_value` e marca a proposta `APPROVED` na **mesma transação**; o histórico nunca é apagado.
+
+### 11.5 API e regras de acesso (no servidor, nunca só na tela)
+
+| Operação | Rota | Quem |
+|---|---|---|
+| Listar | `GET /api/finance/prices` | administrador (tudo); chefe e secretaria (só o seu escopo); demais: 403 |
+| Alterar valor (admin) | `PUT /api/finance/prices/{id}` | administrador |
+| Propor valor | `POST /api/finance/prices/{id}/proposals` | chefe de secretaria do escopo |
+| Confirmar / rejeitar | `POST /api/finance/prices/proposals/{id}/approve` e `/reject` | somente administrador |
+| Histórico | `GET /api/finance/prices/{id}/history` | quem pode ver a linha |
+
+O filtro de escopo é aplicado na consulta (não se confia no que a tela envia). O chefe nunca aprova a própria proposta. Alterações e decisões geram registro de auditoria.
+
+### 11.6 Suposições e pontos a decidir
+1. **Não existe hoje o perfil "chefe de secretaria"** (os perfis atuais vão de `ROLE_ROOT_MASTER` a `ROLE_CANDIDATO`). Sugestão: marcar o chefe em `staff_course_scope`, em vez de criar um perfil novo.
+2. **Não existe vínculo entre secretaria e curso** no sistema. A tabela `staff_course_scope` cria esse vínculo e precisa ser preenchida (quem atende cada curso).
+3. **"Sob sua responsabilidade"** foi interpretado como as cobranças dos cursos do chefe. Confirmar se é por curso ou por categoria.
+4. **O perfil Financeiro fica sem acesso**, pela regra de que só administradores e secretarias veem a tabela. Hoje o financeiro lança cobranças; confirmar se isso deve mudar.
+5. **O valor é por cobrança e curso** (ou global, quando o curso é "Todos"). Confirmar se o valor pode variar por curso.
+6. **Sem data de vigência:** a confirmação vale a partir do momento. Se for preciso vigência futura, acrescentar um campo de data.
+7. **Cobranças já emitidas não mudam** quando o valor da tabela muda; só valem para as novas.
