@@ -25,6 +25,20 @@
   --field-label: #475569;
   --field-surface: rgba(15, 23, 42, 0.03);
   --field-divider: rgba(15, 23, 42, 0.1);
+  /* Texto por nível de destaque e cores de apoio legíveis sobre fundo claro (contraste >= 4,5:1) */
+  --fg-1: #1e293b;
+  --fg-2: #334155;
+  --fg-3: #475569;
+  --fg-4: #5b6b80;
+  --accent-text: #7a5c14;
+  --success-text: #166534;
+  --warning-text: #92400e;
+  --danger-text: #b91c1c;
+  /* Textos secundários esmaecidos: opacidade mínima de 0,7 no tema claro (contraste >= 4,5:1) */
+  --dim-2: 0.7;
+  --dim-3: 0.7;
+  --dim-4: 0.7;
+  --dim-5: 0.7;
 }
 
 /* Tema Escuro */
@@ -46,6 +60,19 @@
   --field-label: rgba(255, 255, 255, 0.7);
   --field-surface: rgba(255, 255, 255, 0.03);
   --field-divider: rgba(255, 255, 255, 0.08);
+  /* Mesmos valores que as páginas usavam antes (branco translúcido e cores de status) */
+  --fg-1: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.7);
+  --fg-3: rgba(255, 255, 255, 0.55);
+  --fg-4: rgba(255, 255, 255, 0.4);
+  --accent-text: #c5a059;
+  --success-text: #2ecc71;
+  --warning-text: #f0a500;
+  --danger-text: #e74c3c;
+  --dim-2: 0.2;
+  --dim-3: 0.3;
+  --dim-4: 0.4;
+  --dim-5: 0.5;
 }
 
 /* Tema Azul Escuro */
@@ -67,6 +94,18 @@
   --field-label: #94bcff;
   --field-surface: rgba(255, 255, 255, 0.03);
   --field-divider: rgba(148, 188, 255, 0.2);
+  --fg-1: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.7);
+  --fg-3: rgba(255, 255, 255, 0.55);
+  --fg-4: rgba(255, 255, 255, 0.4);
+  --accent-text: #facc15;
+  --success-text: #2ecc71;
+  --warning-text: #f0a500;
+  --danger-text: #e74c3c;
+  --dim-2: 0.2;
+  --dim-3: 0.3;
+  --dim-4: 0.4;
+  --dim-5: 0.5;
 }
 
 * {
