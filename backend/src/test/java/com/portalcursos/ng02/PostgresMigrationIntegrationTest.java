@@ -251,6 +251,47 @@ class PostgresMigrationIntegrationTest {
         }, "CHECK deve recusar valor cobrado zerado");
     }
 
+    // V25: carga inicial da tabela de valores (24 cobranças globais em branco). Cada violação de constraint
+    // fica em teste próprio: no Postgres, depois de um erro a transação inteira fica abortada.
+    @Test
+    void tabelaDeValoresTemCargaInicialDe24CobrancasEmBranco() {
+        Integer total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM charge_prices WHERE course_id IS NULL AND active = TRUE", Integer.class);
+        assertEquals(24, total, "V25 deve carregar as 24 cobranças globais");
+        Integer preenchidas = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM charge_prices WHERE current_value IS NOT NULL", Integer.class);
+        assertEquals(0, preenchidas, "Os valores começam em branco, para preenchimento");
+    }
+
+    private Long rematriculaGlobalId() {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM charge_prices WHERE code = 'REMATRICULA' AND course_id IS NULL", Long.class);
+    }
+
+    @Test
+    void soPodeHaverUmaPropostaPendentePorCobrancaContraPostgresReal() {
+        Long priceId = rematriculaGlobalId();
+        jdbcTemplate.update("INSERT INTO charge_price_changes (charge_price_id, proposed_value, status, proposed_by) "
+                + "VALUES (?, 10.00, 'PENDING', 'chefe')", priceId);
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "INSERT INTO charge_price_changes (charge_price_id, proposed_value, status, proposed_by) "
+                        + "VALUES (?, 11.00, 'PENDING', 'chefe')", priceId));
+    }
+
+    @Test
+    void valorNegativoEhRecusadoPeloBancoContraPostgresReal() {
+        Long priceId = rematriculaGlobalId();
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "UPDATE charge_prices SET current_value = -1 WHERE id = ?", priceId));
+    }
+
+    @Test
+    void naoPodeHaverDuasLinhasGlobaisAtivasComOMesmoCodigoContraPostgresReal() {
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "INSERT INTO charge_prices (code, category, name, academic_scope) "
+                        + "VALUES ('REMATRICULA', 'x', 'y', 'ALL')"));
+    }
+
     // Regressão do achado P1: RepairController.deleteTicket fazia hard-delete real
     // (repairRepository.delete(ticket)), inconsistente com o padrão de soft-delete usado no
     // resto do sistema (Payment/Student/StaffMember) e apagando o histórico/auditoria do
