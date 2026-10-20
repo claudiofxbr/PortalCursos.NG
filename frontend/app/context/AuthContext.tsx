@@ -45,16 +45,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             setIsChecking(true);
             const { default: api } = await import('@/app/services/api');
-            const response = await api.get('auth/me');
-            setUser(response.data);
-            setIsAuthenticated(true);
-            setLastUser(response.data.username);
+            // optional: "sem sessão" volta como 200 {authenticated:false}, sem 401 no console a cada carga (E-04).
+            const response = await api.get('auth/me', { params: { optional: true } });
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('HEALTH_SUCCESS'));
             }
+            if (response.data?.authenticated === false) {
+                setUser(null);
+                setIsAuthenticated(false);
+                return;
+            }
+            setUser(response.data);
+            setIsAuthenticated(true);
+            setLastUser(response.data.username);
         } catch (error: unknown) {
             const status = (error as any)?.response?.status;
-            // 401/403 = sem sessão válida; silencioso (sem erro no console)
+            // 401/403 = sem sessão válida (também cobre um backend antigo, sem o modo optional); silencioso
             if (status === 401 || status === 403 || status === undefined) {
                 setUser(null);
                 setIsAuthenticated(false);
