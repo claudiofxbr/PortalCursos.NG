@@ -3,6 +3,9 @@ package com.portalcursos.ng02.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,7 +14,10 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -23,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -217,6 +224,55 @@ public class GlobalExceptionHandler {
         body.put("path", request.getDescription(false).replace("uri=", ""));
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Valor de rota/parâmetro que não converte para o tipo esperado (ex.: id "abc" ou numérico fora do
+     * intervalo de Long). É erro do cliente: 400, nunca 500. O valor recebido não é devolvido na resposta.
+     */
+    @ExceptionHandler(TypeMismatchException.class)
+    public ResponseEntity<?> handleTypeMismatch(TypeMismatchException ex, WebRequest request) {
+        String parameter = ex instanceof MethodArgumentTypeMismatchException mismatch ? mismatch.getName() : ex.getPropertyName();
+        logger.warn("[400 BAD REQUEST] Parâmetro com tipo inválido: {}", parameter);
+
+        return createErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Bad Request",
+                parameter == null ? "Parâmetro com valor inválido." : "O parâmetro '" + parameter + "' tem um valor inválido.",
+                request,
+                null);
+    }
+
+    /** Método HTTP não aceito pela rota: 405 com o cabeçalho Allow, em vez de 500. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, WebRequest request) {
+        logger.warn("[405 METHOD NOT ALLOWED] Método {} não suportado", ex.getMethod());
+
+        ResponseEntity<Map<String, Object>> response = createErrorResponse(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "Method Not Allowed",
+                "Método HTTP não permitido para este endereço.",
+                request,
+                null);
+        HttpHeaders headers = new HttpHeaders();
+        Set<HttpMethod> allowed = ex.getSupportedHttpMethods();
+        if (allowed != null && !allowed.isEmpty()) {
+            headers.setAllow(allowed);
+        }
+        return new ResponseEntity<>(response.getBody(), headers, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /** Content-Type do corpo não suportado pela rota: 415, em vez de 500. */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<?> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, WebRequest request) {
+        logger.warn("[415 UNSUPPORTED MEDIA TYPE] Tipo de conteúdo não suportado");
+
+        return createErrorResponse(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Unsupported Media Type",
+                "Tipo de conteúdo não suportado. Envie o corpo em JSON.",
+                request,
+                null);
     }
 
     @ExceptionHandler(org.springframework.transaction.TransactionSystemException.class)
