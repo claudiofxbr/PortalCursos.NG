@@ -150,12 +150,23 @@ public class AuthController {
         }
     }
 
+    /**
+     * Sessão atual. Sem sessão devolve 401, como sempre. Com {@code ?optional=true} (usado pelo frontend no
+     * carregamento de cada página, antes do login) devolve 200 {@code {"authenticated": false}}: "não estar
+     * logado" é um estado normal, e o 401 enchia o console do navegador de erros a cada carga.
+     */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser() {
+    public ResponseEntity<?> getCurrentUser(
+            @RequestParam(name = "optional", required = false, defaultValue = "false") boolean optional) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()
                 || "anonymousUser".equals(authentication.getPrincipal())) {
+            if (optional) {
+                return ResponseEntity.ok()
+                        .header("Cache-Control", "no-store")
+                        .body(java.util.Map.of("authenticated", false));
+            }
             return ResponseEntity.status(401).body(new MessageResponse("Não autenticado."));
         }
 
