@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit cdbdd93)",
+      "detail": "último run em main: success (commit 520946c)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit cdbdd93)",
+      "detail": "último run em main: success (commit 520946c)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr131-monitor",
-      "label": "#131 — fix(auth): consulta de sessão sem 401 no console antes do login (E-04)",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -155,5 +148,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T16:23:02Z"
+  "updatedAt": "2026-10-20T16:29:02Z"
 }
