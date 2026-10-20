@@ -224,8 +224,8 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 | ID | Gravidade | Onde | O que ocorre | Como reproduzir | O que corrigir |
 |---|---|---|---|---|---|
 | **E-01** ✅ **CORRIGIDO** | **Média** | `GlobalExceptionHandler` (backend) | Erros do cliente viram **HTTP 500** ("Exceção não tratada"): (a) id não numérico ou fora do intervalo em `{paymentId}` (`MethodArgumentTypeMismatchException`); (b) método HTTP errado em rota existente (`HttpRequestMethodNotSupportedException`). Cada caso gera um `ERROR` no log do servidor (ruído para alertas). Não vaza stack trace nem segredo (a resposta traz só um protocolo de rastreio). Afeta todas as rotas, não só os webhooks | `POST /api/finance/pix/webhook/abc/x` → 500; `GET /api/finance/pix/webhook/1/x` → 500; `POST /api/finance/card/webhook/99999999999999999999999/x` → 500 | Tratar `MethodArgumentTypeMismatchException` e erros de conversão como 400, `HttpRequestMethodNotSupportedException` como 405 (e `HttpMediaTypeNotSupportedException` como 415), no `GlobalExceptionHandler`, com teste de regressão |
-| E-02 | Baixa | nginx do servidor | O cabeçalho `Server: nginx/1.24.0 (Ubuntu)` revela produto e versão (BB-83) | `curl -I https://xavierbr-vps.tech/api/health` | `server_tokens off;` na configuração do nginx (infra, exige autorização) |
-| E-03 | Baixa (visual) | Tela "Acesso Restrito" (camada de código de acesso) | Ícone de cadeado sem tamanho definido ocupa toda a largura; textos sem estilo; o envio vazio vai ao servidor e responde "Senha incorreta" | Abrir `/portalcursos.ng/auth/signin` | Definir tamanho do ícone e estilo da camada; validar campo vazio no navegador |
+| E-02 ✅ **CORRIGIDO** | Baixa | nginx do servidor | O cabeçalho `Server: nginx/1.24.0 (Ubuntu)` revela produto e versão (BB-83) | `curl -I https://xavierbr-vps.tech/api/health` | `server_tokens off;` na configuração do nginx (infra, exige autorização) |
+| E-03 ✅ **CORRIGIDO** | Baixa (visual) | Tela "Acesso Restrito" (camada de código de acesso) | Ícone de cadeado sem tamanho definido ocupa toda a largura; textos sem estilo; o envio vazio vai ao servidor e responde "Senha incorreta" | Abrir `/portalcursos.ng/auth/signin` | Definir tamanho do ícone e estilo da camada; validar campo vazio no navegador |
 | E-04 | Informativa | Frontend | Cada carga de página faz `GET /api/auth/me` e registra 401 no console antes do login | Abrir qualquer página sem sessão | Usar um modo "opcional" sem 401 (o CVFacil.NG já faz assim) |
 | E-05 | Informativa | Frontend (qualidade) | `eslint` com 82 erros e 57 avisos (maioria `no-explicit-any` já existente) | `npx eslint app` | Reduzir gradualmente; não bloqueia o build |
 | E-06 | Informativa | Ambiente local | O teste de migração em Postgres real não roda sem Docker | `./mvnw test` com Docker desligado | Ligar o Docker local; no CI já roda e passa |
@@ -273,4 +273,44 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 | RT-06 | Rota protegida sem login; login com credencial falsa; JSON malformado | 401 / 401 / 400 | 401 / 401 / 400 (sem regressão) | ✅ PASSOU |
 | RT-07 | Logs do backend (10 min após o deploy) | `ERROR` a cada caso | 0 `ERROR` (exceto os 401 esperados); 5 avisos `400/405/415` | ✅ PASSOU |
 
-**Pendentes:** E-02 (cabeçalho `Server` do nginx, exige autorização de infraestrutura) e E-03 (visual da tela "Acesso Restrito"), além das observações E-04 a E-08 e das limitações da seção 8.
+**Pendentes após o reteste do E-01:** E-02 e E-03 (corrigidos depois; ver seção 11) e as observações E-04 a E-08.
+
+---
+
+## 11. Correções posteriores (20/10/2026)
+
+| Item | Correção | Verificação |
+|---|---|---|
+| **E-02** cabeçalho `Server` com versão | `server_tokens off;` no nginx do servidor (cópia de segurança de `nginx.conf` feita, `nginx -t` ok, recarga sem queda) | Produção: `Server: nginx` (sem versão); API, login e CVFacil.NG seguem respondendo 200 |
+| **E-03** tela "Acesso Restrito" sem estilo | PR #129 (estilos inline; classes Tailwind não geravam CSS) + validação de campo vazio | Conferido em produção, desktop e celular |
+| `.env` da VPS com permissão `644` (E-08) | `chmod 600` | `stat`: `600`, dono root; deploy e contêineres inalterados |
+| **E-09 (novo)** páginas ilegíveis no tema claro | Variáveis de tema `--fg-*`, `--accent-text`, `--*-text`, `--dim-*` e `--field-*`; ver abaixo | Auditoria automática de contraste antes/depois; 30 testes novos de regressão |
+
+### E-09 — contraste no tema claro (padrão)
+
+**Achado:** várias páginas foram desenhadas para o tema escuro (texto branco translúcido, dourado `#c5a059` e cores de status) e ficavam ilegíveis no tema claro, que é o padrão: títulos brancos sobre fundo claro (contraste 1,03 a 1,08:1), cabeçalhos de tabela invisíveis, dourado a 2,3:1, rótulos de status a 1,4 a 1,8:1 e textos secundários esmaecidos por `opacity` a 2 a 3:1.
+
+**Método:** auditoria no navegador que calcula, para cada texto visível, o contraste real entre a cor do texto (com a opacidade efetiva) e o fundo composto, ignorando elementos sobre degradê. Executada em todas as páginas com dados fictícios nas listas.
+
+| Página | Itens abaixo de 3:1 antes | Depois |
+|---|---|---|
+| Matrícula de graduação (lista e formulário) | 11 | 0 (resta só o rótulo decorativo "NENHUM") |
+| Secretaria de graduação (`/academic/enroll`) | 16 | 0 |
+| Pós-graduação | 1 a 6 | 0 (restam ícones decorativos) |
+| Usuários | 2 a 9 | 0 (restam avatares decorativos) |
+| Cursos | 1 a 4 | 0 (resta um ícone) |
+| Painel inicial, Reparos, Financeiro, Roadmap, Minha conta | 1 a 9 | 0 |
+
+**Correção:** cada variável tem, nos temas escuro e azul, exatamente o valor que as páginas usavam antes (sem mudança visual) e, no tema claro, valores com contraste mínimo de 4,5:1. Também: título "Campus Care" (escuro sobre degradê azul, achado visual), botão "Fechar Formulário", seletores de curso e de status.
+
+**Não alterados de propósito:**
+- Telas de entrada (`/auth/signin` e `/auth/signup`), por serem páginas de entrada (Regra Crítica 2) e usarem fundo em degradê.
+- Modais, que têm fundo escuro próprio e texto claro.
+- Ícones e emojis decorativos.
+
+**Pendências deste achado:** o tema escuro tem problemas antigos e independentes destas mudanças (botões com texto preto sobre azul-marinho, título da barra lateral); estados que não foram abertos na auditoria (modais de edição e de visualização) não foram auditados.
+
+### Observações ainda abertas
+- **E-04:** 401 no console a cada página antes do login (exige modo "opcional" na consulta de sessão).
+- **E-05:** 82 erros de `eslint` antigos (a maioria `no-explicit-any`); nenhum foi introduzido ou removido por estas mudanças.
+- **E-08:** 6 vulnerabilidades do Dependabot e 15 PRs de dependências abertos (não triados; atualizações maiores exigem testes próprios).

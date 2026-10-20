@@ -72,22 +72,22 @@ export default function Home() {
           <h3 style={{ marginBottom: '1.5rem' }}>Últimos Alunos Registrados</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--field-border)' }}>
                 <th style={{ padding: '1rem 0', opacity: 0.6 }}>Nome</th>
                 <th style={{ opacity: 0.6 }}>Matrícula</th>
                 <th style={{ opacity: 0.6 }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <tr style={{ borderBottom: '1px solid var(--field-divider)' }}>
                 <td style={{ padding: '1rem 0' }}>Ricardo Silva</td>
                 <td>#2024-001</td>
-                <td><span style={{ padding: '4px 10px', backgroundColor: 'rgba(39, 174, 96, 0.2)', color: '#2ecc71', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>Ativo</span></td>
+                <td><span style={{ padding: '4px 10px', backgroundColor: 'rgba(39, 174, 96, 0.2)', color: 'var(--success-text)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>Ativo</span></td>
               </tr>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <tr style={{ borderBottom: '1px solid var(--field-divider)' }}>
                 <td style={{ padding: '1rem 0' }}>Camila Pontes</td>
                 <td>#2024-002</td>
-                <td><span style={{ padding: '4px 10px', backgroundColor: 'rgba(39, 174, 96, 0.2)', color: '#2ecc71', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>Ativo</span></td>
+                <td><span style={{ padding: '4px 10px', backgroundColor: 'rgba(39, 174, 96, 0.2)', color: 'var(--success-text)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>Ativo</span></td>
               </tr>
             </tbody>
           </table>
@@ -96,7 +96,7 @@ export default function Home() {
         {isAdmin && (
           <section className="glass-panel" style={{ padding: '2rem', border: '1px solid var(--secondary-color)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.05 }}>🛡️</div>
-            <h3 style={{ marginBottom: '1.5rem', color: 'var(--secondary-color)' }}>Controles Críticos</h3>
+            <h3 style={{ marginBottom: '1.5rem', color: 'var(--accent-text)' }}>Controles Críticos</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <Link href="/users" style={ADMIN_LINK_STYLE}>
                 <div style={{ fontSize: '1.2rem' }}>🛡️</div>
@@ -132,11 +132,11 @@ const ADMIN_LINK_STYLE = {
   alignItems: 'center',
   gap: '1rem',
   padding: '1rem',
-  backgroundColor: 'rgba(255,255,255,0.03)',
+  backgroundColor: 'var(--field-surface)',
   borderRadius: '12px',
   textDecoration: 'none',
   color: 'inherit',
-  border: '1px solid rgba(255,255,255,0.05)',
+  border: '1px solid var(--field-divider)',
   transition: 'all 0.2s ease',
 };
 

@@ -37,6 +37,13 @@ const STATUS_COLORS: Record<string, string> = {
     REJEITADO: '#e74c3c',
 };
 
+// Cor do TEXTO do status: escura no tema claro (contraste >= 4,5:1) e igual à anterior nos temas escuros.
+const STATUS_TEXT: Record<string, string> = {
+    PENDENTE: 'var(--warning-text)',
+    APROVADO: 'var(--success-text)',
+    REJEITADO: 'var(--danger-text)',
+};
+
 export default function PostgradStudentsPage() {
     const [students, setStudents] = useState<PostgradStudent[]>([]);
     const [submitting, setSubmitting] = useState(false);
@@ -178,7 +185,7 @@ export default function PostgradStudentsPage() {
             {/* Cabeçalho */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--secondary-color)' }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-text)' }}>
                         📋 Cadastro de Pós-Graduação
                     </h1>
                     <p style={{ opacity: 0.6, marginTop: '0.3rem' }}>Gerencie o cadastramento de alunos para cursos de pós-graduação</p>
@@ -198,19 +205,19 @@ export default function PostgradStudentsPage() {
 
             {/* Alertas */}
             {error && (
-                <div style={{ backgroundColor: 'rgba(231,76,60,0.1)', border: '1px solid #e74c3c', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: '#e74c3c' }}>
+                <div style={{ backgroundColor: 'rgba(231,76,60,0.1)', border: '1px solid #e74c3c', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: 'var(--danger-text)' }}>
                     ⚠️ {error}
                 </div>
             )}
             {success && (
-                <div style={{ backgroundColor: 'rgba(46,204,113,0.1)', border: '1px solid #2ecc71', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: '#2ecc71' }}>
+                <div style={{ backgroundColor: 'rgba(46,204,113,0.1)', border: '1px solid #2ecc71', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', color: 'var(--success-text)' }}>
                     {success}
                 </div>
             )}
 
             {/* Formulário */}
             {showForm && (
-                <form onSubmit={handleSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '2rem', marginBottom: '2rem' }}>
+                <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--field-bg)', border: '1px solid var(--field-border)', borderRadius: '12px', padding: '2rem', marginBottom: '2rem' }}>
                     <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>📝 Dados do Candidato</h2>
 
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
@@ -235,7 +242,7 @@ export default function PostgradStudentsPage() {
                                     placeholder={f.placeholder}
                                     value={(formData as any)[f.name]}
                                     onChange={handleInputChange}
-                                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.05)', color: 'inherit', boxSizing: 'border-box' }}
+                                    style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'inherit', boxSizing: 'border-box' }}
                                 />
                             </div>
                         ))}
@@ -245,7 +252,7 @@ export default function PostgradStudentsPage() {
                         <label style={{ display: 'block', marginBottom: '0.4rem', opacity: 0.8, fontSize: '0.85rem' }}>Curso Desejado *</label>
                         <select
                             name="desiredCourse" required value={formData.desiredCourse} onChange={handleInputChange}
-                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(30,30,50,0.9)', color: 'inherit' }}
+                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--field-border)', backgroundColor: 'rgba(30,30,50,0.9)', color: 'inherit' }}
                         >
                             <option value="">-- Selecione um Curso --</option>
                             <option value="MBA em Gestão de Negócios">MBA em Gestão de Negócios</option>
@@ -283,15 +290,15 @@ export default function PostgradStudentsPage() {
             )}
 
             {/* Tabela de Alunos */}
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', overflow: 'hidden' }}>
-                <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ backgroundColor: 'var(--field-surface)', border: '1px solid var(--field-divider)', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--field-divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ fontSize: '1rem', opacity: 0.9 }}>Candidatos Cadastrados ({students.length})</h2>
                 </div>
 
                 {isLoading ? (
-                    <div style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>⏳ Carregando...</div>
+                    <div style={{ padding: '3rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>⏳ Carregando...</div>
                 ) : students.length === 0 ? (
-                    <div style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>
+                    <div style={{ padding: '3rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>
                         <p>Nenhum aluno cadastrado ainda.</p>
                         <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Clique em "+ Novo Aluno" para começar.</p>
                     </div>
@@ -299,7 +306,7 @@ export default function PostgradStudentsPage() {
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                             <thead>
-                                <tr style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                <tr style={{ backgroundColor: 'var(--field-bg)' }}>
                                     <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Candidato</th>
                                     <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Curso / Instituição</th>
                                     <th style={{ padding: '1.2rem 1.5rem', textAlign: 'left', opacity: 0.7, fontWeight: 600 }}>Documentos</th>
@@ -310,10 +317,10 @@ export default function PostgradStudentsPage() {
                             </thead>
                             <tbody>
                                 {students.map((s, i) => (
-                                    <tr key={s.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', transition: 'background 0.2s' }}>
+                                    <tr key={s.id} style={{ borderTop: '1px solid var(--field-divider)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)', transition: 'background 0.2s' }}>
                                         <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                                                <div style={{ width: '45px', height: '60px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', flexShrink: 0 }}>
+                                                <div style={{ width: '45px', height: '60px', borderRadius: '8px', backgroundColor: 'var(--field-surface)', border: '1px solid var(--field-border)', overflow: 'hidden', flexShrink: 0 }}>
                                                     {s.fotoMatricula ? (
                                                         <img src={`${BASE_URL}/api/uploads/${s.fotoMatricula}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (
@@ -322,15 +329,15 @@ export default function PostgradStudentsPage() {
                                                 </div>
                                                 <div>
                                                     <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.2rem' }}>{s.fullName}</div>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 'var(--dim-5)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                         <Mail size={12} /> {s.email}
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td style={{ padding: '1.2rem 1.5rem' }}>
-                                            <div style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>{s.desiredCourse}</div>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{s.graduationInstitution} ({s.graduationYear})</div>
+                                            <div style={{ fontWeight: 600, color: 'var(--accent-text)' }}>{s.desiredCourse}</div>
+                                            <div style={{ fontSize: '0.75rem', opacity: 'var(--dim-5)' }}>{s.graduationInstitution} ({s.graduationYear})</div>
                                         </td>
                                         <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <div style={{ display: 'flex', gap: '12px' }}>
@@ -377,7 +384,7 @@ export default function PostgradStudentsPage() {
                                             <select
                                                 value={s.enrollmentStatus}
                                                 onChange={(e) => handleStatusChange(s.id, e.target.value)}
-                                                style={{ padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: STATUS_COLORS[s.enrollmentStatus] + '15', color: STATUS_COLORS[s.enrollmentStatus], fontWeight: 700, cursor: 'pointer', outline: 'none' }}
+                                                style={{ padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: STATUS_COLORS[s.enrollmentStatus] + '15', color: STATUS_TEXT[s.enrollmentStatus] || 'var(--fg-4)', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
                                             >
                                                 <option value="PENDENTE">PENDENTE</option>
                                                 <option value="APROVADO">APROVADO</option>
@@ -386,7 +393,7 @@ export default function PostgradStudentsPage() {
                                         </td>
                                         <td style={{ padding: '1.2rem 1.5rem' }}>
                                             <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center' }}>
-                                                <button onClick={() => setViewingStudent(s)} style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} title="Visualizar Ficha">
+                                                <button onClick={() => setViewingStudent(s)} style={{ padding: '0.6rem', background: 'var(--field-bg)', color: 'var(--fg-1)', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} title="Visualizar Ficha">
                                                     <Eye size={18} />
                                                 </button>
                                                 <button onClick={() => setEditingStudent(s)} style={{ padding: '0.6rem', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', borderRadius: '10px', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.2)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'} title="Editar Cadastro">
