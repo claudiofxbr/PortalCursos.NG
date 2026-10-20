@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import api from '../../services/api';
 import {
+  courseLabel,
   formatMoney,
   groupByCategory,
   parseMoney,
@@ -101,6 +102,11 @@ export default function PriceTablePage() {
     <div className="fade-in" style={{ paddingBottom: '4rem' }}>
       <header style={{ marginBottom: '1.5rem' }}>
         <Link href="/finance" style={{ fontSize: '0.9rem' }}>← Gestão Financeira</Link>
+        {table.role === 'ADMIN' && (
+          <Link href="/finance/prices/admin" style={{ fontSize: '0.9rem', marginLeft: '1rem', fontWeight: 700 }}>
+            Administração: responsáveis e valores por curso
+          </Link>
+        )}
         <h2 style={{ fontSize: '2rem', fontWeight: 800, margin: '0.5rem 0' }}>Tabela de valores das cobranças</h2>
         <p style={{ color: 'var(--text-secondary)' }}>
           Seu perfil: <strong>{roleLabel(table.role)}</strong>. Faturas já emitidas não mudam quando um valor é alterado.
@@ -141,7 +147,7 @@ export default function PriceTablePage() {
                     <tr key={row.id} style={{ borderBottom: '1px solid #eee', verticalAlign: 'top' }}>
                       <td style={{ padding: '8px' }}>{row.name}</td>
                       <td style={{ padding: '8px' }}>{scopeLabel(row.academicScope)}</td>
-                      <td style={{ padding: '8px' }}>{row.courseId ? `Curso ${row.courseId.slice(0, 8)}…` : 'Todos'}</td>
+                      <td style={{ padding: '8px' }}>{courseLabel(row)}</td>
                       <td style={{ padding: '8px', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(row.currentValue)}</td>
                       <td style={{ padding: '8px' }}>
                         {row.pending && (
