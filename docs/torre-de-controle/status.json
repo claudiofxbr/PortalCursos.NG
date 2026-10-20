@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr128-monitor",
+      "label": "#128 — docs(testes): relatório de testes do PortalCursos.NG de 20/10/2026",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr123-monitor",
       "label": "#123 — chore(deps): bump brace-expansion in /frontend",
       "detail": "CI ok.",
@@ -148,5 +155,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-20T13:52:47Z"
+  "updatedAt": "2026-10-20T14:05:21Z"
 }
