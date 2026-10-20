@@ -18,6 +18,13 @@
   --glass-border: rgba(255, 255, 255, 0.2);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
   --card-bg: #ffffff;
+  /* Formulários: campos legíveis no tema claro (texto escuro sobre fundo claro) */
+  --field-bg: #ffffff;
+  --field-border: #cbd5e1;
+  --field-text: #1e293b;
+  --field-label: #475569;
+  --field-surface: rgba(15, 23, 42, 0.03);
+  --field-divider: rgba(15, 23, 42, 0.1);
 }
 
 /* Tema Escuro */
@@ -33,6 +40,12 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   --card-bg: #1e293b;
+  --field-bg: rgba(255, 255, 255, 0.05);
+  --field-border: rgba(255, 255, 255, 0.15);
+  --field-text: #f8fafc;
+  --field-label: rgba(255, 255, 255, 0.7);
+  --field-surface: rgba(255, 255, 255, 0.03);
+  --field-divider: rgba(255, 255, 255, 0.08);
 }
 
 /* Tema Azul Escuro */
@@ -48,6 +61,12 @@
   --glass-border: rgba(59, 130, 246, 0.3);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
   --card-bg: #151b4d;
+  --field-bg: rgba(255, 255, 255, 0.06);
+  --field-border: rgba(148, 188, 255, 0.35);
+  --field-text: #f1f5f9;
+  --field-label: #94bcff;
+  --field-surface: rgba(255, 255, 255, 0.03);
+  --field-divider: rgba(148, 188, 255, 0.2);
 }
 
 * {

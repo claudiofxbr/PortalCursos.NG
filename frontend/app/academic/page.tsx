@@ -248,9 +248,9 @@ export default function GraduationPage() {
                     onClick={() => setShowForm(!showForm)}
                     style={{
                         padding: '0.8rem 1.6rem', borderRadius: '12px',
-                        backgroundColor: showForm ? 'rgba(255,255,255,0.05)' : 'var(--secondary-color)', 
-                        color: showForm ? '#fff' : '#000',
-                        border: showForm ? '1px solid rgba(255,255,255,0.1)' : 'none', 
+                        backgroundColor: showForm ? 'var(--field-bg)' : 'var(--secondary-color)', 
+                        color: showForm ? 'var(--field-text)' : '#000',
+                        border: showForm ? '1px solid var(--field-border)' : 'none', 
                         cursor: 'pointer', fontWeight: 700,
                         fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -264,8 +264,8 @@ export default function GraduationPage() {
             {/* Form Toggle Selection (Idêntico ao postgrad) */}
             {showForm && (
                 <div style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.02)', 
-                    border: '1px solid rgba(255,255,255,0.08)', 
+                    backgroundColor: 'var(--field-surface)', 
+                    border: '1px solid var(--field-divider)', 
                     borderRadius: '24px', 
                     padding: '2.5rem', 
                     marginBottom: '3rem', 
@@ -291,19 +291,19 @@ export default function GraduationPage() {
                                 { label: 'Nacionalidade', name: 'nacionalidade', type: 'text' },
                             ].map(f => (
                                 <div key={f.name}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
                                     <input
                                         name={f.name} type={f.type} required={f.required}
                                         placeholder={f.placeholder}
                                         value={(formData as any)[f.name]}
                                         onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '1rem', outline: 'none' }}
+                                        style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}
                                     />
                                 </div>
                             ))}
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Forma de Ingresso *</label>
-                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>Forma de Ingresso *</label>
+                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}>
                                     <option value="VESTIBULAR_PROPRIO">Vestibular Próprio</option>
                                     <option value="ENEM_SISU">ENEM / SISU</option>
                                     <option value="GRAD_2">2ª Graduação / Portador de Diploma</option>
@@ -311,11 +311,11 @@ export default function GraduationPage() {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Curso Escolhido *</label>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>Curso Escolhido *</label>
                                 <input 
                                     name="currentCourse" required value={formData.currentCourse} onChange={handleInputChange}
                                     placeholder="Ex: Ciência da Computação"
-                                    style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}
+                                    style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}
                                 />
                             </div>
                         </div>
@@ -344,8 +344,8 @@ export default function GraduationPage() {
                                 { label: '🩺 Laudo Médico (Opc)', name: 'laudoMedico' },
                             ].map(f => (
                                 <div key={f.name}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{f.label}</label>
-                                    <div style={{ position: 'relative', height: '54px', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden', cursor: 'pointer' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.85rem' }}>{f.label}</label>
+                                    <div style={{ position: 'relative', height: '54px', border: '2px dashed var(--field-border)', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden', cursor: 'pointer' }}>
                                         <input
                                             type="file" name={f.name} onChange={handleFileChange}
                                             style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
@@ -359,11 +359,11 @@ export default function GraduationPage() {
                             ))}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '2.5rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid var(--field-divider)', paddingTop: '2.5rem' }}>
                             <button type="submit" disabled={submitting} style={{ padding: '1.1rem 3rem', borderRadius: '14px', backgroundColor: 'var(--secondary-color)', color: '#000', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.05rem', opacity: submitting ? 0.7 : 1 }}>
                                 {submitting ? 'Enviando...' : 'Finalizar Matrícula'}
                             </button>
-                            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '1.1rem 2rem', borderRadius: '14px', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}>
+                            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '1.1rem 2rem', borderRadius: '14px', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', border: '1px solid var(--field-border)', cursor: 'pointer', fontWeight: 600 }}>
                                 Fechar
                             </button>
                         </div>
