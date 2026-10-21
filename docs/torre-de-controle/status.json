@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr139-monitor",
+      "label": "#139 — chore(agentes): adiciona 3 agentes de correção de erros",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr138-monitor",
       "label": "#138 — chore(deps): bump vite from 8.3.0 to 8.3.4 in /frontend",
       "detail": "CI ok.",
@@ -134,5 +141,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T10:54:13Z"
+  "updatedAt": "2026-10-21T13:22:22Z"
 }
