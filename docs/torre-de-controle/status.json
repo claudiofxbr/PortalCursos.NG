@@ -44,8 +44,8 @@
     },
     {
       "category": "queue",
-      "id": "pr141-monitor",
-      "label": "#141 — chore(deps): atualiza dependências do backend (postgresql, Flyway, Maven)",
+      "id": "pr142-monitor",
+      "label": "#142 — docs(teste): registra andamento do E-08",
       "detail": "CI ok.",
       "status": "queued"
     },
@@ -120,5 +120,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T15:01:42Z"
+  "updatedAt": "2026-10-21T15:26:43Z"
 }
