@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr148-monitor",
+      "label": "#148 — feat(financeiro): escolher o procedimento preenche o valor da cobrança (frontend)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T20:14:34Z"
+  "updatedAt": "2026-10-21T20:22:21Z"
 }
