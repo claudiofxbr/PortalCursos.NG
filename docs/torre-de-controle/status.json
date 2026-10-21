@@ -18,21 +18,21 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 2ba12b1)",
+      "detail": "último run em main: success (commit d90dc15)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 2ba12b1)",
+      "detail": "último run em main: success (commit d90dc15)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit 924739a)",
+      "detail": "último run em main: success (commit d90dc15)",
       "status": "active"
     },
     {
@@ -41,27 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr143-monitor",
-      "label": "#143 — chore(deps): atualiza dependências do frontend (follow-redirects, vite, react 19.3)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr140-monitor",
-      "label": "#140 — chore(deps): bump follow-redirects from 1.16.0 to 1.16.1 in /frontend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr138-monitor",
-      "label": "#138 — chore(deps): bump vite from 8.3.0 to 8.3.5 in /frontend",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -92,5 +71,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T16:16:13Z"
+  "updatedAt": "2026-10-21T16:21:50Z"
 }
