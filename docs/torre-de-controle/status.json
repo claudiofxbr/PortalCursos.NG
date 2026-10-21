@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit d90dc15)",
+      "detail": "último run em main: success (commit d1a6637)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit d90dc15)",
+      "detail": "último run em main: success (commit d1a6637)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr144-monitor",
-      "label": "#144 — chore(deps): atualiza lucide-react 1.45 e jsdom 30",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -67,9 +60,9 @@
       "category": "queue",
       "id": "pr100-monitor",
       "label": "#100 — chore(deps-dev): bump jsdom from 29.1.1 to 30.0.1 in /frontend",
-      "detail": "CI ok.",
+      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T16:31:46Z"
+  "updatedAt": "2026-10-21T16:37:19Z"
 }
