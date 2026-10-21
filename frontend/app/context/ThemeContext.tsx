@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark" | "blue";
+export type Theme = "light" | "dark" | "blue";
 
 interface ThemeContextType {
   theme: Theme;
@@ -19,6 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedTheme = localStorage.getItem("app-theme") as Theme;
     if (savedTheme && ["light", "dark", "blue"].includes(savedTheme)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lê API do navegador (não existe no servidor) depois da montagem
       setThemeState(savedTheme);
     }
     setMounted(true);

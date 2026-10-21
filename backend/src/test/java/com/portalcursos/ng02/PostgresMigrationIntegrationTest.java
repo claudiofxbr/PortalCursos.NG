@@ -1,14 +1,18 @@
 package com.portalcursos.ng02;
 
+import com.portalcursos.ng02.controller.RepairController;
+import com.portalcursos.ng02.controller.StaffMemberController;
 import com.portalcursos.ng02.model.DataDeletionRequest;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
+import com.portalcursos.ng02.model.RepairTicket;
 import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
 import com.portalcursos.ng02.repository.DataDeletionRequestRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
+import com.portalcursos.ng02.repository.RepairRepository;
 import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
@@ -109,6 +113,15 @@ class PostgresMigrationIntegrationTest {
     @Autowired
     private StaffMemberRepository staffMemberRepository;
 
+    @Autowired
+    private RepairRepository repairRepository;
+
+    @Autowired
+    private RepairController repairController;
+
+    @Autowired
+    private StaffMemberController staffMemberController;
+
     @AfterEach
     void limpaContextoDeSeguranca() {
         SecurityContextHolder.clearContext();
@@ -203,6 +216,173 @@ class PostgresMigrationIntegrationTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM payments WHERE id = ? AND active = false", Integer.class, saved.getId());
         assertEquals(1, count, "O pagamento deve continuar na tabela, só marcado como inativo");
+    }
+
+    // V24: colunas de checkout por cartão e novos métodos de pagamento persistem contra Postgres real;
+    // faturas antigas (sem as colunas novas) continuam válidas e o CHECK rejeita valor cobrado não positivo.
+    @Test
+    void faturaPorCartaoPersisteCamposDeCheckoutContraPostgresReal() {
+        Payment saved = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("150.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(10))
+                .status(EPaymentStatus.PENDING)
+                .method(com.portalcursos.ng02.model.EPaymentMethod.CREDIT_CARD)
+                .pspCheckoutId("CHEC_00000000-0000-0000-0000-000000000000")
+                .chargedAmountCents(15000L)
+                .build());
+        entityManager.clear();
+
+        Payment loaded = paymentRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(com.portalcursos.ng02.model.EPaymentMethod.CREDIT_CARD, loaded.getMethod());
+        assertEquals("CHEC_00000000-0000-0000-0000-000000000000", loaded.getPspCheckoutId());
+        assertEquals(15000L, loaded.getChargedAmountCents());
+
+        Payment legacy = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("10.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(1))
+                .status(EPaymentStatus.PENDING)
+                .method(com.portalcursos.ng02.model.EPaymentMethod.PIX)
+                .build());
+        assertNull(legacy.getPspCheckoutId());
+        assertNull(legacy.getChargedAmountCents());
+
+        assertThrows(DataIntegrityViolationException.class, () -> {
+            jdbcTemplate.update("UPDATE payments SET charged_amount_cents = 0 WHERE id = ?", saved.getId());
+        }, "CHECK deve recusar valor cobrado zerado");
+    }
+
+    // V25: carga inicial da tabela de valores (24 cobranças globais em branco). Cada violação de constraint
+    // fica em teste próprio: no Postgres, depois de um erro a transação inteira fica abortada.
+    @Test
+    void tabelaDeValoresTemCargaInicialDe24CobrancasEmBranco() {
+        Integer total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM charge_prices WHERE course_id IS NULL AND active = TRUE", Integer.class);
+        assertEquals(24, total, "V25 deve carregar as 24 cobranças globais");
+        Integer preenchidas = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM charge_prices WHERE current_value IS NOT NULL", Integer.class);
+        assertEquals(0, preenchidas, "Os valores começam em branco, para preenchimento");
+    }
+
+    private Long rematriculaGlobalId() {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM charge_prices WHERE code = 'REMATRICULA' AND course_id IS NULL", Long.class);
+    }
+
+    @Test
+    void soPodeHaverUmaPropostaPendentePorCobrancaContraPostgresReal() {
+        Long priceId = rematriculaGlobalId();
+        jdbcTemplate.update("INSERT INTO charge_price_changes (charge_price_id, proposed_value, status, proposed_by) "
+                + "VALUES (?, 10.00, 'PENDING', 'chefe')", priceId);
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "INSERT INTO charge_price_changes (charge_price_id, proposed_value, status, proposed_by) "
+                        + "VALUES (?, 11.00, 'PENDING', 'chefe')", priceId));
+    }
+
+    @Test
+    void valorNegativoEhRecusadoPeloBancoContraPostgresReal() {
+        Long priceId = rematriculaGlobalId();
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "UPDATE charge_prices SET current_value = -1 WHERE id = ?", priceId));
+    }
+
+    @Test
+    void naoPodeHaverDuasLinhasGlobaisAtivasComOMesmoCodigoContraPostgresReal() {
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "INSERT INTO charge_prices (code, category, name, academic_scope) "
+                        + "VALUES ('REMATRICULA', 'x', 'y', 'ALL')"));
+    }
+
+    // Regressão do achado P1: RepairController.deleteTicket fazia hard-delete real
+    // (repairRepository.delete(ticket)), inconsistente com o padrão de soft-delete usado no
+    // resto do sistema (Payment/Student/StaffMember) e apagando o histórico/auditoria do
+    // chamado de manutenção. Corrigido trocando para setActive(false) + save(), mesmo padrão
+    // de PaymentService.deleteCharge/UserService.deleteUser — RepairTicket já tem
+    // @SQLRestriction("active = true"), então o soft-delete já funciona de forma
+    // transparente com as queries de listagem existentes, sem precisar mexer no repositório.
+    @Test
+    void deleteTicketDesativaChamadoSemErroContraPostgresReal() {
+        RepairTicket saved = repairRepository.saveAndFlush(RepairTicket.builder()
+                .title("Ar-condicionado quebrado")
+                .description("Não liga")
+                .location("Lab 03")
+                .status(RepairTicket.ERepairStatus.OPEN)
+                .build());
+        Long id = saved.getId();
+
+        // RepairController.deleteTicket tem @PreAuthorize(AUTHORIZED_ROLES) — chamar o bean
+        // gerenciado diretamente (não via MockMvc) ainda passa pelo interceptor de method
+        // security, então precisa de um Authentication válido no contexto (mesmo padrão da
+        // regressão de deleteUser mais abaixo nesta classe).
+        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN).orElseThrow();
+        User operator = userRepository.saveAndFlush(User.builder()
+                .username("operador-repair-teste")
+                .email("operador-repair-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(adminRole))
+                .build());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UserDetailsImpl.build(operator), null, UserDetailsImpl.build(operator).getAuthorities()));
+
+        assertDoesNotThrow(() -> repairController.deleteTicket(id));
+
+        entityManager.flush();
+        entityManager.clear();
+        assertTrue(repairRepository.findById(id).isEmpty(),
+                "@SQLRestriction(active = true) deve esconder o chamado desativado");
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM repair_tickets WHERE id = ? AND active = false", Integer.class, id);
+        assertEquals(1, count, "O chamado deve continuar na tabela, só marcado como inativo (soft-delete real)");
+    }
+
+    // Regressão do achado P1: StaffMemberController.deleteStaff fazia hard-delete real
+    // (staffRepository.delete(staff)) — mesmo bug de @SQLDelete sem o parâmetro de @Version
+    // já corrigido em Payment/RepairTicket, então toda chamada lançava
+    // DataIntegrityViolationException. Corrigido trocando para setActive(false) + save().
+    // StaffMember não tem @SQLRestriction (é referenciado como `creator` em todo registro
+    // auditado), então o soft-delete não esconde o registro de findById — só marca
+    // active=false; as listagens já filtram explicitamente via findAllByActiveTrue.
+    @Test
+    void deleteStaffDesativaColaboradorSemErroContraPostgresReal() {
+        Role staffRole = roleRepository.findByName(Role.ERole.ROLE_SECRETARIA).orElseThrow();
+        User linkedUser = userRepository.saveAndFlush(User.builder()
+                .username("colaborador-delete-teste")
+                .email("colaborador-delete-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(staffRole))
+                .build());
+
+        StaffMember staff = new StaffMember();
+        staff.setUser(linkedUser);
+        staff.setFullName("Colaborador Para Remover");
+        staff.setPosition("Secretaria");
+        staff.setDepartment("Acadêmico");
+        staff.setActive(true);
+        StaffMember saved = staffMemberRepository.saveAndFlush(staff);
+        Long id = saved.getId();
+
+        // StaffMemberController.deleteStaff tem @PreAuthorize — mesmo padrão de autenticação
+        // dos outros testes de soft-delete direto no controller nesta classe.
+        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN).orElseThrow();
+        User operator = userRepository.saveAndFlush(User.builder()
+                .username("operador-staff-teste")
+                .email("operador-staff-teste@test.com")
+                .password("hash-qualquer")
+                .roles(Set.of(adminRole))
+                .build());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UserDetailsImpl.build(operator), null, UserDetailsImpl.build(operator).getAuthorities()));
+
+        assertDoesNotThrow(() -> staffMemberController.deleteStaff(id));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM staff_members WHERE id = ? AND active = false", Integer.class, id);
+        assertEquals(1, count, "O colaborador deve continuar na tabela, só marcado como inativo (soft-delete real)");
     }
 
     // Regressão do achado: userRepository.deleteById() (hard delete, usado por

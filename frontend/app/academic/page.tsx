@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import PhotoUpload3x4 from "@/components/PhotoUpload3x4";
 import { useAuditCRUD } from '@/app/hooks/useAuditCRUD';
 import { AuditStamp } from '@/app/components/AuditStamp';
+import { asHttpError } from '@/app/services/httpError';
 interface StudentDocument {
     id: number;
     documentType: string;
@@ -49,6 +50,14 @@ const STATUS_COLORS: Record<string, string> = {
     PENDENTE_VALIDACAO: '#f0a500',
     APROVADO: '#2ecc71',
     REJEITADO: '#e74c3c',
+};
+
+// Cor do TEXTO do status: escura no tema claro (contraste >= 4,5:1) e igual à anterior nos temas escuros.
+const STATUS_TEXT: Record<string, string> = {
+    PENDENTE: 'var(--warning-text)',
+    PENDENTE_VALIDACAO: 'var(--warning-text)',
+    APROVADO: 'var(--success-text)',
+    REJEITADO: 'var(--danger-text)',
 };
 
 export default function GraduationPage() {
@@ -99,6 +108,7 @@ export default function GraduationPage() {
 
     // useEffect automático pelo useAuditCRUD
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadStudents(); }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -134,7 +144,8 @@ export default function GraduationPage() {
             setShowForm(false);
             resetForm();
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao realizar matrícula.');
         } finally {
             setSubmitting(false);
@@ -166,7 +177,8 @@ export default function GraduationPage() {
             // Limpar arquivo de update após sucesso
             setFiles(prev => ({ ...prev, foto3x4_update: null }));
             loadStudents();
-        } catch (e: any) { 
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught); 
             toast.error(e?.response?.data?.message || 'Erro ao atualizar registro.'); 
         } finally { 
             setSubmitting(false); 
@@ -193,7 +205,8 @@ export default function GraduationPage() {
             const res = await api.post(`v1/grad-students/${studentId}/generate-fee`);
             toast.success(res.data.message);
             // Opcional: recarregar dados
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao gerar taxa.');
         }
     };
@@ -242,15 +255,15 @@ export default function GraduationPage() {
                         <GraduationCap size={42} className="text-blue-400" />
                         Matrícula de Graduação
                     </h1>
-                    <p style={{ opacity: 0.5, marginTop: '0.4rem', fontSize: '1.1rem' }}>Controle acadêmico e gestão de ingressantes</p>
+                    <p style={{ opacity: 'var(--dim-5)', marginTop: '0.4rem', fontSize: '1.1rem' }}>Controle acadêmico e gestão de ingressantes</p>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
                     style={{
                         padding: '0.8rem 1.6rem', borderRadius: '12px',
-                        backgroundColor: showForm ? 'rgba(255,255,255,0.05)' : 'var(--secondary-color)', 
-                        color: showForm ? '#fff' : '#000',
-                        border: showForm ? '1px solid rgba(255,255,255,0.1)' : 'none', 
+                        backgroundColor: showForm ? 'var(--field-bg)' : 'var(--secondary-color)', 
+                        color: showForm ? 'var(--field-text)' : '#000',
+                        border: showForm ? '1px solid var(--field-border)' : 'none', 
                         cursor: 'pointer', fontWeight: 700,
                         fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -264,8 +277,8 @@ export default function GraduationPage() {
             {/* Form Toggle Selection (Idêntico ao postgrad) */}
             {showForm && (
                 <div style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.02)', 
-                    border: '1px solid rgba(255,255,255,0.08)', 
+                    backgroundColor: 'var(--field-surface)', 
+                    border: '1px solid var(--field-divider)', 
                     borderRadius: '24px', 
                     padding: '2.5rem', 
                     marginBottom: '3rem', 
@@ -291,19 +304,19 @@ export default function GraduationPage() {
                                 { label: 'Nacionalidade', name: 'nacionalidade', type: 'text' },
                             ].map(f => (
                                 <div key={f.name}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
                                     <input
                                         name={f.name} type={f.type} required={f.required}
                                         placeholder={f.placeholder}
-                                        value={(formData as any)[f.name]}
+                                        value={(formData as Record<string, string>)[f.name]}
                                         onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '1rem', outline: 'none' }}
+                                        style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}
                                     />
                                 </div>
                             ))}
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Forma de Ingresso *</label>
-                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>Forma de Ingresso *</label>
+                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}>
                                     <option value="VESTIBULAR_PROPRIO">Vestibular Próprio</option>
                                     <option value="ENEM_SISU">ENEM / SISU</option>
                                     <option value="GRAD_2">2ª Graduação / Portador de Diploma</option>
@@ -311,11 +324,11 @@ export default function GraduationPage() {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Curso Escolhido *</label>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.9rem', fontWeight: 500 }}>Curso Escolhido *</label>
                                 <input 
                                     name="currentCourse" required value={formData.currentCourse} onChange={handleInputChange}
                                     placeholder="Ex: Ciência da Computação"
-                                    style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}
+                                    style={{ width: '100%', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', fontSize: '1rem', outline: 'none' }}
                                 />
                             </div>
                         </div>
@@ -344,26 +357,26 @@ export default function GraduationPage() {
                                 { label: '🩺 Laudo Médico (Opc)', name: 'laudoMedico' },
                             ].map(f => (
                                 <div key={f.name}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>{f.label}</label>
-                                    <div style={{ position: 'relative', height: '54px', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden', cursor: 'pointer' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--field-label)', fontSize: '0.85rem' }}>{f.label}</label>
+                                    <div style={{ position: 'relative', height: '54px', border: '2px dashed var(--field-border)', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden', cursor: 'pointer' }}>
                                         <input
                                             type="file" name={f.name} onChange={handleFileChange}
                                             style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
                                         />
-                                        <Upload size={16} style={{ marginRight: '0.75rem', opacity: 0.4 }} />
+                                        <Upload size={16} style={{ marginRight: '0.75rem', opacity: 'var(--dim-4)' }} />
                                         <span style={{ fontSize: '0.8rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {(files as any)[f.name] ? (files as any)[f.name].name : 'Selecionar arquivo...'}
+                                            {files[f.name]?.name || 'Selecionar arquivo...'}
                                         </span>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '2.5rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid var(--field-divider)', paddingTop: '2.5rem' }}>
                             <button type="submit" disabled={submitting} style={{ padding: '1.1rem 3rem', borderRadius: '14px', backgroundColor: 'var(--secondary-color)', color: '#000', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.05rem', opacity: submitting ? 0.7 : 1 }}>
                                 {submitting ? 'Enviando...' : 'Finalizar Matrícula'}
                             </button>
-                            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '1.1rem 2rem', borderRadius: '14px', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}>
+                            <button type="button" onClick={() => setShowForm(false)} style={{ padding: '1.1rem 2rem', borderRadius: '14px', backgroundColor: 'var(--field-bg)', color: 'var(--field-text)', border: '1px solid var(--field-border)', cursor: 'pointer', fontWeight: 600 }}>
                                 Fechar
                             </button>
                         </div>
@@ -372,31 +385,31 @@ export default function GraduationPage() {
             )}
 
             {/* Listagem Estilo Unificado */}
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden' }}>
-                <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ backgroundColor: 'var(--field-surface)', border: '1px solid var(--field-divider)', borderRadius: '24px', overflow: 'hidden' }}>
+                <div style={{ padding: '2rem', borderBottom: '1px solid var(--field-divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Candidatos da Graduação ({students.length})</h3>
                     <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ padding: '0.5rem 1rem', borderRadius: '20px', backgroundColor: 'rgba(46,204,113,0.1)', color: '#2ecc71', fontSize: '0.75rem', fontWeight: 700 }}>
+                        <div style={{ padding: '0.5rem 1rem', borderRadius: '20px', backgroundColor: 'rgba(46,204,113,0.1)', color: 'var(--success-text)', fontSize: '0.75rem', fontWeight: 700 }}>
                             ● {students.filter(s => s.enrollmentStatus === 'APROVADO').length} APROVADOS
                         </div>
-                        <div style={{ padding: '0.5rem 1rem', borderRadius: '20px', backgroundColor: 'rgba(240,165,0,0.1)', color: '#f0a500', fontSize: '0.75rem', fontWeight: 700 }}>
+                        <div style={{ padding: '0.5rem 1rem', borderRadius: '20px', backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--warning-text)', fontSize: '0.75rem', fontWeight: 700 }}>
                             ● {students.filter(s => s.enrollmentStatus.startsWith('PENDENTE')).length} PENDENTES
                         </div>
                     </div>
                 </div>
 
                 {isLoading ? (
-                    <div style={{ padding: '8rem', textAlign: 'center', opacity: 0.5 }}>⏳ Sincronizando dados acadêmicos...</div>
+                    <div style={{ padding: '8rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>⏳ Sincronizando dados acadêmicos...</div>
                 ) : students.length === 0 ? (
                     <div style={{ padding: '8rem', textAlign: 'center' }}>
-                        <p style={{ opacity: 0.3, fontSize: '1.2rem' }}>Nenhum aluno matriculado na graduação.</p>
-                        <p style={{ opacity: 0.2, fontSize: '0.9rem', marginTop: '1rem' }}>Clique em "Novo Aluno" para iniciar um processo de matrícula.</p>
+                        <p style={{ opacity: 'var(--dim-3)', fontSize: '1.2rem' }}>Nenhum aluno matriculado na graduação.</p>
+                        <p style={{ opacity: 0.2, fontSize: '0.9rem', marginTop: '1rem' }}>Clique em &quot;Novo Aluno&quot; para iniciar um processo de matrícula.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <tr style={{ borderBottom: '1px solid var(--field-divider)', textAlign: 'left', color: 'var(--fg-4)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     {['Aluno / Matrícula', 'Contato', 'Auditoria', 'Curso / Ingresso', 'Documentação', 'Status', 'Ações'].map(h => (
                                         <th key={h} style={{ padding: '1.5rem 2rem', fontWeight: 700 }}>{h}</th>
                                     ))}
@@ -404,29 +417,29 @@ export default function GraduationPage() {
                             </thead>
                             <tbody>
                                 {students.map((s, i) => (
-                                    <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                                    <tr key={s.id} style={{ borderBottom: '1px solid var(--field-divider)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 {s.fotoMatricula ? (
                                                     <img 
                                                         src={s.fotoMatricula.startsWith('http') ? s.fotoMatricula : `${BASE_URL}/api/uploads/${s.fotoMatricula}`}
                                                         alt={s.fullName} 
-                                                        style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }}
+                                                        style={{ width: '40px', height: '53px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--field-border)' }}
                                                     />
                                                 ) : (
-                                                    <div style={{ width: '40px', height: '53px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div style={{ width: '40px', height: '53px', borderRadius: '4px', backgroundColor: 'var(--field-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <User size={20} opacity={0.3} />
                                                     </div>
                                                 )}
                                                 <div>
                                                     <div style={{ fontWeight: 700, fontSize: '1rem' }}>{s.fullName}</div>
-                                                    <div style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: '0.2rem' }}>{s.registrationNumber}</div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 'var(--dim-4)', marginTop: '0.2rem' }}>{s.registrationNumber}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ opacity: 0.8 }}>{s.email}</div>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.4 }}>{s.phone}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 'var(--dim-4)' }}>{s.phone}</div>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <AuditStamp 
@@ -437,8 +450,8 @@ export default function GraduationPage() {
                                             />
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
-                                            <div style={{ fontWeight: 600, color: 'var(--secondary-color)' }}>{s.currentCourse}</div>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.4 }}>{s.formaIngresso}</div>
+                                            <div style={{ fontWeight: 600, color: 'var(--accent-text)' }}>{s.currentCourse}</div>
+                                            <div style={{ fontSize: '0.75rem', opacity: 'var(--dim-4)' }}>{s.formaIngresso}</div>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
                                             <div style={{ display: 'flex', gap: '4px' }}>
@@ -449,13 +462,13 @@ export default function GraduationPage() {
                                                             href={`${BASE_URL}/api/uploads/${doc.filePath}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: doc.status === 'APPROVED' ? '#2ecc71' : '#f0a500' }}
+                                                            style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: 'var(--field-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: doc.status === 'APPROVED' ? '#2ecc71' : '#f0a500' }}
                                                             title={doc.documentType}
                                                         >
                                                             <FileText size={12} />
                                                         </a>
                                                     ))
-                                                ) : <span style={{ fontSize: '0.7rem', opacity: 0.2 }}>NENHUM</span>}
+                                                ) : <span style={{ fontSize: '0.7rem', opacity: 'var(--dim-2)' }}>NENHUM</span>}
                                             </div>
                                         </td>
                                         <td style={{ padding: '1.5rem 2rem' }}>
@@ -465,7 +478,7 @@ export default function GraduationPage() {
                                                 style={{ 
                                                     padding: '6px 12px', borderRadius: '10px', border: 'none', 
                                                     backgroundColor: (STATUS_COLORS[s.enrollmentStatus] || '#7f8c8d') + '15', 
-                                                    color: STATUS_COLORS[s.enrollmentStatus] || '#7f8c8d', 
+                                                    color: STATUS_TEXT[s.enrollmentStatus] || 'var(--fg-4)', 
                                                     fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' 
                                                 }}
                                             >
@@ -478,7 +491,7 @@ export default function GraduationPage() {
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button
                                                     onClick={() => setViewingStudent(s)}
-                                                    style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                                                    style={{ padding: '0.6rem', background: 'var(--field-bg)', color: 'var(--fg-1)', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
                                                     title="Ver Ficha Detalhada"
                                                 >
                                                     <User size={18} />
@@ -492,7 +505,7 @@ export default function GraduationPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(s.id)}
-                                                    style={{ padding: '0.6rem', background: 'rgba(231,76,60,0.1)', color: '#e74c3c', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                                                    style={{ padding: '0.6rem', background: 'rgba(231,76,60,0.1)', color: 'var(--danger-text)', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
                                                     title="Inativar Matrícula"
                                                 >
                                                     <Trash2 size={18} />

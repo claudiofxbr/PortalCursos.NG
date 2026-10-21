@@ -21,6 +21,7 @@ export default function ConnectivityGuard({ children }: { children: React.ReactN
     const [timedOut, setTimedOut] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- marca de montagem: evita divergência de hidratação com o servidor
         setIsMounted(true);
 
         const updateStatus = (e: Event) => {

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { asHttpError } from '@/app/services/httpError';
 interface GradStudent {
     id: number;
     fullName: string;
@@ -29,7 +30,8 @@ interface GradStudent {
     currentCourse: string;
     enrollmentStatus: string;
     registrationNumber: string;
-    documents: any[];
+    formaIngresso?: string;
+    documents: unknown[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -37,6 +39,14 @@ const STATUS_COLORS: Record<string, string> = {
     PENDENTE_VALIDACAO: '#f0a500',
     APROVADO: '#2ecc71',
     REJEITADO: '#e74c3c',
+};
+
+// Cor do TEXTO do status: escura no tema claro (contraste >= 4,5:1) e igual à anterior nos temas escuros.
+const STATUS_TEXT: Record<string, string> = {
+    PENDENTE: 'var(--warning-text)',
+    PENDENTE_VALIDACAO: 'var(--warning-text)',
+    APROVADO: 'var(--success-text)',
+    REJEITADO: 'var(--danger-text)',
 };
 
 export default function GradEnrollPage() {
@@ -75,13 +85,15 @@ export default function GradEnrollPage() {
         try {
             const res = await api.get('v1/grad-students');
             setStudents(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error('Erro ao carregar alunos. Verifique o backend.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadStudents(); }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -113,7 +125,8 @@ export default function GradEnrollPage() {
             setShowForm(false);
             resetForm();
             loadStudents();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             toast.error(e?.response?.data?.message || 'Erro ao realizar matrícula.');
         } finally {
             setSubmitting(false);
@@ -156,18 +169,18 @@ export default function GradEnrollPage() {
             {/* Cabeçalho */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.025em', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <h1 style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--fg-1)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         🎓 Secretaria de Graduação
                     </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem', fontSize: '1.1rem' }}>Gerenciamento e validação de inscrições para graduação</p>
+                    <p style={{ color: 'var(--fg-3)', marginTop: '0.5rem', fontSize: '1.1rem' }}>Gerenciamento e validação de inscrições para graduação</p>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
                     style={{
                         padding: '0.8rem 1.8rem', borderRadius: '12px',
-                        backgroundColor: showForm ? 'rgba(255,255,255,0.1)' : 'var(--secondary-color)', 
-                        color: showForm ? '#fff' : '#000',
-                        border: showForm ? '1px solid rgba(255,255,255,0.2)' : 'none', 
+                        backgroundColor: showForm ? 'var(--field-bg)' : 'var(--secondary-color)', 
+                        color: showForm ? 'var(--field-text)' : '#000',
+                        border: showForm ? '1px solid var(--field-border)' : 'none', 
                         cursor: 'pointer', fontWeight: 700,
                         fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
                         transition: 'all 0.2s ease'
@@ -180,7 +193,7 @@ export default function GradEnrollPage() {
 
             {/* Formulário Estilo Unificado */}
             {showForm && (
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '2.5rem', marginBottom: '3rem', backdropFilter: 'blur(20px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+                <div style={{ backgroundColor: 'var(--field-surface)', border: '1px solid var(--field-divider)', borderRadius: '24px', padding: '2.5rem', marginBottom: '3rem', backdropFilter: 'blur(20px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
                     <form onSubmit={handleSubmit}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
                             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--secondary-color)', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', color: '#000' }}>
@@ -199,19 +212,19 @@ export default function GradEnrollPage() {
                                 { label: 'Nacionalidade', name: 'nacionalidade', type: 'text' },
                             ].map(f => (
                                 <div key={f.name}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--fg-3)', fontSize: '0.9rem', fontWeight: 500 }}>{f.label}</label>
                                     <input
                                         name={f.name} type={f.type} required={f.required}
                                         placeholder={f.placeholder}
-                                        value={(formData as any)[f.name]}
+                                        value={(formData as Record<string, string>)[f.name]}
                                         onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }}
+                                        style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--fg-1)', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }}
                                     />
                                 </div>
                             ))}
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Ingresso *</label>
-                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--fg-3)', fontSize: '0.9rem', fontWeight: 500 }}>Ingresso *</label>
+                                <select name="formaIngresso" value={formData.formaIngresso} onChange={handleInputChange} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--fg-1)', fontSize: '1rem', outline: 'none' }}>
                                     <option value="VESTIBULAR_PROPRIO">Vestibular Próprio</option>
                                     <option value="ENEM_SISU">ENEM / SISU</option>
                                     <option value="GRAD_2">2ª Graduação / Portador de Diploma</option>
@@ -219,8 +232,8 @@ export default function GradEnrollPage() {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', fontWeight: 500 }}>Cota *</label>
-                                <select name="tipoCota" value={formData.tipoCota} onChange={handleInputChange} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1rem', outline: 'none' }}>
+                                <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--fg-3)', fontSize: '0.9rem', fontWeight: 500 }}>Cota *</label>
+                                <select name="tipoCota" value={formData.tipoCota} onChange={handleInputChange} style={{ width: '100%', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid var(--field-border)', backgroundColor: 'var(--field-bg)', color: 'var(--fg-1)', fontSize: '1rem', outline: 'none' }}>
                                     <option value="NENHUMA">Ampla Concorrência</option>
                                     <option value="SOCIOECONOMICA">Cota Socioeconômica</option>
                                     <option value="RACIAL">Cota Racial</option>
@@ -248,22 +261,22 @@ export default function GradEnrollPage() {
                                 { label: '🩺 Laudo Médico (Cotas)', name: 'laudoMedico' },
                             ].map(f => (
                                 <div key={f.name} style={{ position: 'relative' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>{f.label}</label>
-                                    <div style={{ position: 'relative', height: '50px', backgroundColor: 'rgba(255,255,255,0.03)', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.6rem', color: 'var(--fg-3)', fontSize: '0.85rem' }}>{f.label}</label>
+                                    <div style={{ position: 'relative', height: '50px', backgroundColor: 'var(--field-surface)', border: '2px dashed var(--field-border)', borderRadius: '12px', display: 'flex', alignItems: 'center', padding: '0 1rem', overflow: 'hidden' }}>
                                         <input
                                             type="file" name={f.name} onChange={handleFileChange}
                                             style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2 }}
                                         />
-                                        <Upload size={16} style={{ marginRight: '0.75rem', opacity: 0.5 }} />
+                                        <Upload size={16} style={{ marginRight: '0.75rem', opacity: 'var(--dim-5)' }} />
                                         <span style={{ fontSize: '0.8rem', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {(files as any)[f.name] ? (files as any)[f.name].name : 'Selecionar arquivo...'}
+                                            {files[f.name]?.name || 'Selecionar arquivo...'}
                                         </span>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid var(--field-border)', paddingTop: '2rem' }}>
                             <button 
                                 type="submit" 
                                 disabled={submitting} 
@@ -281,7 +294,7 @@ export default function GradEnrollPage() {
                             <button 
                                 type="button" 
                                 onClick={() => setShowForm(false)}
-                                style={{ padding: '1rem 2rem', borderRadius: '12px', backgroundColor: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}
+                                style={{ padding: '1rem 2rem', borderRadius: '12px', backgroundColor: 'transparent', color: 'var(--fg-1)', border: '1px solid var(--field-border)', cursor: 'pointer', fontWeight: 600 }}
                             >
                                 Cancelar
                             </button>
@@ -291,28 +304,28 @@ export default function GradEnrollPage() {
             )}
 
             {/* Listagem de Alunos */}
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', overflow: 'hidden' }}>
-                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+            <div style={{ backgroundColor: 'var(--field-surface)', border: '1px solid var(--field-divider)', borderRadius: '24px', overflow: 'hidden' }}>
+                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--field-divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--field-surface)' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Alunos Registrados ({students.length})</h2>
                 </div>
 
                 {isLoading ? (
                     <div style={{ padding: '5rem', textAlign: 'center' }}>
-                        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--secondary-color)', borderRadius: '50%', margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }} />
+                        <div style={{ width: '40px', height: '40px', border: '3px solid var(--field-border)', borderTopColor: 'var(--secondary-color)', borderRadius: '50%', margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }} />
                         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                        <p style={{ opacity: 0.5 }}>Carregando registros...</p>
+                        <p style={{ opacity: 'var(--dim-5)' }}>Carregando registros...</p>
                     </div>
                 ) : students.length === 0 ? (
-                    <div style={{ padding: '5rem', textAlign: 'center', opacity: 0.5 }}>
+                    <div style={{ padding: '5rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>
                         <GraduationCap size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
                         <p style={{ fontSize: '1.1rem' }}>Nenhuma matrícula encontrada na graduação.</p>
-                        <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Use o botão "Nova Inscrição" para matricular um aluno.</p>
+                        <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Use o botão &quot;Nova Inscrição&quot; para matricular um aluno.</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                                <tr style={{ borderBottom: '1px solid var(--field-divider)', color: 'var(--fg-4)', fontSize: '0.85rem' }}>
                                     {['Aluno', 'Contato', 'CPF', 'Curso / Ingresso', 'Docs', 'Status', 'Ações'].map(h => (
                                         <th key={h} style={{ padding: '1.25rem 1.5rem', textAlign: 'left', fontWeight: 600 }}>{h}</th>
                                     ))}
@@ -320,28 +333,28 @@ export default function GradEnrollPage() {
                             </thead>
                             <tbody style={{ fontSize: '0.95rem' }}>
                                 {students.map((s, i) => (
-                                    <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background-color 0.2s' }}>
+                                    <tr key={s.id} style={{ borderBottom: '1px solid var(--field-divider)', transition: 'background-color 0.2s' }}>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ fontWeight: 700, color: '#fff' }}>{s.fullName}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.2rem' }}>{s.registrationNumber}</div>
+                                            <div style={{ fontWeight: 700, color: 'var(--fg-1)' }}>{s.fullName}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--fg-4)', marginTop: '0.2rem' }}>{s.registrationNumber}</div>
                                         </td>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ color: 'rgba(255,255,255,0.7)' }}>{s.email}</div>
-                                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)' }}>{s.phone}</div>
+                                            <div style={{ color: 'var(--fg-2)' }}>{s.email}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--fg-4)' }}>{s.phone}</div>
                                         </td>
-                                        <td style={{ padding: '1.25rem 1.5rem', color: 'rgba(255,255,255,0.7)' }}>{s.cpf}</td>
+                                        <td style={{ padding: '1.25rem 1.5rem', color: 'var(--fg-2)' }}>{s.cpf}</td>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
-                                            <div style={{ fontWeight: 500, color: 'var(--secondary-color)' }}>{s.currentCourse}</div>
-                                            <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>{(s as any).formaIngresso || '-'}</div>
+                                            <div style={{ fontWeight: 500, color: 'var(--accent-text)' }}>{s.currentCourse}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 'var(--dim-5)' }}>{s.formaIngresso || '-'}</div>
                                         </td>
                                         <td style={{ padding: '1.25rem 1.5rem' }}>
                                             <div style={{ display: 'flex', gap: '6px' }}>
                                                 {s.documents?.length > 0 ? (
-                                                    <span style={{ backgroundColor: 'rgba(46,204,113,0.1)', color: '#2ecc71', padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                                    <span style={{ backgroundColor: 'rgba(46,204,113,0.1)', color: 'var(--success-text)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700 }}>
                                                         {s.documents.length} ANEXOS
                                                     </span>
                                                 ) : (
-                                                    <span style={{ backgroundColor: 'rgba(231,76,60,0.1)', color: '#e74c3c', padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                                    <span style={{ backgroundColor: 'rgba(231,76,60,0.1)', color: 'var(--danger-text)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700 }}>
                                                         SEM DOCS
                                                     </span>
                                                 )}
@@ -354,7 +367,7 @@ export default function GradEnrollPage() {
                                                 style={{ 
                                                     padding: '6px 12px', borderRadius: '8px', border: 'none', 
                                                     backgroundColor: (STATUS_COLORS[s.enrollmentStatus] || '#7f8c8d') + '22', 
-                                                    color: STATUS_COLORS[s.enrollmentStatus] || '#7f8c8d', 
+                                                    color: STATUS_TEXT[s.enrollmentStatus] || 'var(--fg-4)', 
                                                     fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' 
                                                 }}
                                             >

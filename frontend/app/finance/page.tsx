@@ -7,14 +7,44 @@ import { useAuditCRUD } from '../hooks/useAuditCRUD';
 import { AuditStamp } from '../components/AuditStamp';
 import { PixQrCode } from '../components/PixQrCode';
 import { toast } from 'sonner';
+import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdFromSearch } from './cardCheckout';
+import Link from 'next/link';
+import { mayOpenPriceTable } from './prices/priceTable';
 
+import { asHttpError } from '@/app/services/httpError';
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
+
+interface StudentRef {
+  fullName?: string;
+  cpf?: string;
+  fotoUrl?: string;
+}
+
+/** Fatura como a API devolve (só os campos que esta tela usa). */
+interface Invoice {
+  id: number;
+  status: string;
+  category?: string;
+  description: string;
+  amount: number;
+  totalAmount?: number;
+  dueDate: string;
+  createdAt?: string;
+  method?: string;
+  paymentCode?: string;
+  secretaryProcessType?: string;
+  student?: StudentRef | null;
+  postgradStudent?: StudentRef | null;
+  creatorName?: string;
+  creatorPosition?: string;
+  creatorPhotoUrl?: string;
+}
 
 export default function FinancePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AcademicLevel>('GRADUATION');
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [history, setHistory] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +54,7 @@ export default function FinancePage() {
   
   // Estados para Modais
   const [showChargeModal, setShowChargeModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState<any | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState<(Invoice & { method: 'PIX' | 'BOLETO'; paymentCode: string }) | null>(null);
   
   // Estado para formulário de nova cobrança
   const [newCharge, setNewCharge] = useState({
@@ -36,15 +66,11 @@ export default function FinancePage() {
     description: ''
   });
   
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentRef | null>(null);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
   
   // Estado para Edição
-  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
-
-  useEffect(() => {
-    fetchFinanceData();
-  }, [activeTab]);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
     const searchStudent = async () => {
@@ -88,6 +114,56 @@ export default function FinancePage() {
     }
   };
 
+  // Declarado depois de fetchFinanceData: o efeito chama a função, que não pode ser usada antes de existir.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga dos dados do servidor ao abrir e ao trocar de aba
+    fetchFinanceData();
+  }, [activeTab]);
+
+  // Retorno do checkout de cartão do PagBank (?payment=<id>). A baixa só acontece pelo webhook; aqui apenas
+  // acompanhamos o histórico por alguns instantes e avisamos, sem nunca afirmar pagamento sem confirmação.
+  const [returnedPaymentId, setReturnedPaymentId] = useState<number | null>(null);
+  const [returnConfirmed, setReturnConfirmed] = useState(false);
+
+  useEffect(() => {
+    const id = paymentIdFromSearch(window.location.search);
+    if (id !== null) {
+      // URL só existe no navegador: ler depois da montagem evita divergência de hidratação com o servidor.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReturnedPaymentId(id);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (returnedPaymentId === null) return;
+    let attempts = 0;
+    let cancelled = false;
+    const check = async () => {
+      attempts += 1;
+      const [grad, post] = await Promise.all(
+        (['GRADUATION', 'POSTGRADUATE'] as AcademicLevel[]).map(level =>
+          api.get(`/finance/history/${level}`).then(r => r.data).catch(() => [])
+        )
+      );
+      if (cancelled) return;
+      const paid = [...(Array.isArray(grad) ? grad : []), ...(Array.isArray(post) ? post : [])]
+        .some((h: { id?: number } | null) => h?.id === returnedPaymentId);
+      if (paid) {
+        setReturnConfirmed(true);
+        toast.success('Pagamento confirmado!');
+        fetchFinanceData();
+        return;
+      }
+      if (attempts < 6) timer = setTimeout(check, 5000);
+    };
+    let timer: ReturnType<typeof setTimeout> = setTimeout(check, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [returnedPaymentId]);
+
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -109,9 +185,25 @@ export default function FinancePage() {
           const endpoint = method === 'PIX' ? `/finance/generate-pix/${id}` : `/finance/generate-boleto/${id}`;
           const res = await api.post(endpoint);
           setShowPaymentModal({ ...res.data, method });
-      } catch (err: any) {
+      } catch (errCaught: unknown) {
+          const err = asHttpError(errCaught);
           const msg = err?.response?.data?.message || `Não foi possível gerar o ${method === 'PIX' ? 'código Pix' : 'boleto'}. Tente novamente.`;
           alert(msg);
+      }
+  };
+
+  const handleCardCheckout = async (id: number) => {
+      try {
+          const res = await api.post(`/finance/generate-card-checkout/${id}`);
+          const url = res?.data?.url;
+          if (!isSafePayUrl(url)) {
+              toast.error(cardCheckoutErrorMessage());
+              return;
+          }
+          window.location.assign(url);
+      } catch (err: unknown) {
+          const response = (err as { response?: { status?: number; data?: { message?: unknown } } })?.response;
+          toast.error(cardCheckoutErrorMessage(response?.status, response?.data?.message));
       }
   };
 
@@ -127,6 +219,7 @@ export default function FinancePage() {
  
   const handleUpdateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingInvoice) return;
     try {
       await invoicesService.update(editingInvoice.id, editingInvoice);
       setEditingInvoice(null);
@@ -151,6 +244,9 @@ export default function FinancePage() {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
+          {mayOpenPriceTable(user?.roles) && (
+            <Link href="/finance/prices" className="hover-lift" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, background: '#f3f0ff', color: '#5b3cc4', display: 'flex', alignItems: 'center' }}>Tabela de valores</Link>
+          )}
           <button onClick={() => setShowChargeModal(true)} className="btn-primary hover-lift" style={{ 
             padding: '12px 24px',
             borderRadius: '12px',
@@ -201,6 +297,14 @@ export default function FinancePage() {
             }}
           >📘 Pós-Graduação</button>
       </div>
+
+      {returnedPaymentId !== null && (
+        <div role="status" className="glass-panel" style={{ backgroundColor: returnConfirmed ? '#f0fff4' : '#fffbea', color: '#333', padding: '1rem', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+          {returnConfirmed
+            ? <><strong>Pagamento confirmado.</strong> A fatura #{returnedPaymentId} foi baixada.</>
+            : <><strong>Aguardando confirmação do pagamento da fatura #{returnedPaymentId}.</strong> A confirmação do banco pode levar alguns instantes; esta tela se atualiza sozinha.</>}
+        </div>
+      )}
 
       {error && (
         <div className="glass-panel" style={{ backgroundColor: '#fff5f5', color: '#c53030', padding: '1rem', marginBottom: '1.5rem', border: '1px solid #feb2b2' }}>
@@ -265,6 +369,9 @@ export default function FinancePage() {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => handleGeneratePayment(invoice.id, 'PIX')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f0faff', color: '#0288d1', fontSize: '0.8rem' }}>Pix</button>
+                        {cardPaymentsEnabled() && (
+                            <button onClick={() => handleCardCheckout(invoice.id)} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f3f0ff', color: '#5b3cc4', fontSize: '0.8rem' }}>Cartão</button>
+                        )}
                         <button onClick={() => handleGeneratePayment(invoice.id, 'BOLETO')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f5f5f5', color: '#333', fontSize: '0.8rem' }}>Boleto</button>
                     </div>
                 </div>
@@ -281,7 +388,7 @@ export default function FinancePage() {
             </div>
           </div>
         )) : (
-          <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: '#999' }}>
+          <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', gridColumn: '1/-1', color: 'var(--text-secondary)' }}>
             Nenhuma cobrança pendente para este nível.
           </div>
         )}
@@ -313,7 +420,7 @@ export default function FinancePage() {
                     ))}
                 </tbody>
             </table>
-            {history.length === 0 && <p style={{ textAlign: 'center', padding: '2rem', color: '#ccc' }}>Nenhum histórico disponível.</p>}
+            {history.length === 0 && <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Nenhum histórico disponível.</p>}
         </div>
       </section>
 

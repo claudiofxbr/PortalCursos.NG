@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import api, { API_BASE_URL, V_BUILD_ID, checkServerHealth } from '@/app/services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 /**
  * PortalCursos Diagnostics Center V18.1 - SIGMA
  * Central de Monitoramento e Estabilização de Rede.
  */
 export default function HealthPage() {
     const [status, setStatus] = useState<'loading' | 'online' | 'offline'>('loading');
-    const [details, setDetails] = useState<any>(null);
-    const [environment, setEnvironment] = useState<any>(null);
+    const [details, setDetails] = useState<Record<string, string> | null>(null);
+    const [environment, setEnvironment] = useState<Record<string, string> | null>(null);
     const [isColdStart, setIsColdStart] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
@@ -31,7 +32,8 @@ export default function HealthPage() {
                     backend: data?.message || data?.status || 'Ativo',
                     protocol: 'SIGMA-V18.1'
                 });
-            } catch (err: any) {
+            } catch (errCaught: unknown) {
+                const err = asHttpError(errCaught);
                 console.error("Health check failed:", err);
                 setStatus('offline');
                 setDetails({
@@ -50,7 +52,7 @@ export default function HealthPage() {
             });
         };
 
-        (window as any).RECHECK_HEALTH = () => checkHealth(true);
+        window.RECHECK_HEALTH = () => checkHealth(true);
         checkHealth();
     }, []);
 
@@ -185,7 +187,7 @@ export default function HealthPage() {
                     <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>Recuperação</h3>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
-                            onClick={() => (window as any).RECHECK_HEALTH?.()}
+                            onClick={() => window.RECHECK_HEALTH?.()}
                             style={{ flex: 1, padding: '0.75rem', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                         >
                             🔄 Re-testar

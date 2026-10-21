@@ -4,10 +4,11 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import api from '@/app/services/api';
 
+import { asHttpError } from '@/app/services/httpError';
 const GLASS_SECTION: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.02)',
+    background: 'var(--field-surface)',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--field-divider)',
     borderRadius: '24px',
     padding: '2rem',
     marginBottom: '1.5rem',
@@ -16,8 +17,29 @@ const GLASS_SECTION: React.CSSProperties = {
 const FIELD_LABEL: React.CSSProperties = { fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' };
 const FIELD_VALUE: React.CSSProperties = { fontSize: '1rem', marginBottom: '1rem' };
 
+/** Dados pessoais como a API devolve (só os campos que esta tela mostra). */
+interface MyData {
+    account?: {
+        username?: string;
+        email?: string;
+        roles?: string[];
+        privacyConsentAccepted?: boolean;
+        privacyConsentVersion?: string;
+        privacyConsentAt?: string;
+    };
+    academic?: {
+        fullName?: string;
+        registrationNumber?: string;
+        cpf?: string;
+        phone?: string;
+        address?: string;
+        course?: string;
+        enrollmentStatus?: string;
+    };
+}
+
 export default function MinhaContaPage() {
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<MyData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [requestStatus, setRequestStatus] = useState<string | null>(null);
@@ -48,7 +70,8 @@ export default function MinhaContaPage() {
         try {
             const res = await api.post('privacy/data-deletion-request');
             setRequestStatus(res.data?.message || 'Solicitação registrada.');
-        } catch (err: any) {
+        } catch (errCaught: unknown) {
+            const err = asHttpError(errCaught);
             setRequestStatus(err.response?.data?.message || 'Não foi possível registrar a solicitação.');
         } finally {
             setRequesting(false);
@@ -56,7 +79,7 @@ export default function MinhaContaPage() {
     };
 
     if (loading) return <div className="fade-in">Carregando seus dados...</div>;
-    if (error) return <div className="fade-in" style={{ color: '#e74c3c' }}>{error}</div>;
+    if (error) return <div className="fade-in" style={{ color: 'var(--danger-text)' }}>{error}</div>;
 
     const account = data?.account || {};
     const academic = data?.academic;
@@ -124,7 +147,7 @@ export default function MinhaContaPage() {
                         style={{
                             padding: '10px 20px',
                             backgroundColor: 'rgba(255, 60, 60, 0.15)',
-                            color: '#ff6b6b',
+                            color: 'var(--danger-text)',
                             border: '1px solid rgba(255, 107, 107, 0.5)',
                             borderRadius: '8px',
                             cursor: requesting ? 'default' : 'pointer',

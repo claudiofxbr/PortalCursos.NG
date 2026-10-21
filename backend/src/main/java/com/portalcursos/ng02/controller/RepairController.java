@@ -163,7 +163,8 @@ public class RepairController {
             ticket.getPhotoUrls().forEach(storageService::delete);
         }
 
-        repairRepository.delete(ticket);
+        ticket.setActive(false);
+        repairRepository.save(ticket);
         return ResponseEntity.ok(new MessageResponse("Chamado removido e evidências deletadas. Protocolo OMEGA."));
     }
 }

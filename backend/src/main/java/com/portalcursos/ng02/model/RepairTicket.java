@@ -16,8 +16,9 @@ import org.hibernate.annotations.SQLRestriction;
 // @SQLDelete removido (mesmo achado do Payment): o SQL customizado não incluía o
 // parâmetro de @Version que o Hibernate injeta para entidades versionadas, então
 // repairTicketRepository.delete()/deleteById() sempre lançaria DataIntegrityViolationException
-// se alguém chegasse a chamá-los — código morto hoje (nenhum lugar chama). Soft-delete real
-// é via setActive(false) + save() (ver UserService.deleteUser).
+// se alguém chegasse a chamá-los. Não é código morto: RepairController.deleteTicket
+// (DELETE /api/repairs/{id}) faz soft-delete real via setActive(false) + save()
+// (mesmo padrão de UserService.deleteUser), sem nunca chamar delete()/deleteById().
 @Entity
 @Table(name = "repair_tickets")
 @Data

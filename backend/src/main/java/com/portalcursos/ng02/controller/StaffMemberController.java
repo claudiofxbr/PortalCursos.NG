@@ -29,7 +29,7 @@ public class StaffMemberController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('ROOT_MASTER')")
     public ResponseEntity<?> getAllStaff() {
-        return ResponseEntity.ok(staffRepository.findAll());
+        return ResponseEntity.ok(staffRepository.findAllByActiveTrue());
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -113,7 +113,8 @@ public class StaffMemberController {
         } catch (Exception e) {
             logger.warn("[STAFF API] Erro ao deletar arquivo de foto: {}", e.getMessage());
         }
-        staffRepository.delete(staff);
+        staff.setActive(false);
+        staffRepository.save(staff);
         return ResponseEntity.ok(new MessageResponse("Membro removido com sucesso."));
     }
 }

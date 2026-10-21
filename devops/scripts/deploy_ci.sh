@@ -1,16 +1,17 @@
 #!/bin/bash
 # =================================================================
 # PortalCursos.NG - CI/CD Deploy Script
-# Edge: nginx do host (xavierbr-vps.tech) -> upstreams portalcursos_api/web
+# Edge: Traefik do EasyPanel (xavierbr-vps.tech) — descobre os containers
+# pelas labels do docker-compose.prod.yml. O nginx do host NAO e o edge.
 # Triggered by: GitHub Actions on push to main
 #
 # DEPLOY_STRATEGY (no .env):
 #   recreate  (padrão) -> recria os containers backend/frontend no lugar.
 #                         Janela de ~15-20s de 502 durante o restart.
-#   blue-green         -> sobe a cor ociosa (green: 8091/3011), valida o health,
-#                         troca o upstream do nginx com `nginx -s reload` (sem
-#                         derrubar conexão) e só então para a cor antiga.
-#                         Zero downtime. Rollback = não trocar o upstream.
+#   blue-green         -> sobe a cor ociosa, valida o health, espera o Traefik
+#                         registrar a nova cor (as duas atendem juntas por alguns
+#                         segundos) e só então para a cor antiga.
+#                         Zero downtime. Rollback = não parar a cor antiga.
 # =================================================================
 set -euo pipefail
 
@@ -19,7 +20,6 @@ DEVOPS_DIR="$PROJECT_ROOT/devops"
 ENV_FILE="$PROJECT_ROOT/.env"
 COMPOSE="docker compose -f $DEVOPS_DIR/docker-compose.prod.yml --env-file $ENV_FILE"
 EASYPANEL_NET="easypanel"
-NGINX_UPSTREAM_CONF="/etc/nginx/conf.d/portalcursos-upstream.conf"
 
 log()  { echo "[$(date '+%H:%M:%S')] $*"; }
 ok()   { echo "[$(date '+%H:%M:%S')] OK  $*"; }
@@ -49,13 +49,6 @@ net_connect() { # $@ = nomes de container
         already=$(docker inspect "$c" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null | tr ' ' '\n' | grep -c "^${EASYPANEL_NET}$" || true)
         [ "${already:-0}" -eq 0 ] && docker network connect "$EASYPANEL_NET" "$c" 2>/dev/null && ok "$c -> rede $EASYPANEL_NET" || true
     done
-}
-write_upstream() { # $1 = porta backend, $2 = porta frontend
-    cat > "$NGINX_UPSTREAM_CONF" <<EOF
-# Gerado pelo deploy_ci.sh em $(date '+%F %T')
-upstream portalcursos_api { server 127.0.0.1:${1} max_fails=0; }
-upstream portalcursos_web { server 127.0.0.1:${2} max_fails=0; }
-EOF
 }
 
 # ── 1. Validacoes ────────────────────────────────────────────────
@@ -93,6 +86,13 @@ log "Buildando imagens Docker..."
 $COMPOSE build backend frontend
 ok "Build concluido"
 
+# `latest` continua sendo o que o compose e o rollback usam; a tag com o SHA e
+# so rastreabilidade (qual commit gerou cada imagem: `docker images`).
+IMAGE_SHA=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD)
+docker tag portalcursos-ng-backend:latest "portalcursos-ng-backend:${IMAGE_SHA}"
+docker tag portalcursos-ng-frontend:latest "portalcursos-ng-frontend:${IMAGE_SHA}"
+ok "Imagens tagueadas com o commit ${IMAGE_SHA}"
+
 BACKEND_READY=false
 FRONTEND_READY=false
 
@@ -100,8 +100,8 @@ FRONTEND_READY=false
 if [ "$DEPLOY_STRATEGY" = "blue-green" ]; then
     log "=== FASE 5: Deploy BLUE-GREEN ==="
 
-    # Cor ativa = a que o upstream do nginx aponta hoje (fallback: blue)
-    if grep -q "127.0.0.1:8091" "$NGINX_UPSTREAM_CONF" 2>/dev/null; then
+    # Cor ativa = a que esta rodando hoje (fallback: blue)
+    if [ "$(docker inspect -f '{{.State.Running}}' portalcursos_backend_green 2>/dev/null || echo false)" = "true" ]; then
         ACTIVE=green
         IDLE_BE_SVC=backend;        IDLE_FE_SVC=frontend
         IDLE_BE_CT=portalcursos_backend;       IDLE_FE_CT=portalcursos_frontend
@@ -134,21 +134,11 @@ if [ "$DEPLOY_STRATEGY" = "blue-green" ]; then
         $COMPOSE rm -f "$IDLE_BE_SVC" "$IDLE_FE_SVC" || true
         fail "Frontend da cor $IDLE nao ficou saudavel. Producao INTACTA na cor $ACTIVE."
     fi
-    ok "Cor $IDLE saudavel — trocando o upstream do nginx para ela"
+    ok "Cor $IDLE saudavel — aguardando o Traefik registrar a nova cor"
 
-    write_upstream "$IDLE_BE_PORT" "$IDLE_FE_PORT"
-    if sudo nginx -t 2>/dev/null; then
-        sudo nginx -s reload
-        ok "nginx recarregado — trafego agora na cor $IDLE"
-    else
-        warn "nginx -t falhou — revertendo upstream e abortando"
-        write_upstream "$ACT_BE_PORT" "$ACT_FE_PORT"
-        sudo nginx -s reload 2>/dev/null || true
-        $COMPOSE stop "$IDLE_BE_SVC" "$IDLE_FE_SVC" || true
-        fail "Switch do nginx abortado. Producao INTACTA na cor $ACTIVE."
-    fi
-
-    sleep 5
+    # O Traefik so inclui o container no balanceamento depois do healthcheck da
+    # label (intervalo 10s); parar a cor antiga antes disso abriria janela de 502.
+    sleep 20
     $COMPOSE stop "$ACT_BE_SVC" "$ACT_FE_SVC" || true
     $COMPOSE rm -f "$ACT_BE_SVC" "$ACT_FE_SVC" || true
     ok "Cor antiga $ACTIVE removida"

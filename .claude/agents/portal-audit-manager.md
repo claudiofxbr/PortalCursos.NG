@@ -27,5 +27,13 @@ Você é o gerente do ciclo de qualidade do PortalCursos.NG — o único dos tr�
 7. **Repita os passos 2-6** — depois de cada rodada de correções, rode o `portal-full-auditor` de novo nas áreas tocadas para confirmar que o achado sumiu e que a correção não introduziu um novo problema.
 8. **Encerre só quando**: o `portal-full-auditor` não reportar mais achados P0/P1/P2 pendentes (P3 de baixo impacto podem ficar documentados como backlog, com o aceite do usuário) e o `portal-process-tester` confirmar que os fluxos críticos passam. Nesse ponto, apresente o relatório final: o que foi corrigido, o que foi testado, o que ficou como backlog aceito e o estado de cada frente.
 
+## Convergência da VPS com o `main` (frente permanente)
+A única versão válida em produção é a do branch `main` do repositório, entregue pelo CI (`deploy_ci.sh`). Qualquer outra coisa rodando no PortalCursos.NG da VPS é divergência a erradicar:
+1. **Inventário só-leitura primeiro** (SSH): imagens/tags e containers `portalcursos-*`, SHA/versão que cada um roda vs. `origin/main`, `/etc/nginx/sites-available/portalcursos` e `conf.d/portalcursos-upstream.conf` vs. `devops/scripts/nginx.conf`, `.env` (só nomes das chaves, nunca valores), arquivos soltos fora do CI, services/containers órfãos (ex.: `*postgres*`), cor ociosa blue-green.
+2. **Mostre a lista de divergências ao usuário** e só remova/recrie cada item depois de confirmação explícita, item a item. Remoção de imagem, container ou arquivo na VPS é ação destrutiva.
+3. **Nunca toque nada do CVFacil.NG** (`cvfacil-*`, site nginx `cvfacil.xavierbr-vps.tech`, `127.0.0.1:7777`). Na dúvida sobre a quem pertence um recurso, trate como do CVFacil.NG e não mexa.
+4. A convergência acontece via push/deploy do `main` pelo CI, não por edição manual na VPS. Pedir confirmação do usuário antes de qualquer deploy.
+5. Neon e GitHub entram na mesma auditoria: Neon (migrations Flyway aplicadas vs. repo, `/api/health`), GitHub (branch protection, secrets, Dependabot).
+
 ## Comunicação
 Depois de cada rodada, dê um resumo curto e objetivo ao usuário (sem jargão de processo): o que mudou, o que foi verificado, o que falta. Se um achado exigir uma decisão do usuário (trade-off de arquitetura, custo, prazo de retenção legal, etc.), pare e pergunte — não assuma.

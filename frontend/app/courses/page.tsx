@@ -5,6 +5,7 @@ import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
 import { AuditStamp } from '@/app/components/AuditStamp';
 
+import { asHttpError } from '@/app/services/httpError';
 interface Course {
     id: string;
     codigoIes: string;
@@ -34,8 +35,8 @@ interface Course {
 }
 
 const SECTION_STYLE = {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    backgroundColor: 'var(--field-surface)',
+    border: '1px solid var(--field-divider)',
     borderRadius: '12px',
     padding: '1.5rem',
     marginBottom: '1.5rem'
@@ -53,16 +54,17 @@ const INPUT_STYLE = {
     width: '100%',
     padding: '0.7rem',
     borderRadius: '8px',
-    border: '1px solid rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    color: 'inherit',
+    border: '1px solid var(--field-border)',
+    backgroundColor: 'var(--field-bg)',
+    color: 'var(--field-text)',
     boxSizing: 'border-box' as const,
     fontSize: '0.9rem'
 };
 
 const SELECT_STYLE = {
     ...INPUT_STYLE,
-    backgroundColor: '#1a1a2e'
+    // Sólido (lista de opções legível): branco no tema claro, azul-noite nos escuros.
+    backgroundColor: 'var(--card-bg)'
 };
 
 export default function CoursesPage() {
@@ -102,13 +104,15 @@ export default function CoursesPage() {
         try {
             const res = await api.get('v1/courses');
             setCourses(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError('Erro ao carregar cursos.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { loadCourses(); }, []);
 
     // Seções Colapsáveis
@@ -178,7 +182,8 @@ export default function CoursesPage() {
             setEditingId(null);
             setShowForm(false);
             loadCourses();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao cadastrar curso. Verifique se os campos estão preenchidos corretamente.');
         } finally {
             setSubmitting(false);
@@ -244,23 +249,23 @@ export default function CoursesPage() {
                     <h1 style={{ fontSize: '2.2rem', fontWeight: 800, background: 'linear-gradient(45deg, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         🎒 Gestão do MEC - Cursos
                     </h1>
-                    <p style={{ opacity: 0.5, fontSize: '0.9rem', marginTop: '0.5rem' }}>Conformidade Institucional & Diretrizes MEC</p>
+                    <p style={{ opacity: 'var(--dim-5)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Conformidade Institucional & Diretrizes MEC</p>
                 </div>
                 <button 
                     onClick={() => isEditing ? handleCancelEdit() : setShowForm(!showForm)} 
-                    style={{ padding: '0.8rem 1.5rem', borderRadius: '10px', backgroundColor: isEditing ? '#e74c3c' : 'rgba(212, 175, 55, 0.15)', color: isEditing ? '#fff' : 'var(--secondary-color)', border: isEditing ? 'none' : '1px solid var(--secondary-color)', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.3s' }}
+                    style={{ padding: '0.8rem 1.5rem', borderRadius: '10px', backgroundColor: isEditing ? '#e74c3c' : 'rgba(212, 175, 55, 0.15)', color: isEditing ? '#fff' : 'var(--accent-text)', border: isEditing ? 'none' : '1px solid var(--secondary-color)', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.3s' }}
                 >
                     {isEditing ? '✖️ Cancelar Edição' : showForm ? '🔼 Fechar Formulário' : '➕ Registrar Novo Curso'}
                 </button>
             </div>
 
-            {error && <div style={{ padding: '1rem', backgroundColor: 'rgba(231, 76, 60, 0.15)', border: '1px solid #e74c3c', borderRadius: '10px', color: '#e74c3c', marginBottom: '1.5rem', fontWeight: 600 }}>{error}</div>}
-            {success && <div style={{ padding: '1rem', backgroundColor: 'rgba(46, 204, 113, 0.15)', border: '1px solid #2ecc71', borderRadius: '10px', color: '#2ecc71', marginBottom: '1.5rem', fontWeight: 600 }}>{success}</div>}
+            {error && <div style={{ padding: '1rem', backgroundColor: 'rgba(231, 76, 60, 0.15)', border: '1px solid #e74c3c', borderRadius: '10px', color: 'var(--danger-text)', marginBottom: '1.5rem', fontWeight: 600 }}>{error}</div>}
+            {success && <div style={{ padding: '1rem', backgroundColor: 'rgba(46, 204, 113, 0.15)', border: '1px solid #2ecc71', borderRadius: '10px', color: 'var(--success-text)', marginBottom: '1.5rem', fontWeight: 600 }}>{success}</div>}
 
             {/* Form */}
             {showForm && (
-                <form onSubmit={handleSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '3rem', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--secondary-color)' }}>
+                <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--field-surface)', padding: '2rem', borderRadius: '20px', border: '1px solid var(--field-divider)', marginBottom: '3rem', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--accent-text)' }}>
                         {isEditing ? '📝 Editando Registro MEC' : '🏛️ Dados Obrigatórios do Curso'}
                     </h2>
 
@@ -270,7 +275,7 @@ export default function CoursesPage() {
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('institucional')}
                         >
-                            <h3 style={{ margin: 0, color: 'var(--secondary-color)', fontSize: '1.1rem', fontWeight: 700 }}>
+                            <h3 style={{ margin: 0, color: 'var(--accent-text)', fontSize: '1.1rem', fontWeight: 700 }}>
                                 🏛️ I. Dados Institucionais e Estrutura
                             </h3>
                             <span style={{ transform: openSections.institucional ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
@@ -319,7 +324,7 @@ export default function CoursesPage() {
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('autorizativo')}
                         >
-                            <h3 style={{ margin: 0, color: 'var(--secondary-color)', fontSize: '1.1rem', fontWeight: 700 }}>
+                            <h3 style={{ margin: 0, color: 'var(--accent-text)', fontSize: '1.1rem', fontWeight: 700 }}>
                                 📜 II. Atos Autorizativos e Resoluções
                             </h3>
                             <span style={{ transform: openSections.autorizativo ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
@@ -349,7 +354,7 @@ export default function CoursesPage() {
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                             onClick={() => toggleSection('docente')}
                         >
-                            <h3 style={{ margin: 0, color: 'var(--secondary-color)', fontSize: '1.1rem', fontWeight: 700 }}>
+                            <h3 style={{ margin: 0, color: 'var(--accent-text)', fontSize: '1.1rem', fontWeight: 700 }}>
                                 👨‍🏫 III. Coordenação e Corpo Docente
                             </h3>
                             <span style={{ transform: openSections.docente ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
@@ -410,11 +415,11 @@ export default function CoursesPage() {
                             />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--secondary-color)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>
+                            <h4 style={{ margin: '0 0 0.2rem 0', color: 'var(--accent-text)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>
                                 Auditoria MEC (Responsável pelo Registro)
                             </h4>
                             <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{user?.fullName || user?.username || 'Sessão Administrativa'}</p>
-                            <p style={{ margin: '0.1rem 0 0 0', opacity: 0.8, fontSize: '0.8rem', color: 'var(--secondary-color)', fontWeight: 600 }}>{user?.position || 'COORDENAÇÃO ACADÊMICA'}</p>
+                            <p style={{ margin: '0.1rem 0 0 0', opacity: 0.8, fontSize: '0.8rem', color: 'var(--accent-text)', fontWeight: 600 }}>{user?.position || 'COORDENAÇÃO ACADÊMICA'}</p>
                         </div>
                     </div>
 
@@ -427,18 +432,18 @@ export default function CoursesPage() {
             )}
 
             {/* List */}
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem' }}>
+            <div style={{ backgroundColor: 'var(--field-surface)', borderRadius: '15px', border: '1px solid var(--field-divider)', padding: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', opacity: 0.8 }}>Cursos Registrados ({courses.length})</h2>
 
                 {isLoading ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.5 }}>Carregando dados...</div>
+                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 'var(--dim-5)' }}>Carregando dados...</div>
                 ) : courses.length === 0 ? (
-                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.4 }}>Nenhum curso cadastrado no sistema.</div>
+                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 'var(--dim-4)' }}>Nenhum curso cadastrado no sistema.</div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                                <tr style={{ borderBottom: '1px solid var(--field-border)', textAlign: 'left' }}>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>DENOMINAÇÃO / CÓD. IES</th>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>NÍVEL / MODALIDADE</th>
                                     <th style={{ padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>CARGA H.</th>
@@ -448,13 +453,13 @@ export default function CoursesPage() {
                             </thead>
                             <tbody>
                                 {courses.map(c => (
-                                    <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
+                                    <tr key={c.id} style={{ borderBottom: '1px solid var(--field-divider)', transition: 'background 0.2s' }}>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ fontWeight: 600 }}>{c.denominacaoCurso}</div>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>IES: {c.codigoIes}</div>
+                                            <div style={{ fontSize: '0.75rem', opacity: 'var(--dim-5)' }}>IES: {c.codigoIes}</div>
                                         </td>
                                         <td style={{ padding: '1rem' }}>
-                                            <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)' }}>{c.nivelPosGraduacao}</span>
+                                            <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--field-bg)' }}>{c.nivelPosGraduacao}</span>
                                             <div style={{ fontSize: '0.75rem', marginTop: '0.3rem', opacity: 0.7 }}>{c.modalidade}</div>
                                         </td>
                                         <td style={{ padding: '1rem' }}>{c.cargaHorariaTotal}h</td>
@@ -467,7 +472,7 @@ export default function CoursesPage() {
                                                     date={c.registrationDate}
                                                 />
                                             ) : (
-                                                <span style={{ fontSize: '0.7rem', opacity: 0.3 }}>Automático</span>
+                                                <span style={{ fontSize: '0.7rem', opacity: 'var(--dim-3)' }}>Automático</span>
                                             )}
                                         </td>
                                         <td style={{ padding: '1rem' }}>
@@ -482,7 +487,7 @@ export default function CoursesPage() {
                                                 <button 
                                                     onClick={() => handleDelete(c.id)} 
                                                     title="Remover Registro"
-                                                    style={{ background: 'rgba(231, 76, 60, 0.1)', border: '1px solid #e74c3c', color: '#e74c3c', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ background: 'rgba(231, 76, 60, 0.1)', border: '1px solid #e74c3c', color: 'var(--danger-text)', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
                                                     🗑️
                                                 </button>

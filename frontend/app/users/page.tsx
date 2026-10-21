@@ -5,6 +5,8 @@ import api, { BASE_URL } from '@/app/services/api';
 import { useAuth } from '@/app/context/AuthContext';
 import PhotoUpload3x4 from '@/components/PhotoUpload3x4';
 
+import { asHttpError } from '@/app/services/httpError';
+import { roleName, type RoleLike } from '@/app/services/roles';
 interface Role {
     id: number;
     name: string;
@@ -136,6 +138,7 @@ export default function UsersManagementPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [newRoles, setNewRoles] = useState<string[]>([]);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marca de montagem: evita divergência de hidratação com o servidor
     useEffect(() => { setIsMounted(true); }, []);
 
     const getRoleLevel = (roleName: string) => {
@@ -150,9 +153,9 @@ export default function UsersManagementPage() {
         return 20;
     };
 
-    const getMaxLevel = (user: any) => {
+    const getMaxLevel = (user: { roles?: RoleLike[] } | null | undefined) => {
         if (!user?.roles) return 0;
-        return Math.max(...user.roles.map((r: any) => getRoleLevel(typeof r === 'string' ? r : r.name)));
+        return Math.max(...user.roles.map((r: RoleLike) => getRoleLevel(roleName(r))));
     };
 
     const loadUsers = async () => {
@@ -160,13 +163,15 @@ export default function UsersManagementPage() {
             setIsLoading(true);
             const res = await api.get('v1/users');
             setUsers(res.data);
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError('⚠️ Falha de rede ou permissão insuficiente para listar governança.');
         } finally {
             setIsLoading(false);
         }
     };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados do servidor ao abrir a página
     useEffect(() => { if (isMounted) loadUsers(); }, [isMounted]);
 
     const [formData, setFormData] = useState({
@@ -204,7 +209,8 @@ export default function UsersManagementPage() {
             setShowForm(false);
             setFormData({ username: '', email: '', password: '', roles: ['ALUNO'], fullName: '', position: '', department: '', foto3x4File: null });
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro na sincronização atômica.');
         } finally {
             setSubmitting(false);
@@ -219,7 +225,8 @@ export default function UsersManagementPage() {
             await api.delete(`v1/users/${user.id}`);
             setSuccess('🗑️ Usuário removido da base institucional.');
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao remover colaborador.');
         }
     };
@@ -231,7 +238,8 @@ export default function UsersManagementPage() {
             setSuccess('🛡️ Nível de acesso atualizado com segurança.');
             setEditingUser(null);
             loadUsers();
-        } catch (e: any) {
+        } catch (eCaught: unknown) {
+            const e = asHttpError(eCaught);
             setError(e?.response?.data?.message || 'Erro ao redefinir autoridade.');
         } finally {
             setSubmitting(false);
@@ -247,10 +255,10 @@ export default function UsersManagementPage() {
             {/* Header */}
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-3px', color: '#fff', marginBottom: '0.5rem' }}>
-                        GOVERNANÇA <span style={{ color: 'var(--secondary-color)' }}>NG</span>
+                    <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-3px', color: 'var(--fg-1)', marginBottom: '0.5rem' }}>
+                        GOVERNANÇA <span style={{ color: 'var(--accent-text)' }}>NG</span>
                     </h1>
-                    <p style={{ opacity: 0.4, fontWeight: 700, letterSpacing: '2px', fontSize: '0.8rem' }}>PROTOCOL V50.0 // HIERARCHICAL ENGINE</p>
+                    <p style={{ opacity: 'var(--dim-4)', fontWeight: 700, letterSpacing: '2px', fontSize: '0.8rem' }}>PROTOCOL V50.0 // HIERARCHICAL ENGINE</p>
                 </div>
                 {opLevel >= 40 && (
                     <button 
@@ -273,7 +281,7 @@ export default function UsersManagementPage() {
             <div style={GLASS_SECTION}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                        <tr style={{ borderBottom: '1px solid var(--field-border)', textAlign: 'left' }}>
                             <th style={TH_STYLE}>Identidade Institucional</th>
                             <th style={TH_STYLE}>Autoridade</th>
                             <th style={{ ...TH_STYLE, textAlign: 'right' }}>Ações de Controle</th>
@@ -281,7 +289,7 @@ export default function UsersManagementPage() {
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', opacity: 0.3 }}>Sincronizando registros da nuvem...</td></tr>
+                            <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', opacity: 'var(--dim-3)' }}>Sincronizando registros da nuvem...</td></tr>
                         ) : users.map(user => {
                             const userLevel = getMaxLevel(user);
                             const canManage = (opLevel > userLevel || opLevel === 100) && user.username !== 'rootmaster' && user.username !== currentUser?.username;
@@ -296,8 +304,8 @@ export default function UsersManagementPage() {
                                                 ) : <div style={AVATAR_PLACEHOLDER}>👤</div>}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>{user.username}</div>
-                                                <div style={{ fontSize: '0.85rem', opacity: 0.4 }}>{user.email}</div>
+                                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--fg-1)' }}>{user.username}</div>
+                                                <div style={{ fontSize: '0.85rem', opacity: 'var(--dim-4)' }}>{user.email}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -330,14 +338,14 @@ export default function UsersManagementPage() {
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                             <button 
-                                                onClick={() => { setEditingUser(user); setNewRoles(user.roles.map((r: any) => (typeof r === 'string' ? r : r.name).replace('ROLE_', ''))); }}
+                                                onClick={() => { setEditingUser(user); setNewRoles(user.roles.map((r: RoleLike) => roleName(r).replace('ROLE_', ''))); }}
                                                 disabled={!canManage}
-                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--secondary-color)' : 'rgba(255,255,255,0.05)' }}
+                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--accent-text)' : 'var(--field-divider)' }}
                                             >ALTERAR</button>
                                             <button 
                                                 onClick={() => handleDelete(user)}
                                                 disabled={!canManage}
-                                                style={{ ...ACTION_BTN, color: canManage ? '#ff4757' : 'rgba(255,255,255,0.05)' }}
+                                                style={{ ...ACTION_BTN, color: canManage ? 'var(--danger-text)' : 'var(--field-divider)' }}
                                             >REMOVER</button>
                                         </div>
                                     </td>
@@ -433,7 +441,7 @@ export default function UsersManagementPage() {
     );
 }
 
-const TH_STYLE = { padding: '1.5rem', opacity: 0.3, fontSize: '0.7rem', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 800 };
+const TH_STYLE = { padding: '1.5rem', opacity: 'var(--dim-3)', fontSize: '0.7rem', textTransform: 'uppercase' as const, letterSpacing: '2px', fontWeight: 800 };
 const TR_STYLE = { borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.3s' };
 const BADGE_STYLE = { fontSize: '0.6rem', fontWeight: 900, padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.5px' };
 const AVATAR_CONTAINER = { width: '45px', height: '60px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' };

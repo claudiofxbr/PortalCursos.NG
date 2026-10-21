@@ -145,28 +145,28 @@ try {
     # Garante que a pasta base exista na VPS
     ssh -o StrictHostKeyChecking=accept-new "$vpsUser@$vpsIp" "sudo mkdir -p /var/www/portalcursos && sudo chown -R root:root /var/www/portalcursos"
 
-    # Transfere o arquivo .env local de forma segura via SCP para a VPS
-    Write-Host "    -> Transferindo arquivo .env local via SCP..." -ForegroundColor DarkCyan
-    scp -o StrictHostKeyChecking=accept-new "$envFile" "${vpsUser}@${vpsIp}:/var/www/portalcursos/.env"
-    Write-Host "    [OK] Arquivo .env sincronizado com a VPS!" -ForegroundColor Green
-    
-    # Executa o orquestrador completo
-    Write-Host "    -> Disparando build e deploy Docker..." -ForegroundColor DarkCyan
-    # git fetch + reset --hard origin/main (em vez de "git pull") evita depender de
-    # tracking de branch configurado na VPS — "git pull" falhava silenciosamente
-    # quando a branch local nao tinha upstream, deixando o deploy rodar com codigo
-    # desatualizado sem nenhum erro visivel.
+    # O .env de producao NUNCA e sobrescrito a partir daqui: e gerenciado so na VPS
+    # (achado de auditoria 2026-09-30 — um "scp" automatico aqui sobrescrevia o .env real
+    # da VPS com o .env local do desenvolvedor, sem diff nem confirmacao, podendo invalidar
+    # sessoes ativas — JWT secret diferente — ou apontar producao para outro banco). O
+    # devops/scripts/deploy_ci.sh (mesmo script usado pelo pipeline oficial do CI) falha
+    # cedo e com mensagem clara se o .env remoto nao existir ou faltar variavel critica.
+    Write-Host "    -> .env de producao gerenciado so na VPS (nao e sobrescrito por este script)." -ForegroundColor DarkCyan
+
+    # Executa o mesmo pipeline do CI (devops/scripts/deploy_ci.sh), nao mais o script
+    # legado em devops/scripts/legacy-do-not-run/ (achado de auditoria 2026-09-30 — esse
+    # script legado assume Traefik como borda e tenta subir um servico "postgres" que nao
+    # existe mais no docker-compose.prod.yml, quebrando o deploy). deploy_ci.sh ja faz o
+    # proprio "git fetch + reset --hard" contra a VPS antes de buildar — nao duplicar aqui.
+    Write-Host "    -> Disparando deploy_ci.sh (mesmo pipeline do CI/CD oficial)..." -ForegroundColor DarkCyan
     $sshCommand = "if [ ! -d '/var/www/portalcursos/.git' ]; then " +
                   "  echo '    [!] Repositorio nao encontrado na VPS. Clonando do Github...' && " +
                   "  sudo rm -rf /var/www/portalcursos && " +
                   "  sudo git clone https://github.com/claudiofxbr/PortalCursos.NG /var/www/portalcursos && " +
-                  "  sudo cp /tmp/portal_env /var/www/portalcursos/.env 2>/dev/null || true; " +
+                  "  echo '    [!] Configure /var/www/portalcursos/.env manualmente antes de prosseguir (nao e copiado automaticamente).'; " +
                   "fi && " +
                   "cd /var/www/portalcursos && " +
-                  "git fetch origin main && " +
-                  "git reset --hard origin/main && " +
-                  "chmod +x devops/scripts/legacy-do-not-run/deploy_docker_compose.sh && " +
-                  "./devops/scripts/legacy-do-not-run/deploy_docker_compose.sh"
+                  "bash devops/scripts/deploy_ci.sh"
 
     ssh -o StrictHostKeyChecking=accept-new "$vpsUser@$vpsIp" $sshCommand
     if ($LASTEXITCODE -ne 0) {
