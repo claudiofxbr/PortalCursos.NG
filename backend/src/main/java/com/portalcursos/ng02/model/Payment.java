@@ -86,6 +86,10 @@ public class Payment extends BaseAuditEntity {
 
     private String description;
 
+    /** Linha da tabela de valores de onde o valor saiu (nulo em cobranças anteriores ou de valor livre). */
+    @Column(name = "charge_price_id")
+    private Long chargePriceId;
+
     @Column(columnDefinition = "TEXT")
     private String studentPhotoUrl;
 

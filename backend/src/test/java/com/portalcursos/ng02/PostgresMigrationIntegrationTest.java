@@ -278,6 +278,36 @@ class PostgresMigrationIntegrationTest {
                         + "VALUES (?, 11.00, 'PENDING', 'chefe')", priceId));
     }
 
+    // V26: a cobrança guarda de qual linha da tabela de valores veio o valor; apagar a linha não apaga a cobrança.
+    @Test
+    void cobrancaGuardaALinhaDaTabelaDeValoresESobreviveAoSeuRemocaoContraPostgresReal() {
+        Long priceId = rematriculaGlobalId();
+        Payment saved = paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("100.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(5))
+                .status(EPaymentStatus.PENDING)
+                .chargePriceId(priceId)
+                .build());
+        entityManager.clear();
+        assertEquals(priceId, paymentRepository.findById(saved.getId()).orElseThrow().getChargePriceId());
+
+        jdbcTemplate.update("DELETE FROM charge_prices WHERE id = ?", priceId);
+
+        Long afterDelete = jdbcTemplate.queryForObject(
+                "SELECT charge_price_id FROM payments WHERE id = ?", Long.class, saved.getId());
+        assertNull(afterDelete, "ON DELETE SET NULL: a cobrança fica, só perde o vínculo");
+    }
+
+    @Test
+    void cobrancaNaoAceitaVinculoComLinhaInexistenteDaTabelaDeValoresContraPostgresReal() {
+        assertThrows(DataIntegrityViolationException.class, () -> paymentRepository.saveAndFlush(Payment.builder()
+                .amount(new java.math.BigDecimal("100.00"))
+                .dueDate(java.time.LocalDate.now().plusDays(5))
+                .status(EPaymentStatus.PENDING)
+                .chargePriceId(999999999L)
+                .build()));
+    }
+
     @Test
     void valorNegativoEhRecusadoPeloBancoContraPostgresReal() {
         Long priceId = rematriculaGlobalId();
