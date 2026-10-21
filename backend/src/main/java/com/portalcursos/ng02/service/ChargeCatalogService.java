@@ -81,7 +81,7 @@ public class ChargeCatalogService {
     }
 
     /** Curso do aluno: o vínculo direto; na pós-graduação, na falta dele, o curso desejado pelo nome. */
-    private UUID courseIdOf(Student student) {
+    public UUID courseIdOf(Student student) {
         if (student == null) {
             return null;
         }
