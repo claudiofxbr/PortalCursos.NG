@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr146-monitor",
+      "label": "#146 — fix(pagbank): registra o código HTTP da falha do PagBank no log",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T17:50:30Z"
+  "updatedAt": "2026-10-21T18:15:18Z"
 }
