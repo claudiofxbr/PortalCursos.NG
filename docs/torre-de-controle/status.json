@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr150-monitor",
+      "label": "#150 — feat(financeiro): pedido e decisão de exceção de valor na interface (frontend)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T21:04:02Z"
+  "updatedAt": "2026-10-21T21:08:11Z"
 }
