@@ -308,6 +308,60 @@ class PostgresMigrationIntegrationTest {
                 .build()));
     }
 
+    // V27: pedidos de exceção ao valor da tabela. Uma violação por teste (no Postgres a transação aborta no erro).
+    private Long novoAlunoParaExcecao(String sufixo) {
+        Student s = studentRepository.saveAndFlush(Student.builder()
+                .registrationNumber("EXC-" + sufixo).fullName("Aluno " + sufixo)
+                .email("exc" + sufixo + "@example.com").cpf("1234567890" + sufixo).build());
+        return s.getId();
+    }
+
+    private void inserirExcecao(Long studentId, Long priceId, String status, String requested) {
+        jdbcTemplate.update("INSERT INTO charge_amount_exceptions (student_id, academic_level, charge_price_id, "
+                + "table_amount, requested_amount, due_date, reason, status, requested_by) "
+                + "VALUES (?, 'GRADUATION', ?, 100.00, " + requested + ", CURRENT_DATE, 'Justificativa de teste', ?, 'ana')",
+                studentId, priceId, status);
+    }
+
+    @Test
+    void pedidoDeExcecaoValidoEhAceitoContraPostgresReal() {
+        inserirExcecao(novoAlunoParaExcecao("1"), rematriculaGlobalId(), "PENDING", "60.00");
+        Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM charge_amount_exceptions", Integer.class);
+        assertEquals(1, total);
+    }
+
+    @Test
+    void soPodeHaverUmPedidoPendentePorAlunoEProcedimentoContraPostgresReal() {
+        Long aluno = novoAlunoParaExcecao("2");
+        Long price = rematriculaGlobalId();
+        inserirExcecao(aluno, price, "PENDING", "60.00");
+        assertThrows(DataIntegrityViolationException.class, () -> inserirExcecao(aluno, price, "PENDING", "70.00"));
+    }
+
+    @Test
+    void depoisDeDecididoPodeHaverNovoPedidoPendenteContraPostgresReal() {
+        Long aluno = novoAlunoParaExcecao("3");
+        Long price = rematriculaGlobalId();
+        inserirExcecao(aluno, price, "REJECTED", "60.00");
+        inserirExcecao(aluno, price, "PENDING", "70.00");
+        Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM charge_amount_exceptions", Integer.class);
+        assertEquals(2, total);
+    }
+
+    @Test
+    void pedidoDeExcecaoComValorNegativoEhRecusadoPeloBancoContraPostgresReal() {
+        Long aluno = novoAlunoParaExcecao("4");
+        Long price = rematriculaGlobalId();
+        assertThrows(DataIntegrityViolationException.class, () -> inserirExcecao(aluno, price, "PENDING", "-1.00"));
+    }
+
+    @Test
+    void pedidoDeExcecaoComSituacaoInvalidaEhRecusadoPeloBancoContraPostgresReal() {
+        Long aluno = novoAlunoParaExcecao("5");
+        Long price = rematriculaGlobalId();
+        assertThrows(DataIntegrityViolationException.class, () -> inserirExcecao(aluno, price, "QUALQUER", "60.00"));
+    }
+
     @Test
     void valorNegativoEhRecusadoPeloBancoContraPostgresReal() {
         Long priceId = rematriculaGlobalId();

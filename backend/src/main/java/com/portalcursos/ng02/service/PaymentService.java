@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.ManualChargeRequest;
+import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.EAcademicLevel;
 import com.portalcursos.ng02.model.EPaymentStatus;
@@ -26,8 +27,18 @@ public class PaymentService {
     private final PostgradStudentRepository postgradStudentRepository;
     private final AuditService auditService;
     private final ChargeCatalogService chargeCatalogService;
+    private final ChargePolicy chargePolicy;
+
+    private static final String AMOUNT_LOCKED_MESSAGE =
+            "O valor da cobrança vem da tabela de valores e não pode ser alterado aqui. "
+            + "Para um valor diferente, a secretária do curso deve pedir uma exceção, aprovada por um administrador.";
 
     public Payment createManualCharge(ManualChargeRequest request) {
+        if (chargePolicy.enforceTablePrice() && request.getChargePriceId() == null) {
+            throw new BusinessException("Escolha o procedimento: o valor da cobrança vem da tabela de valores. "
+                    + "Para um valor diferente, a secretária do curso deve pedir uma exceção, aprovada por um administrador.");
+        }
+
         Payment payment = Payment.builder()
                 .amount(request.getAmount())
                 .dueDate(request.getDueDate())
@@ -70,7 +81,15 @@ public class PaymentService {
         Payment payment = paymentRepository.findByIdWithCreatorAndStudent(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
-        payment.setAmount(request.getAmount());
+        if (chargePolicy.enforceTablePrice()) {
+            // O valor da cobrança só nasce da tabela (ou de uma exceção aprovada); editar não o altera.
+            if (request.getAmount() != null && payment.getAmount() != null
+                    && request.getAmount().compareTo(payment.getAmount()) != 0) {
+                throw new BusinessException(AMOUNT_LOCKED_MESSAGE);
+            }
+        } else {
+            payment.setAmount(request.getAmount());
+        }
         payment.setDueDate(request.getDueDate());
         payment.setCategory(request.getCategory());
         payment.setSecretaryProcessType(request.getSecretaryProcessType());
