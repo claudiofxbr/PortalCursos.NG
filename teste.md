@@ -230,7 +230,7 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 | E-05 ✅ **CORRIGIDO** (erros) | Informativa | Frontend (qualidade) | `eslint` com 82 erros e 57 avisos (maioria `no-explicit-any` já existente) | `npx eslint app` | Erros zerados (PR #133); 59 avisos restantes |
 | E-06 | Informativa | Ambiente local | O teste de migração em Postgres real não roda sem Docker | `./mvnw test` com Docker desligado | Ligar o Docker local; no CI já roda e passa |
 | E-07 | Observação | Desempenho | `/api/health` com 10 requisições em paralelo: p50 804 ms, p95 1090 ms. A latência do banco no health é ~250 ms (Neon remoto). Sem falhas | Seção 4, BB-102 | Não é defeito; acompanhar se a carga real crescer. Considerar cache curto no health |
-| E-08 | Observação | Segurança / operação | GitHub aponta 6 vulnerabilidades de dependências (2 críticas, 1 alta) e há 15 PRs do Dependabot abertos (não analisado nesta rodada); `.env` da VPS com permissão 644; sobras de contêineres Traefik "Created" na VPS | — | Triar vulnerabilidades; `chmod 600` no `.env`; limpar contêineres órfãos (todos com autorização) |
+| E-08 | Observação | Segurança / operação | Vulnerabilidades do Dependabot **zeradas em 21/10/2026** (PRs #135 e #137); PRs de versão remanescentes triados (backend consolidado no PR #141; restam jsdom e lucide-react); `.env` da VPS com permissão 644; sobras de contêineres Traefik "Created" na VPS | — | Triar vulnerabilidades; `chmod 600` no `.env`; limpar contêineres órfãos (todos com autorização) |
 
 ---
 
@@ -313,6 +313,6 @@ Não foi inserido nenhum código de acesso nem credencial na tela.
 
 ### Observações ainda abertas
 - **E-05 ✅ CORRIGIDO (erros):** os 82 erros de `eslint` antigos foram zerados no PR #133 (`asHttpError`/`roleName` no lugar de `any`, estados tipados, efeitos reordenados, aspas escapadas, `eslint-disable` justificado nos efeitos de montagem). Verificação: `tsc`, `eslint` (0 erros), `vitest` (94 testes), `next build` e navegação local nas páginas alteradas; em produção `/api/health` UP e páginas 200. Restam **59 avisos** (`no-unused-vars`, `no-img-element`, `exhaustive-deps`), mantidos de propósito.
-- **E-08:** 6 vulnerabilidades do Dependabot e 15 PRs de dependências abertos (não triados; atualizações maiores exigem testes próprios).
+- **E-08:** alertas do Dependabot em 0 (PRs #135 e #137); dependências do backend atualizadas no PR #141; ficam abertos apenas os PRs de jsdom 30 e lucide-react, aguardando o Dependabot.
 
 **Observação (nova, baixa):** um token JWT malformado enviado a qualquer rota é registrado em nível `ERROR` (`JwtUtils`: "Token malformado"), o que permite a qualquer cliente gerar linhas de erro no log. Sugestão: baixar para `WARN`. Não alterado.
