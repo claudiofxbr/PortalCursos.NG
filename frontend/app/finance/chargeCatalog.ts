@@ -82,7 +82,12 @@ export function catalogErrorMessage(status?: number): string {
 }
 
 /** Retorna a mensagem de erro de validação, ou null se o formulário pode ser enviado. */
-export function validateCharge(form: ChargeForm, selected: CatalogItem | null, catalogFailed: boolean): string | null {
+export function validateCharge(
+  form: ChargeForm,
+  selected: CatalogItem | null,
+  catalogFailed: boolean,
+  enforceTablePrice = false,
+): string | null {
   if (!form.studentId) return 'Informe o aluno.';
   if (!form.dueDate) return 'Informe a data de vencimento.';
   if (selected) {
@@ -90,6 +95,7 @@ export function validateCharge(form: ChargeForm, selected: CatalogItem | null, c
     return null;
   }
   if (catalogFailed) return 'A lista de procedimentos não carregou; recarregue antes de lançar a cobrança.';
+  if (enforceTablePrice) return 'Escolha o procedimento: o valor da cobrança vem da tabela de valores.';
   const amount = parseFloat(form.amount);
   if (Number.isNaN(amount) || amount < 0) return 'Informe um valor válido (zero ou maior).';
   return null;

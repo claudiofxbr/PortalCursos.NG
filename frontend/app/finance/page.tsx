@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdFromSearch } from './cardCheckout';
 import Link from 'next/link';
 import { mayOpenPriceTable } from './prices/priceTable';
+import { ExceptionRequestModal } from './ExceptionRequestModal';
+import { DEFAULT_POLICY, normalizePolicy, type ChargePolicy } from './chargeExceptions';
 import {
   applyProcedure, buildChargePayload, catalogErrorMessage, clearProcedure, EMPTY_CHARGE, groupItems, optionLabel,
   sourceLabel, validateCharge, type CatalogItem, type ChargeForm,
@@ -69,6 +71,10 @@ export default function FinancePage() {
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [selectedPriceId, setSelectedPriceId] = useState<number | null>(null);
   const selectedItem = catalog.find(item => item.priceId === selectedPriceId) ?? null;
+
+  // Política de valores vinda do servidor: "valor sempre da tabela" e quem pode pedir/decidir exceções.
+  const [policy, setPolicy] = useState<ChargePolicy>(DEFAULT_POLICY);
+  const [showExceptionModal, setShowExceptionModal] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<StudentRef | null>(null);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
@@ -98,6 +104,12 @@ export default function FinancePage() {
     const timer = setTimeout(searchStudent, 800);
     return () => clearTimeout(timer);
   }, [newCharge.studentId, activeTab]);
+
+  useEffect(() => {
+    api.get('/finance/charge-policy')
+      .then(res => setPolicy(normalizePolicy(res.data)))
+      .catch(() => setPolicy(DEFAULT_POLICY));
+  }, []);
 
   useEffect(() => {
     if (!showChargeModal || !selectedStudent || !newCharge.studentId) {
@@ -209,7 +221,7 @@ export default function FinancePage() {
 
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
-    const problem = validateCharge(newCharge, selectedItem, catalogMessage !== null);
+    const problem = validateCharge(newCharge, selectedItem, catalogMessage !== null, policy.enforceTablePrice);
     if (problem) {
       toast.error(problem);
       return;
@@ -287,6 +299,9 @@ export default function FinancePage() {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
+          {(policy.canRequestException || policy.canDecideException) && (
+            <Link href="/finance/exceptions" className="hover-lift" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, background: '#fff7e0', color: '#8a6100', display: 'flex', alignItems: 'center' }}>Pedidos de exceção</Link>
+          )}
           {mayOpenPriceTable(user?.roles) && (
             <Link href="/finance/prices" className="hover-lift" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, background: '#f3f0ff', color: '#5b3cc4', display: 'flex', alignItems: 'center' }}>Tabela de valores</Link>
           )}
@@ -467,6 +482,19 @@ export default function FinancePage() {
         </div>
       </section>
 
+      {showExceptionModal && selectedItem && (
+        <ExceptionRequestModal
+          item={selectedItem}
+          studentId={newCharge.studentId}
+          studentName={selectedStudent?.fullName}
+          academicLevel={activeTab}
+          dueDate={newCharge.dueDate}
+          description={newCharge.description}
+          onClose={() => setShowExceptionModal(false)}
+          onSent={() => { setShowExceptionModal(false); setShowChargeModal(false); }}
+        />
+      )}
+
       {/* MODAL: Nova Cobrança (Processo Interno) */}
       {showChargeModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -564,7 +592,7 @@ export default function FinancePage() {
                       <div style={{ marginBottom: '1.5rem' }}>
                           <label htmlFor="charge-procedure" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Procedimento cobrado</label>
                           <select id="charge-procedure" value={selectedPriceId ?? ''} onChange={e => handleProcedureChange(e.target.value)} disabled={!selectedStudent || catalogLoading} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: 'white' }}>
-                              <option value="">Sem procedimento (informar o valor manualmente)</option>
+                              <option value="">{policy.enforceTablePrice ? 'Escolha o procedimento…' : 'Sem procedimento (informar o valor manualmente)'}</option>
                               {groupItems(catalog).map(group => (
                                   <optgroup key={group.group} label={group.group}>
                                       {group.items.map(item => (
@@ -577,12 +605,15 @@ export default function FinancePage() {
                           {catalogLoading && <small style={{ display: 'block', marginTop: '6px', color: '#888' }}>Carregando procedimentos…</small>}
                           {catalogMessage && <small role="alert" style={{ display: 'block', marginTop: '6px', color: '#c0392b' }}>{catalogMessage}</small>}
                           {selectedItem && <small style={{ display: 'block', marginTop: '6px', color: '#27ae60' }}>{sourceLabel(selectedItem)}</small>}
+                          {selectedItem && selectedItem.valueDefined && policy.canRequestException && (
+                              <button type="button" onClick={() => setShowExceptionModal(true)} style={{ marginTop: '8px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #5b3cc4', background: 'white', color: '#5b3cc4', fontWeight: 700, cursor: 'pointer' }}>Pedir valor diferente (exceção)</button>
+                          )}
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                           <div>
                             <label htmlFor="charge-amount" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Valor (R$)</label>
-                            <input id="charge-amount" type="number" step="0.01" min="0" required readOnly={selectedItem !== null} value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: selectedItem ? '#f3f3f3' : undefined }} placeholder="0.00" />
+                            <input id="charge-amount" type="number" step="0.01" min="0" required readOnly={selectedItem !== null || policy.enforceTablePrice} value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: selectedItem ? '#f3f3f3' : undefined }} placeholder="0.00" />
                           </div>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Data de Vencimento</label>
@@ -673,7 +704,7 @@ export default function FinancePage() {
                   <form onSubmit={handleUpdateInvoice}>
                       <div style={{ marginBottom: '1rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Valor (R$)</label>
-                          <input type="number" step="0.01" value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                          <input type="number" step="0.01" readOnly={policy.enforceTablePrice} value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
                       </div>
 
                       <div style={{ marginBottom: '1rem' }}>
