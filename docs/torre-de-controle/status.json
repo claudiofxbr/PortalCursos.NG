@@ -32,7 +32,7 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit d19d2ea)",
+      "detail": "último run em main: success (commit 648d5ad)",
       "status": "active"
     },
     {
@@ -44,23 +44,9 @@
     },
     {
       "category": "queue",
-      "id": "pr139-monitor",
-      "label": "#139 — chore(agentes): adiciona 3 agentes de correção de erros",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr138-monitor",
       "label": "#138 — chore(deps): bump vite from 8.3.0 to 8.3.4 in /frontend",
       "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr119-monitor",
-      "label": "#119 — chore(deps): bump maven from 3.9.11-eclipse-temurin-21 to 3.9-eclipse-temurin-26 in /backend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
     },
     {
@@ -74,13 +60,6 @@
       "category": "queue",
       "id": "pr117-monitor",
       "label": "#117 — chore(deps): bump org.flywaydb:flyway-core from 13.5.0 to 13.10.0 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr116-monitor",
-      "label": "#116 — chore(deps): bump org.postgresql:postgresql from 42.7.13 to 42.7.14 in /backend",
       "detail": "CI ok.",
       "status": "queued"
     },
@@ -114,13 +93,6 @@
     },
     {
       "category": "queue",
-      "id": "pr99-monitor",
-      "label": "#99 — chore(deps-dev): bump @types/node from 20.19.41 to 26.5.1 in /frontend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr98-monitor",
       "label": "#98 — chore(deps): bump react and @types/react in /frontend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -141,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T13:23:59Z"
+  "updatedAt": "2026-10-21T13:58:58Z"
 }
