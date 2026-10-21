@@ -5,7 +5,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.portalcursos.ng02.dto.ManualChargeRequest;
+import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
+import com.portalcursos.ng02.model.ChargePrice;
+import com.portalcursos.ng02.model.EPaymentCategory;
+import com.portalcursos.ng02.model.ESecretaryProcessType;
 import com.portalcursos.ng02.model.EAcademicLevel;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
@@ -42,6 +46,9 @@ public class PaymentServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private ChargeCatalogService chargeCatalogService;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -162,5 +169,75 @@ public class PaymentServiceTest {
 
         assertEquals("Cobrança não encontrada", ex.getMessage());
         verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void createManualChargeComProcedimentoUsaOValorDaTabelaEIgnoraOAmountEnviado() {
+        Student student = Student.builder().id(1L).fotoMatricula("foto.jpg").build();
+        ChargePrice row = new ChargePrice();
+        row.setId(7L);
+        row.setName("Certidão de nada consta");
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(7L, student, EAcademicLevel.GRADUATION)).thenReturn(
+                new ChargeCatalogService.Resolved(row, new BigDecimal("15.50"),
+                        com.portalcursos.ng02.dto.ChargeCatalogDtos.ValueSource.GLOBAL,
+                        EPaymentCategory.INTERNAL_PROCESS, ESecretaryProcessType.CERTIFICATE));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("9999.00"));
+        request.setDescription(null);
+        request.setChargePriceId(7L);
+
+        Payment result = paymentService.createManualCharge(request);
+
+        assertEquals(new BigDecimal("15.50"), result.getAmount());
+        assertEquals(7L, result.getChargePriceId());
+        assertEquals(EPaymentCategory.INTERNAL_PROCESS, result.getCategory());
+        assertEquals(ESecretaryProcessType.CERTIFICATE, result.getSecretaryProcessType());
+        assertEquals("Certidão de nada consta", result.getDescription());
+    }
+
+    @Test
+    public void createManualChargeComProcedimentoPreservaADescricaoInformada() {
+        Student student = Student.builder().id(1L).build();
+        ChargePrice row = new ChargePrice();
+        row.setId(7L);
+        row.setName("Nome da tabela");
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(7L, student, EAcademicLevel.GRADUATION)).thenReturn(
+                new ChargeCatalogService.Resolved(row, BigDecimal.TEN,
+                        com.portalcursos.ng02.dto.ChargeCatalogDtos.ValueSource.GLOBAL,
+                        EPaymentCategory.OTHER, ESecretaryProcessType.OTHER));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setChargePriceId(7L);
+
+        assertEquals("Mensalidade teste", paymentService.createManualCharge(request).getDescription());
+    }
+
+    @Test
+    public void createManualChargeComProcedimentoInvalidoNaoSalvaNada() {
+        Student student = Student.builder().id(1L).build();
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(7L, student, EAcademicLevel.GRADUATION))
+                .thenThrow(new BusinessException("Valor ainda não definido"));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setChargePriceId(7L);
+
+        assertThrows(BusinessException.class, () -> paymentService.createManualCharge(request));
+
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void createManualChargeSemProcedimentoMantemOFluxoAntigoComAmountEnviado() {
+        Student student = Student.builder().id(1L).build();
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Payment result = paymentService.createManualCharge(requestFor(EAcademicLevel.GRADUATION, 1L));
+
+        assertEquals(new BigDecimal("250.00"), result.getAmount());
+        verify(chargeCatalogService, never()).resolve(any(), any(), any());
     }
 }
