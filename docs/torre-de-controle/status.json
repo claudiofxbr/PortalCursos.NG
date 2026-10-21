@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 924739a)",
+      "detail": "último run em main: success (commit 2ba12b1)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 924739a)",
+      "detail": "último run em main: success (commit 2ba12b1)",
       "status": "active"
     },
     {
@@ -41,13 +41,6 @@
       "label": "Dependabot",
       "detail": "checagem semanal (maven, npm) — não é um workflow do Actions, sem execução/conclusion para acompanhar automaticamente",
       "status": "active"
-    },
-    {
-      "category": "queue",
-      "id": "pr142-monitor",
-      "label": "#142 — docs(teste): registra andamento do E-08",
-      "detail": "CI ok.",
-      "status": "queued"
     },
     {
       "category": "queue",
@@ -81,7 +74,7 @@
       "category": "queue",
       "id": "pr114-monitor",
       "label": "#114 — chore(deps): bump org.apache.maven:apache-maven from 3.9.16 to 3.10.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     },
     {
@@ -116,9 +109,9 @@
       "category": "queue",
       "id": "pr97-monitor",
       "label": "#97 — chore(deps): bump org.apache.maven.wrapper:maven-wrapper from 3.2.0 to 3.3.4 in /backend",
-      "detail": "CI ok.",
+      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T15:26:43Z"
+  "updatedAt": "2026-10-21T15:31:49Z"
 }
