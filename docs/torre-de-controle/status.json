@@ -25,8 +25,8 @@
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: failure (commit e8de25e)",
-      "status": "failed"
+      "detail": "último run em main: success (commit e8de25e)",
+      "status": "active"
     },
     {
       "category": "auto",
@@ -50,5 +50,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T18:19:22Z"
+  "updatedAt": "2026-10-21T18:21:23Z"
 }
