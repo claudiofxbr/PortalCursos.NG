@@ -10,6 +10,10 @@ import { toast } from 'sonner';
 import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdFromSearch } from './cardCheckout';
 import Link from 'next/link';
 import { mayOpenPriceTable } from './prices/priceTable';
+import {
+  applyProcedure, buildChargePayload, catalogErrorMessage, clearProcedure, EMPTY_CHARGE, groupItems, optionLabel,
+  sourceLabel, validateCharge, type CatalogItem, type ChargeForm,
+} from './chargeCatalog';
 
 import { asHttpError } from '@/app/services/httpError';
 type AcademicLevel = 'GRADUATION' | 'POSTGRADUATE';
@@ -57,14 +61,14 @@ export default function FinancePage() {
   const [showPaymentModal, setShowPaymentModal] = useState<(Invoice & { method: 'PIX' | 'BOLETO'; paymentCode: string }) | null>(null);
   
   // Estado para formulário de nova cobrança
-  const [newCharge, setNewCharge] = useState({
-    studentId: '',
-    amount: '',
-    dueDate: '',
-    category: 'MENSALIDADE',
-    secretaryProcessType: 'REGULAR',
-    description: ''
-  });
+  const [newCharge, setNewCharge] = useState<ChargeForm>(EMPTY_CHARGE);
+
+  // Procedimentos cobráveis do aluno (tabela de valores): escolher um preenche valor, categoria e descrição.
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
+  const [selectedPriceId, setSelectedPriceId] = useState<number | null>(null);
+  const selectedItem = catalog.find(item => item.priceId === selectedPriceId) ?? null;
   
   const [selectedStudent, setSelectedStudent] = useState<StudentRef | null>(null);
   const [isSearchingStudent, setIsSearchingStudent] = useState(false);
@@ -94,6 +98,45 @@ export default function FinancePage() {
     const timer = setTimeout(searchStudent, 800);
     return () => clearTimeout(timer);
   }, [newCharge.studentId, activeTab]);
+
+  useEffect(() => {
+    if (!showChargeModal || !selectedStudent || !newCharge.studentId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpa a lista quando não há aluno válido ou o modal fecha
+      setCatalog([]);
+      setSelectedPriceId(null);
+      setCatalogMessage(null);
+      return;
+    }
+    let cancelled = false;
+    setCatalogLoading(true);
+    setSelectedPriceId(null);
+    api.get('/finance/charge-catalog', { params: { studentId: newCharge.studentId, level: activeTab } })
+      .then(res => {
+        if (cancelled) return;
+        setCatalog(Array.isArray(res.data) ? res.data : []);
+        setCatalogMessage(null);
+      })
+      .catch((errCaught: unknown) => {
+        if (cancelled) return;
+        setCatalog([]);
+        setCatalogMessage(catalogErrorMessage(asHttpError(errCaught)?.response?.status));
+      })
+      .finally(() => { if (!cancelled) setCatalogLoading(false); });
+    return () => { cancelled = true; };
+  }, [showChargeModal, selectedStudent, newCharge.studentId, activeTab]);
+
+  const handleProcedureChange = (value: string) => {
+    const previous = selectedItem;
+    if (value === '') {
+      setSelectedPriceId(null);
+      setNewCharge(form => clearProcedure(form, previous));
+      return;
+    }
+    const item = catalog.find(candidate => candidate.priceId === Number(value));
+    if (!item) return;
+    setSelectedPriceId(item.priceId);
+    setNewCharge(form => applyProcedure(form, item, previous));
+  };
 
   const fetchFinanceData = async () => {
     try {
@@ -166,13 +209,13 @@ export default function FinancePage() {
 
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
+    const problem = validateCharge(newCharge, selectedItem, catalogMessage !== null);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
     try {
-      await financeService.create({
-        ...newCharge,
-        amount: parseFloat(newCharge.amount),
-        studentId: parseInt(newCharge.studentId),
-        academicLevel: activeTab
-      }, '/charge'); 
+      await financeService.create(buildChargePayload(newCharge, selectedItem, activeTab), '/charge');
       fetchFinanceData();
       setShowChargeModal(false);
     } catch (err) {
@@ -518,10 +561,28 @@ export default function FinancePage() {
                           <input type="number" required value={newCharge.studentId} onChange={e => setNewCharge({...newCharge, studentId: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', outline: 'none', transition: 'border-color 0.3s' }} placeholder="ID do Aluno no Sistema" />
                       </div>
 
+                      <div style={{ marginBottom: '1.5rem' }}>
+                          <label htmlFor="charge-procedure" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Procedimento cobrado</label>
+                          <select id="charge-procedure" value={selectedPriceId ?? ''} onChange={e => handleProcedureChange(e.target.value)} disabled={!selectedStudent || catalogLoading} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: 'white' }}>
+                              <option value="">Sem procedimento (informar o valor manualmente)</option>
+                              {groupItems(catalog).map(group => (
+                                  <optgroup key={group.group} label={group.group}>
+                                      {group.items.map(item => (
+                                          <option key={item.priceId} value={item.priceId} disabled={!item.valueDefined}>{optionLabel(item)}</option>
+                                      ))}
+                                  </optgroup>
+                              ))}
+                          </select>
+                          {!selectedStudent && <small style={{ display: 'block', marginTop: '6px', color: '#888' }}>Informe um aluno válido para ver os procedimentos.</small>}
+                          {catalogLoading && <small style={{ display: 'block', marginTop: '6px', color: '#888' }}>Carregando procedimentos…</small>}
+                          {catalogMessage && <small role="alert" style={{ display: 'block', marginTop: '6px', color: '#c0392b' }}>{catalogMessage}</small>}
+                          {selectedItem && <small style={{ display: 'block', marginTop: '6px', color: '#27ae60' }}>{sourceLabel(selectedItem)}</small>}
+                      </div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Valor (R$)</label>
-                            <input type="number" step="0.01" required value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee' }} placeholder="0.00" />
+                            <label htmlFor="charge-amount" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Valor (R$)</label>
+                            <input id="charge-amount" type="number" step="0.01" min="0" required readOnly={selectedItem !== null} value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: selectedItem ? '#f3f3f3' : undefined }} placeholder="0.00" />
                           </div>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Data de Vencimento</label>
@@ -529,6 +590,7 @@ export default function FinancePage() {
                           </div>
                       </div>
 
+                      {selectedItem === null && (
                       <div style={{ marginBottom: '1.5rem' }}>
                           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Categoria da Cobrança</label>
                           <select value={newCharge.category} onChange={e => setNewCharge({...newCharge, category: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: 'white' }}>
@@ -539,8 +601,9 @@ export default function FinancePage() {
                               <option value="OTHER">Outros Serviços</option>
                           </select>
                       </div>
+                      )}
 
-                      {newCharge.category === 'INTERNAL_PROCESS' && (
+                      {selectedItem === null && newCharge.category === 'INTERNAL_PROCESS' && (
                           <div style={{ marginBottom: '1.5rem', animation: 'fadeInDown 0.3s ease' }}>
                               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Tipo de Processo Secretaria</label>
                               <select value={newCharge.secretaryProcessType} onChange={e => setNewCharge({...newCharge, secretaryProcessType: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', background: '#f8f9ff' }}>
