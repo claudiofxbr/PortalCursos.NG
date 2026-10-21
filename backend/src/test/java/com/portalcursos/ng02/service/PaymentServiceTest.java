@@ -50,6 +50,9 @@ public class PaymentServiceTest {
     @Mock
     private ChargeCatalogService chargeCatalogService;
 
+    @Mock
+    private ChargePolicy chargePolicy;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -239,5 +242,79 @@ public class PaymentServiceTest {
 
         assertEquals(new BigDecimal("250.00"), result.getAmount());
         verify(chargeCatalogService, never()).resolve(any(), any(), any());
+    }
+
+    // --- Regra "o valor vem sempre da tabela" (política ligada) ---
+
+    @Test
+    public void comAPoliticaLigadaCriarCobrancaSemProcedimentoELancadoEFalhaSemSalvar() {
+        when(chargePolicy.enforceTablePrice()).thenReturn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> paymentService.createManualCharge(requestFor(EAcademicLevel.GRADUATION, 1L)));
+
+        assertTrue(ex.getMessage().contains("tabela de valores"));
+        verify(paymentRepository, never()).save(any());
+        verify(studentRepository, never()).findById(any());
+    }
+
+    @Test
+    public void comAPoliticaLigadaCriarCobrancaComProcedimentoContinuaFuncionando() {
+        when(chargePolicy.enforceTablePrice()).thenReturn(true);
+        Student student = Student.builder().id(1L).build();
+        ChargePrice row = new ChargePrice();
+        row.setId(7L);
+        row.setName("Nome da tabela");
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(7L, student, EAcademicLevel.GRADUATION)).thenReturn(
+                new ChargeCatalogService.Resolved(row, new BigDecimal("15.50"),
+                        com.portalcursos.ng02.dto.ChargeCatalogDtos.ValueSource.GLOBAL,
+                        EPaymentCategory.OTHER, ESecretaryProcessType.OTHER));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setChargePriceId(7L);
+
+        assertEquals(new BigDecimal("15.50"), paymentService.createManualCharge(request).getAmount());
+    }
+
+    @Test
+    public void comAPoliticaLigadaEditarOValorDaFaturaEhRecusado() {
+        when(chargePolicy.enforceTablePrice()).thenReturn(true);
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("1.00"));
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, request));
+
+        assertEquals(new BigDecimal("100.00"), existing.getAmount());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void comAPoliticaLigadaEditarVencimentoEDescricaoComOMesmoValorFunciona() {
+        when(chargePolicy.enforceTablePrice()).thenReturn(true);
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("100.0"));
+        request.setDescription("Nova descrição");
+
+        Payment result = paymentService.updateCharge(5L, request);
+
+        assertEquals(new BigDecimal("100.00"), result.getAmount());
+        assertEquals("Nova descrição", result.getDescription());
+    }
+
+    @Test
+    public void comAPoliticaDesligadaEditarOValorContinuaPermitido() {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("120.00"));
+
+        assertEquals(new BigDecimal("120.00"), paymentService.updateCharge(5L, request).getAmount());
     }
 }
