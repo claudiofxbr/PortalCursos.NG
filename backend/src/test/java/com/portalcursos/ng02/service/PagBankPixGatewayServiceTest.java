@@ -5,7 +5,11 @@ import com.portalcursos.ng02.exception.PaymentGatewayException;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,6 +23,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -105,6 +110,33 @@ class PagBankPixGatewayServiceTest {
         assertFalse(ex.getMessage().contains("invalid tax_id"),
                 "mensagem exposta não deve conter o corpo de erro bruto do PSP");
         mockServer.verify();
+    }
+
+    @Test
+    void createPixOrderQuandoPagBankRecusaCredencialLogaCodigoHttpSemTokenNemCorpo() {
+        setUpWithToken("segredo-do-token");
+        mockServer.expect(requestTo(BASE_URL + "/orders"))
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED)
+                        .body("{\"error_messages\":[{\"description\":\"corpo-sensivel-do-psp\"}]}")
+                        .contentType(MediaType.APPLICATION_JSON));
+        Logger serviceLogger = (Logger) LoggerFactory.getLogger(PagBankPixGatewayService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        serviceLogger.addAppender(appender);
+        try {
+            assertThrows(PaymentGatewayException.class,
+                    () -> service.createPixOrder(samplePayment(), "webhook-token", BASE_URL + "/webhook"));
+        } finally {
+            serviceLogger.detachAppender(appender);
+        }
+
+        String warn = appender.list.stream()
+                .filter(e -> e.getLevel() == ch.qos.logback.classic.Level.WARN)
+                .map(ILoggingEvent::getFormattedMessage)
+                .findFirst().orElse("");
+        assertTrue(warn.contains("HTTP 401"), "o WARN deve trazer o código HTTP do PagBank: " + warn);
+        assertFalse(warn.contains("segredo-do-token"));
+        assertFalse(warn.contains("corpo-sensivel-do-psp"));
     }
 
     @Test
