@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestClientException;
 
 import java.math.RoundingMode;
@@ -154,7 +155,7 @@ public class PagBankPixGatewayService {
         } catch (RestClientException ex) {
             // Nunca logar o token nem o corpo bruto da resposta de erro (pode conter dado
             // sensível do PSP) em nível que vá para log de produção; detalhe técnico fica em DEBUG.
-            logger.warn("[PAGBANK] Falha ao criar pedido PIX (paymentId={})", payment.getId());
+            logger.warn("[PAGBANK] Falha ao criar pedido PIX (paymentId={}, causa={})", payment.getId(), describeFailure(ex));
             logger.debug("[PAGBANK] Detalhe técnico da falha de criação de pedido PIX", ex);
             throw new PaymentGatewayException("Falha ao comunicar com o gateway de pagamento", ex);
         }
@@ -178,6 +179,17 @@ public class PagBankPixGatewayService {
         String qrCodeImageUrl = extractQrCodeImageUrl(firstCharge);
 
         return new PixOrderResult(pspOrderId, copiaECola, qrCodeImageUrl);
+    }
+
+    /**
+     * Causa resumida para o log: só o código HTTP do PagBank (ex.: 401 = token inválido) ou o tipo da
+     * exceção de rede. Nunca o corpo da resposta nem a mensagem da exceção, que podem trazer dado do PSP.
+     */
+    private static String describeFailure(RestClientException ex) {
+        if (ex instanceof RestClientResponseException responseEx) {
+            return "HTTP " + responseEx.getStatusCode().value();
+        }
+        return ex.getClass().getSimpleName();
     }
 
     @SuppressWarnings("unchecked")
@@ -213,7 +225,7 @@ public class PagBankPixGatewayService {
                     .retrieve()
                     .body(Map.class);
         } catch (RestClientException ex) {
-            logger.warn("[PAGBANK] Falha ao consultar status do pedido PIX (pspOrderId={})", pspOrderId);
+            logger.warn("[PAGBANK] Falha ao consultar status do pedido PIX (pspOrderId={}, causa={})", pspOrderId, describeFailure(ex));
             logger.debug("[PAGBANK] Detalhe técnico da falha de consulta de status", ex);
             throw new PaymentGatewayException("Falha ao comunicar com o gateway de pagamento", ex);
         }
