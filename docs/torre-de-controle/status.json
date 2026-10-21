@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr143-monitor",
+      "label": "#143 — chore(deps): atualiza dependências do frontend (follow-redirects, vite, react 19.3)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr140-monitor",
       "label": "#140 — chore(deps): bump follow-redirects from 1.16.0 to 1.16.1 in /frontend",
       "detail": "CI ok.",
@@ -54,27 +61,6 @@
       "id": "pr138-monitor",
       "label": "#138 — chore(deps): bump vite from 8.3.0 to 8.3.5 in /frontend",
       "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr118-monitor",
-      "label": "#118 — chore(deps): bump org.flywaydb:flyway-database-postgresql from 13.5.0 to 13.10.0 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr117-monitor",
-      "label": "#117 — chore(deps): bump org.flywaydb:flyway-core from 13.5.0 to 13.10.0 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr114-monitor",
-      "label": "#114 — chore(deps): bump org.apache.maven:apache-maven from 3.9.16 to 3.10.0 in /backend",
-      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     },
     {
@@ -104,14 +90,7 @@
       "label": "#98 — chore(deps): bump react and @types/react in /frontend",
       "detail": "CONFLITANTE com main. CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr97-monitor",
-      "label": "#97 — chore(deps): bump org.apache.maven.wrapper:maven-wrapper from 3.2.0 to 3.3.4 in /backend",
-      "detail": "CONFLITANTE com main. CI ok.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T15:31:49Z"
+  "updatedAt": "2026-10-21T16:16:13Z"
 }
