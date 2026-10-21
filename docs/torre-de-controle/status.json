@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit d1a6637)",
+      "detail": "último run em main: success (commit 5046481)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit d1a6637)",
+      "detail": "último run em main: success (commit 5046481)",
       "status": "active"
     },
     {
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr145-monitor",
-      "label": "#145 — docs(teste): registra triagem do npm audit no E-08",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T17:46:54Z"
+  "updatedAt": "2026-10-21T17:50:30Z"
 }
