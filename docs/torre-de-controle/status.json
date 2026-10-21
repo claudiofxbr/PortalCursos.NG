@@ -62,14 +62,7 @@
       "label": "#100 — chore(deps-dev): bump jsdom from 29.1.1 to 30.0.1 in /frontend",
       "detail": "CI ok.",
       "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr98-monitor",
-      "label": "#98 — chore(deps): bump react and @types/react in /frontend",
-      "detail": "CONFLITANTE com main. CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-21T16:21:50Z"
+  "updatedAt": "2026-10-21T16:22:04Z"
 }
