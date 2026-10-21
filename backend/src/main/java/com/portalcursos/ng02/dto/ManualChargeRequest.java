@@ -20,6 +20,7 @@ public class ManualChargeRequest {
     private EPaymentCategory category;
     private ESecretaryProcessType secretaryProcessType;
     private String description;
+    private Long chargePriceId;
 
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
@@ -33,6 +34,8 @@ public class ManualChargeRequest {
     public void setCategory(EPaymentCategory category) { this.category = category; }
     public ESecretaryProcessType getSecretaryProcessType() { return secretaryProcessType; }
     public void setSecretaryProcessType(ESecretaryProcessType secretaryProcessType) { this.secretaryProcessType = secretaryProcessType; }
+    public Long getChargePriceId() { return chargePriceId; }
+    public void setChargePriceId(Long chargePriceId) { this.chargePriceId = chargePriceId; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 }

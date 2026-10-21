@@ -5,7 +5,6 @@ import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.EAcademicLevel;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
-import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
@@ -26,6 +25,7 @@ public class PaymentService {
     private final StudentRepository studentRepository;
     private final PostgradStudentRepository postgradStudentRepository;
     private final AuditService auditService;
+    private final ChargeCatalogService chargeCatalogService;
 
     public Payment createManualCharge(ManualChargeRequest request) {
         Payment payment = Payment.builder()
@@ -38,16 +38,28 @@ public class PaymentService {
                 .description(request.getDescription())
                 .build();
 
+        Student student;
         if (request.getAcademicLevel() == EAcademicLevel.GRADUATION) {
-            Student student = studentRepository.findById(request.getStudentId())
+            student = studentRepository.findById(request.getStudentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Estudante de graduação não encontrado"));
-            payment.setStudent(student);
-            payment.setStudentPhotoUrl(student.getFotoMatricula());
         } else {
-            PostgradStudent postgradStudent = postgradStudentRepository.findById(request.getStudentId())
+            student = postgradStudentRepository.findById(request.getStudentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
-            payment.setStudent(postgradStudent);
-            payment.setStudentPhotoUrl(postgradStudent.getFotoMatricula());
+        }
+        payment.setStudent(student);
+        payment.setStudentPhotoUrl(student.getFotoMatricula());
+
+        // Procedimento escolhido na tabela de valores: o servidor decide o valor (o amount enviado é ignorado).
+        if (request.getChargePriceId() != null) {
+            ChargeCatalogService.Resolved resolved =
+                    chargeCatalogService.resolve(request.getChargePriceId(), student, request.getAcademicLevel());
+            payment.setAmount(resolved.value());
+            payment.setChargePriceId(resolved.price().getId());
+            payment.setCategory(resolved.category());
+            payment.setSecretaryProcessType(resolved.processType());
+            if (payment.getDescription() == null || payment.getDescription().isBlank()) {
+                payment.setDescription(resolved.price().getName());
+            }
         }
 
         auditService.injectCreator(payment);

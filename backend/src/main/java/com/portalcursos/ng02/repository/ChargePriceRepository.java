@@ -24,4 +24,6 @@ public interface ChargePriceRepository extends JpaRepository<ChargePrice, Long> 
     Optional<ChargePrice> findActiveById(@Param("id") Long id);
 
     boolean existsByCodeAndCourseIdAndActiveTrue(String code, UUID courseId);
+
+    Optional<ChargePrice> findByCodeAndCourseIdAndActiveTrue(String code, UUID courseId);
 }
