@@ -23,13 +23,6 @@
     },
     {
       "category": "auto",
-      "id": "auto-cicd-portalcursosng",
-      "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 4f63673)",
-      "status": "active"
-    },
-    {
-      "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
       "detail": "último run em main: success (commit d90dc15)",
@@ -50,5 +43,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-22T14:00:13Z"
+  "updatedAt": "2026-10-22T16:21:54Z"
 }
