@@ -95,7 +95,9 @@ public class ChargePriceService {
         }
         price.setCurrentValue(value);
         stamp(price, access);
-        priceRepository.save(price);
+        // saveAndFlush: a versão (@Version) só é incrementada no flush; sem ele a resposta traria a versão
+        // antiga e a edição seguinte, feita com ela, daria falso conflito.
+        priceRepository.saveAndFlush(price);
 
         changeRepository.findFirstByChargePriceIdAndStatus(priceId, Status.PENDING).ifPresent(c -> {
             decide(c, Status.REJECTED, access, "Superada por alteração direta do administrador");
@@ -141,7 +143,7 @@ public class ChargePriceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
         price.setCurrentValue(change.getProposedValue());
         stamp(price, access);
-        priceRepository.save(price);
+        priceRepository.saveAndFlush(price);
         decide(change, Status.APPROVED, access, null);
         changeRepository.save(change);
         logger.info("[PRICES] proposta confirmada: changeId={} priceId={} por={}", changeId, price.getId(), access.actor());

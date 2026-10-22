@@ -241,6 +241,34 @@ class ChargePriceControllerIntegrationTest {
                 .andExpect(jsonPath("$[0].decisionReason").value("fora do orçamento"));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void alterarOValorDevolveAVersaoJaIncrementadaEPermiteEditarDeNovoComEla() throws Exception {
+        String first = mockMvc.perform(put("/api/finance/prices/" + globalId).contentType(JSON)
+                        .content("{\"value\":101.00,\"version\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1))
+                .andReturn().getResponse().getContentAsString();
+        // Reaproveitar a versão da própria resposta (como faz quem usa a API direto) não pode dar falso conflito.
+        mockMvc.perform(put("/api/finance/prices/" + globalId).contentType(JSON)
+                        .content("{\"value\":102.00,\"version\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(2))
+                .andExpect(jsonPath("$.currentValue").value(102.00));
+        mockMvc.perform(put("/api/finance/prices/" + globalId).contentType(JSON)
+                        .content("{\"value\":103.00,\"version\":0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void confirmarPropostaDevolveAVersaoJaIncrementada() throws Exception {
+        Long changeId = proposeAsHeadAsAdminContext("150.00");
+        mockMvc.perform(post("/api/finance/prices/proposals/" + changeId + "/approve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1));
+    }
+
     /** Cria a proposta direto no repositório (o contexto de segurança do teste é o do administrador). */
     private Long proposeAsHeadAsAdminContext(String value) {
         ChargePriceChange c = new ChargePriceChange();
