@@ -23,6 +23,13 @@
     },
     {
       "category": "auto",
+      "id": "auto-cicd-portalcursosng",
+      "label": "CI/CD PortalCursos.NG",
+      "detail": "último run em main: success (commit 4f63673)",
+      "status": "active"
+    },
+    {
+      "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
       "detail": "último run em main: success (commit d90dc15)",
@@ -37,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr158-monitor",
+      "label": "#158 — fix(pix): mensagem clara quando o PagBank recusa o Pix",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-22T16:21:54Z"
+  "updatedAt": "2026-10-22T17:12:40Z"
 }
