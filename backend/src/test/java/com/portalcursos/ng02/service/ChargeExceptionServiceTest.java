@@ -216,6 +216,26 @@ class ChargeExceptionServiceTest {
     }
 
     @Test
+    void excecaoAprovadaComValorZeroEmiteAFaturaJaQuitada() {
+        ChargeAmountException entity = pending("ana");
+        entity.setRequestedAmount(BigDecimal.ZERO);
+        when(accessService.current()).thenReturn(admin("adm2"));
+        when(repository.findById(9L)).thenReturn(Optional.of(entity));
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(catalogService.resolve(7L, student, EAcademicLevel.GRADUATION)).thenReturn(table);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> {
+            Payment p = inv.getArgument(0);
+            p.setId(56L);
+            return p;
+        });
+
+        service.approve(9L, null);
+
+        verify(paymentRepository).save(org.mockito.ArgumentMatchers.argThat((Payment p) ->
+                p.getAmount().signum() == 0 && p.getStatus() == com.portalcursos.ng02.model.EPaymentStatus.PAID));
+    }
+
+    @Test
     void quemPediuNaoPodeAprovarOProprioPedido() {
         when(accessService.current()).thenReturn(admin("adm1"));
         when(repository.findById(9L)).thenReturn(Optional.of(pending("adm1")));

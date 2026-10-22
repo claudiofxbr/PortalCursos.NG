@@ -244,6 +244,61 @@ public class PaymentServiceTest {
         verify(chargeCatalogService, never()).resolve(any(), any(), any());
     }
 
+    // --- Fatura de valor zero (procedimento gratuito) já nasce quitada ---
+
+    @Test
+    public void criarCobrancaPorProcedimentoGratuitoJaNasceQuitada() {
+        Student student = Student.builder().id(1L).build();
+        ChargePrice row = new ChargePrice();
+        row.setId(3L);
+        row.setName("Contrato e aceite");
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(3L, student, EAcademicLevel.GRADUATION)).thenReturn(
+                new ChargeCatalogService.Resolved(row, BigDecimal.ZERO,
+                        com.portalcursos.ng02.dto.ChargeCatalogDtos.ValueSource.GLOBAL,
+                        EPaymentCategory.INTERNAL_PROCESS, ESecretaryProcessType.OTHER));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setChargePriceId(3L);
+
+        Payment result = paymentService.createManualCharge(request);
+
+        assertEquals(0, result.getAmount().signum());
+        assertEquals(EPaymentStatus.PAID, result.getStatus());
+    }
+
+    @Test
+    public void criarCobrancaComValorPositivoContinuaPendente() {
+        Student student = Student.builder().id(1L).build();
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals(EPaymentStatus.PENDING,
+                paymentService.createManualCharge(requestFor(EAcademicLevel.GRADUATION, 1L)).getStatus());
+    }
+
+    @Test
+    public void criarCobrancaManualComValorZeroTambemNasceQuitada() {
+        Student student = Student.builder().id(1L).build();
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(BigDecimal.ZERO);
+
+        assertEquals(EPaymentStatus.PAID, paymentService.createManualCharge(request).getStatus());
+    }
+
+    @Test
+    public void editarFaturaPendenteParaValorZeroQuitaAFatura() {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(EPaymentStatus.PENDING).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(BigDecimal.ZERO);
+
+        assertEquals(EPaymentStatus.PAID, paymentService.updateCharge(5L, request).getStatus());
+    }
+
     // --- Regra "o valor vem sempre da tabela" (política ligada) ---
 
     @Test
