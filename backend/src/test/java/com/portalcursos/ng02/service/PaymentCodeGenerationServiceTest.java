@@ -141,6 +141,40 @@ public class PaymentCodeGenerationServiceTest {
         verify(paymentRepository).save(payment);
     }
 
+    // --- Fatura sem valor a pagar ---
+
+    @Test
+    public void faturaDeValorZeroNaoGeraPixNemChamaOGateway() {
+        Payment gratuita = pendingPayment(30L);
+        gratuita.setAmount(BigDecimal.ZERO);
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> paymentCodeGenerationService.generatePix(gratuita));
+
+        assertTrue(ex.getMessage().contains("valor zero"));
+        verifyNoInteractions(pagBankPixGatewayService);
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void faturaSemValorDefinidoNaoGeraPix() {
+        Payment semValor = pendingPayment(31L);
+        semValor.setAmount(null);
+
+        assertThrows(BusinessException.class, () -> paymentCodeGenerationService.generatePix(semValor));
+        verifyNoInteractions(pagBankPixGatewayService);
+    }
+
+    @Test
+    public void faturaDeUmCentavoAindaGeraPix() {
+        Payment umCentavo = pendingPayment(32L);
+        umCentavo.setAmount(new BigDecimal("0.01"));
+        when(pagBankPixGatewayService.createPixOrder(eq(umCentavo), any(), any()))
+                .thenReturn(new PixOrderResult("ORDE_1C", "CODIGO-1C", null));
+        when(paymentRepository.save(umCentavo)).thenReturn(umCentavo);
+
+        assertEquals("ORDE_1C", paymentCodeGenerationService.generatePix(umCentavo).payment().getPspOrderId());
+    }
+
     // --- Pix já existente: não pode ser sobrescrito por um novo pedido ---
 
     private Payment withLivePix(long id) {
