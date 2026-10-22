@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.PixOrderResult;
+import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.PaymentGatewayException;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
@@ -171,6 +172,15 @@ public class PagBankPixGatewayService {
         }
 
         Map<String, Object> firstCharge = charges.get(0);
+        if ("DECLINED".equals(firstCharge.get("status"))) {
+            // O PagBank aceitou o pedido (201) mas recusou a cobrança: não há QR code. Não é instabilidade, então
+            // não pede "tente novamente"; o texto bruto do PSP não vai para o cliente (só o código, no log).
+            Object responseCode = firstCharge.get("payment_response") instanceof Map<?, ?> pr ? pr.get("code") : null;
+            logger.warn("[PAGBANK] Pix recusado pelo PagBank (paymentId={}, codigo={})", payment.getId(), responseCode);
+            throw new BusinessException(
+                    "O PagBank recusou a criação deste Pix. A cobrança continua pendente; tente novamente mais tarde "
+                    + "ou use outra forma de pagamento.");
+        }
         Map<String, Object> qrCode = (Map<String, Object>) firstCharge.get("qr_code");
         if (qrCode == null) {
             throw new PaymentGatewayException("Resposta inesperada do gateway de pagamento");
