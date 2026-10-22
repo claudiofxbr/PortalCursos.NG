@@ -222,7 +222,8 @@ class ChargeExceptionControllerIntegrationTest {
 
         mockMvc.perform(get("/api/finance/charge-exceptions").with(as(2, "adm2", "ADMIN")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].studentName").value("Aluna Exceção"));
+                .andExpect(jsonPath("$[0].studentName").value("Aluna Exceção"))
+                .andExpect(jsonPath("$[0].procedureName").value("Certidão de nada consta"));
         mockMvc.perform(get("/api/finance/charge-exceptions").with(as(100, "ana", "SECRETARIA")))
                 .andExpect(jsonPath("$", hasSize(1)));
         mockMvc.perform(get("/api/finance/charge-exceptions").with(as(101, "bia", "SECRETARIA")))
