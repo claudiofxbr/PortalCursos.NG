@@ -58,6 +58,10 @@ public class PaymentCodeGenerationService {
         if (payment.getStatus() == EPaymentStatus.PAID) {
             throw new BusinessException("Fatura já paga, não é possível gerar novo PIX");
         }
+        // Procedimento gratuito (valor zero) não tem o que pagar: o PagBank recusaria um Pix de R$ 0,00.
+        if (payment.getTotalAmount() == null || payment.getTotalAmount().signum() <= 0) {
+            throw new BusinessException("Esta fatura tem valor zero e não há o que pagar; não é gerado Pix");
+        }
 
         // Um novo pedido sobrescreveria o pspOrderId e o webhook deixaria de enxergar um pagamento feito
         // no QR anterior. Por isso, havendo Pix vigente, ele é reaproveitado (ou baixado, se já foi pago).
