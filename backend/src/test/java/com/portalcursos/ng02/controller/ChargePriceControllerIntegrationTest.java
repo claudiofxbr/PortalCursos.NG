@@ -269,6 +269,49 @@ class ChargePriceControllerIntegrationTest {
                 .andExpect(jsonPath("$.version").value(1));
     }
 
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void alteracaoDiretaDoAdministradorFicaNoHistorico() throws Exception {
+        mockMvc.perform(put("/api/finance/prices/" + courseAId).contentType(JSON)
+                        .content("{\"value\":130.00,\"version\":0}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/finance/prices/" + courseAId + "/history"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].status").value("APPROVED"))
+                .andExpect(jsonPath("$[0].proposedValue").value(130.00))
+                .andExpect(jsonPath("$[0].proposedBy").value("admin"))
+                .andExpect(jsonPath("$[0].decidedBy").value("admin"))
+                .andExpect(jsonPath("$[0].reason").value("Alteração direta do administrador"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void alteracaoDiretaQueSuperaUmaPropostaRegistraAsDuasNoHistorico() throws Exception {
+        proposeAsHeadAsAdminContext("150.00");
+
+        mockMvc.perform(put("/api/finance/prices/" + courseAId).contentType(JSON)
+                        .content("{\"value\":130.00,\"version\":0}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/finance/prices/" + courseAId + "/history"))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.status=='APPROVED')].proposedValue").value(130.00))
+                .andExpect(jsonPath("$[?(@.status=='REJECTED')].decisionReason").value("Superada por alteração direta do administrador"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void alteracaoRecusadaPorValorInvalidoNaoGeraHistorico() throws Exception {
+        mockMvc.perform(put("/api/finance/prices/" + courseAId).contentType(JSON)
+                        .content("{\"value\":-1,\"version\":0}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/finance/prices/" + courseAId + "/history"))
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
     /** Cria a proposta direto no repositório (o contexto de segurança do teste é o do administrador). */
     private Long proposeAsHeadAsAdminContext(String value) {
         ChargePriceChange c = new ChargePriceChange();
@@ -300,8 +343,11 @@ class ChargePriceControllerIntegrationTest {
                 .andExpect(jsonPath("$.currentValue").value(200.00))
                 .andExpect(jsonPath("$.pending").doesNotExist());
 
+        // O histórico agora traz também a própria alteração direta (a mais nova, primeiro) e a proposta superada.
         mockMvc.perform(get("/api/finance/prices/" + courseAId + "/history"))
-                .andExpect(jsonPath("$[0].id").value(changeId.intValue()))
-                .andExpect(jsonPath("$[0].status").value("REJECTED"));
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].status").value("APPROVED"))
+                .andExpect(jsonPath("$[0].proposedValue").value(200.00))
+                .andExpect(jsonPath("$[?(@.id==" + changeId + ")].status").value("REJECTED"));
     }
 }
