@@ -123,6 +123,7 @@ public class ChargeExceptionService {
                 .build();
         payment.setStudent(student);
         payment.setStudentPhotoUrl(student.getFotoMatricula());
+        payment.settleIfFree();
         auditService.injectCreator(payment);
         Payment issued = paymentRepository.save(payment);
 

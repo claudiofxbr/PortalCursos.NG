@@ -115,6 +115,20 @@ public class Payment extends BaseAuditEntity {
     }
 
     /**
+     * Cobrança de valor zero (procedimento gratuito) não tem o que pagar: já nasce quitada, sem Pix nem
+     * pendência. Só atua sobre fatura pendente com valor definido igual a zero.
+     *
+     * @return {@code true} se a fatura foi quitada agora
+     */
+    public boolean settleIfFree() {
+        if (status == EPaymentStatus.PENDING && amount != null && amount.signum() == 0) {
+            status = EPaymentStatus.PAID;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Retorna o valor total (Principal + Juros)
      */
     @JsonProperty("totalAmount")

@@ -11,6 +11,8 @@ import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
@@ -73,8 +77,13 @@ public class PaymentService {
             }
         }
 
+        boolean free = payment.settleIfFree();
         auditService.injectCreator(payment);
-        return paymentRepository.save(payment);
+        Payment saved = paymentRepository.save(payment);
+        if (free) {
+            logger.info("[FINANCE] fatura {} de valor zero quitada automaticamente na criação", saved.getId());
+        }
+        return saved;
     }
 
     public Payment updateCharge(Long id, ManualChargeRequest request) {
@@ -95,6 +104,9 @@ public class PaymentService {
         payment.setSecretaryProcessType(request.getSecretaryProcessType());
         payment.setDescription(request.getDescription());
 
+        if (payment.settleIfFree()) {
+            logger.info("[FINANCE] fatura {} editada para valor zero e quitada automaticamente", payment.getId());
+        }
         auditService.injectCreator(payment);
         return paymentRepository.save(payment);
     }
