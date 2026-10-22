@@ -9,12 +9,17 @@ import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Set;
 import java.security.NoSuchAlgorithmException;
 import java.security.InvalidKeyException;
 
@@ -30,7 +35,10 @@ import java.security.InvalidKeyException;
 @RequiredArgsConstructor
 public class PaymentCodeGenerationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PaymentCodeGenerationService.class);
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+    /** Situações do pedido que ainda aceitam pagamento no QR existente. */
+    private static final Set<String> REUSABLE_PSP_STATUSES = Set.of("WAITING", "IN_ANALYSIS");
 
     private final PaymentRepository paymentRepository;
     private final PagBankPixGatewayService pagBankPixGatewayService;
@@ -51,6 +59,21 @@ public class PaymentCodeGenerationService {
             throw new BusinessException("Fatura já paga, não é possível gerar novo PIX");
         }
 
+        // Um novo pedido sobrescreveria o pspOrderId e o webhook deixaria de enxergar um pagamento feito
+        // no QR anterior. Por isso, havendo Pix vigente, ele é reaproveitado (ou baixado, se já foi pago).
+        if (hasLivePix(payment)) {
+            String status = currentPspStatus(payment);
+            if ("PAID".equals(status)) {
+                payment.setStatus(EPaymentStatus.PAID);
+                paymentRepository.save(payment);
+                throw new BusinessException("O pagamento deste Pix já foi confirmado pelo PagBank; a fatura foi atualizada");
+            }
+            if (status == null || REUSABLE_PSP_STATUSES.contains(status)) {
+                return new PixGenerationResponse(payment, null);
+            }
+            // Pedido anterior encerrado sem pagamento (cancelado/recusado): segue e cria um novo.
+        }
+
         String webhookToken = computeWebhookToken(payment.getId());
         String webhookUrl = publicApiUrl + "/api/finance/pix/webhook/" + payment.getId() + "/" + webhookToken;
 
@@ -62,6 +85,29 @@ public class PaymentCodeGenerationService {
         Payment saved = paymentRepository.save(payment);
 
         return new PixGenerationResponse(saved, result.qrCodeImageUrl());
+    }
+
+    /** Pix já gerado para esta fatura e ainda dentro da validade (vencimento + 1 dia, como no pedido ao PagBank). */
+    private static boolean hasLivePix(Payment payment) {
+        if (payment.getMethod() != EPaymentMethod.PIX || payment.getPspOrderId() == null
+                || payment.getPaymentCode() == null || payment.getDueDate() == null) {
+            return false;
+        }
+        Instant expiresAt = payment.getDueDate().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return Instant.now().isBefore(expiresAt);
+    }
+
+    /**
+     * Situação do pedido no PagBank. Se a consulta falhar não dá para afirmar que o Pix morreu, então
+     * devolve {@code null} (= reaproveitar), nunca cria um segundo pedido às cegas.
+     */
+    private String currentPspStatus(Payment payment) {
+        try {
+            return pagBankPixGatewayService.fetchOrderStatus(payment.getPspOrderId());
+        } catch (PaymentGatewayException ex) {
+            logger.warn("[PIX] Não foi possível consultar o pedido existente da fatura {}; reaproveitando o Pix atual", payment.getId());
+            return null;
+        }
     }
 
     /**

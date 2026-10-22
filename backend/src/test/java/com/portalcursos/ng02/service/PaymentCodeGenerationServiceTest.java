@@ -140,4 +140,105 @@ public class PaymentCodeGenerationServiceTest {
                 result.getPaymentCode());
         verify(paymentRepository).save(payment);
     }
+
+    // --- Pix já existente: não pode ser sobrescrito por um novo pedido ---
+
+    private Payment withLivePix(long id) {
+        Payment payment = pendingPayment(id);
+        payment.setDueDate(LocalDate.now().plusDays(10));
+        payment.setMethod(EPaymentMethod.PIX);
+        payment.setPspOrderId("ORDE_ORIGINAL");
+        payment.setPaymentCode("CODIGO-ORIGINAL");
+        return payment;
+    }
+
+    @Test
+    public void pedirPixDeNovoComPixAguardandoPagamentoReaproveitaOMesmoCodigoSemCriarOutroPedido() {
+        Payment payment = withLivePix(10L);
+        when(pagBankPixGatewayService.fetchOrderStatus("ORDE_ORIGINAL")).thenReturn("WAITING");
+
+        PixGenerationResponse response = paymentCodeGenerationService.generatePix(payment);
+
+        assertEquals("ORDE_ORIGINAL", response.payment().getPspOrderId());
+        assertEquals("CODIGO-ORIGINAL", response.payment().getPaymentCode());
+        assertNull(response.qrCodeImageUrl());
+        verify(pagBankPixGatewayService, never()).createPixOrder(any(), any(), any());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void pedirPixDeNovoQuandoPagBankAindaNaoTemCobrancaReaproveita() {
+        // Pedido Pix recém-criado: a API ainda não lista cobrança paga, então o status vem nulo.
+        Payment payment = withLivePix(11L);
+        when(pagBankPixGatewayService.fetchOrderStatus("ORDE_ORIGINAL")).thenReturn(null);
+
+        assertEquals("CODIGO-ORIGINAL", paymentCodeGenerationService.generatePix(payment).payment().getPaymentCode());
+        verify(pagBankPixGatewayService, never()).createPixOrder(any(), any(), any());
+    }
+
+    @Test
+    public void pedirPixDeNovoQuandoOPixAnteriorJaFoiPagoBaixaAFaturaENaoCriaOutro() {
+        Payment payment = withLivePix(12L);
+        when(pagBankPixGatewayService.fetchOrderStatus("ORDE_ORIGINAL")).thenReturn("PAID");
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        assertThrows(BusinessException.class, () -> paymentCodeGenerationService.generatePix(payment));
+
+        assertEquals(EPaymentStatus.PAID, payment.getStatus());
+        verify(paymentRepository).save(payment);
+        verify(pagBankPixGatewayService, never()).createPixOrder(any(), any(), any());
+    }
+
+    @Test
+    public void pedirPixDeNovoComFalhaNaConsultaAoPagBankReaproveitaEmVezDeCriarOutro() {
+        Payment payment = withLivePix(13L);
+        when(pagBankPixGatewayService.fetchOrderStatus("ORDE_ORIGINAL"))
+                .thenThrow(new PaymentGatewayException("PagBank fora do ar"));
+
+        PixGenerationResponse response = paymentCodeGenerationService.generatePix(payment);
+
+        assertEquals("ORDE_ORIGINAL", response.payment().getPspOrderId());
+        verify(pagBankPixGatewayService, never()).createPixOrder(any(), any(), any());
+    }
+
+    @Test
+    public void pedirPixDeNovoComPedidoAnteriorCanceladoCriaUmNovoESobrescreve() {
+        Payment payment = withLivePix(14L);
+        when(pagBankPixGatewayService.fetchOrderStatus("ORDE_ORIGINAL")).thenReturn("CANCELED");
+        when(pagBankPixGatewayService.createPixOrder(eq(payment), any(), any()))
+                .thenReturn(new PixOrderResult("ORDE_NOVO", "CODIGO-NOVO", null));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        PixGenerationResponse response = paymentCodeGenerationService.generatePix(payment);
+
+        assertEquals("ORDE_NOVO", response.payment().getPspOrderId());
+        assertEquals("CODIGO-NOVO", response.payment().getPaymentCode());
+    }
+
+    @Test
+    public void pedirPixDeNovoComPixExpiradoCriaUmNovoSemConsultarOAntigo() {
+        Payment payment = withLivePix(15L);
+        payment.setDueDate(LocalDate.now().minusDays(3));
+        when(pagBankPixGatewayService.createPixOrder(eq(payment), any(), any()))
+                .thenReturn(new PixOrderResult("ORDE_NOVO", "CODIGO-NOVO", null));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        assertEquals("ORDE_NOVO", paymentCodeGenerationService.generatePix(payment).payment().getPspOrderId());
+        verify(pagBankPixGatewayService, never()).fetchOrderStatus(any());
+    }
+
+    @Test
+    public void faturaComBoletoOuSemCodigoAindaGeraPixNormalmente() {
+        Payment boleto = pendingPayment(16L);
+        boleto.setDueDate(LocalDate.now().plusDays(10));
+        boleto.setMethod(EPaymentMethod.BOLETO);
+        boleto.setPspOrderId("ORDE_QUALQUER");
+        boleto.setPaymentCode("https://boleto");
+        when(pagBankPixGatewayService.createPixOrder(eq(boleto), any(), any()))
+                .thenReturn(new PixOrderResult("ORDE_NOVO", "CODIGO-NOVO", null));
+        when(paymentRepository.save(boleto)).thenReturn(boleto);
+
+        assertEquals(EPaymentMethod.PIX, paymentCodeGenerationService.generatePix(boleto).payment().getMethod());
+        verify(pagBankPixGatewayService, never()).fetchOrderStatus(any());
+    }
 }
