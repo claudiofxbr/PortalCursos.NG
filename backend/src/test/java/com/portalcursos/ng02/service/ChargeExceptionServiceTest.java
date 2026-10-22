@@ -23,6 +23,7 @@ import com.portalcursos.ng02.model.ESecretaryProcessType;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.repository.ChargeAmountExceptionRepository;
+import com.portalcursos.ng02.repository.ChargePriceRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
@@ -55,6 +56,7 @@ class ChargeExceptionServiceTest {
     @Mock private PostgradStudentRepository postgradStudentRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private ChargeCatalogService catalogService;
+    @Mock private ChargePriceRepository priceRepository;
     @Mock private ChargePriceAccessService accessService;
     @Mock private ChargePolicy policy;
     @Mock private AuditService auditService;
@@ -250,10 +252,12 @@ class ChargeExceptionServiceTest {
 
         when(repository.findById(9L)).thenReturn(Optional.of(entity));
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(priceRepository.findById(7L)).thenReturn(Optional.of(table.price()));
         ExceptionDto dto = service.reject(9L, new DecisionRequest("Fora da política de bolsas"));
 
         assertEquals(Status.REJECTED, dto.status());
         assertEquals("Fora da política de bolsas", dto.decisionReason());
+        assertEquals("Certidão de nada consta", dto.procedureName());
         verify(paymentRepository, never()).save(any());
     }
 
@@ -265,9 +269,12 @@ class ChargeExceptionServiceTest {
         when(repository.findAllByOrderByRequestedAtDesc()).thenReturn(List.of(mine));
         when(repository.findByRequestedByOrderByRequestedAtDesc("ana")).thenReturn(List.of(mine));
         when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(priceRepository.findAllById(any())).thenReturn(List.of(table.price()));
 
         when(accessService.current()).thenReturn(admin("adm1"));
-        assertEquals(1, service.list().size());
+        List<ExceptionDto> all = service.list();
+        assertEquals(1, all.size());
+        assertEquals("Certidão de nada consta", all.get(0).procedureName());
         verify(repository, never()).findByRequestedByOrderByRequestedAtDesc(any());
 
         when(accessService.current()).thenReturn(secretaria("ana", COURSE));
