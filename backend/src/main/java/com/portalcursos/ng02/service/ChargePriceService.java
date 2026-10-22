@@ -43,6 +43,7 @@ public class ChargePriceService {
 
     private static final Logger logger = LoggerFactory.getLogger(ChargePriceService.class);
     private static final BigDecimal MAX_VALUE = new BigDecimal("9999999.99");
+    private static final String DIRECT_CHANGE_REASON = "Alteração direta do administrador";
 
     private final ChargePriceRepository priceRepository;
     private final ChargePriceChangeRepository changeRepository;
@@ -103,6 +104,7 @@ public class ChargePriceService {
             decide(c, Status.REJECTED, access, "Superada por alteração direta do administrador");
             changeRepository.save(c);
         });
+        recordDirectChange(price, value, access, DIRECT_CHANGE_REASON);
         logger.info("[PRICES] valor alterado pelo administrador: priceId={} por={}", priceId, access.actor());
         return toRow(price, access, null, courseNames(List.of(price)));
     }
@@ -131,6 +133,9 @@ public class ChargePriceService {
         row.setCurrentValue(request.value() == null ? null : normalize(request.value()));
         stamp(row, access);
         ChargePrice saved = priceRepository.save(row);
+        if (saved.getCurrentValue() != null) {
+            recordDirectChange(saved, saved.getCurrentValue(), access, "Valor inicial definido pelo administrador");
+        }
         logger.info("[PRICES] valor por curso criado: priceId={} por={}", saved.getId(), access.actor());
         return toRow(saved, access, null, courseNames(List.of(saved)));
     }
@@ -265,6 +270,20 @@ public class ChargePriceService {
         if (priceIds.isEmpty()) return Map.of();
         return changeRepository.findByChargePriceIdInAndStatus(priceIds, Status.PENDING).stream()
                 .collect(Collectors.toMap(ChargePriceChange::getChargePriceId, c -> c, (a, b) -> a));
+    }
+
+    /**
+     * Registra no histórico uma definição de valor feita direto pelo administrador (já vigente): sem isso só as
+     * propostas apareciam, e a linha parecia nunca ter mudado.
+     */
+    private void recordDirectChange(ChargePrice price, BigDecimal value, Access access, String reason) {
+        ChargePriceChange entry = new ChargePriceChange();
+        entry.setChargePriceId(price.getId());
+        entry.setProposedValue(value);
+        entry.setProposedBy(access.actor());
+        entry.setReason(reason);
+        decide(entry, Status.APPROVED, access, null);
+        changeRepository.save(entry);
     }
 
     private static void decide(ChargePriceChange change, Status status, Access access, String reason) {
