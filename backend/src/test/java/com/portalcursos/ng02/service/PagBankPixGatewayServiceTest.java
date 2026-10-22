@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.PixOrderResult;
+import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.PaymentGatewayException;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
@@ -137,6 +138,40 @@ class PagBankPixGatewayServiceTest {
         assertTrue(warn.contains("HTTP 401"), "o WARN deve trazer o código HTTP do PagBank: " + warn);
         assertFalse(warn.contains("segredo-do-token"));
         assertFalse(warn.contains("corpo-sensivel-do-psp"));
+    }
+
+    @Test
+    void createPixOrderQuandoPagBankRecusaOPedidoLancaRecusaClaraSemVazarCorpoDoPsp() {
+        // Resposta real do sandbox no cenário "recusada": 201 com charges[0].status=DECLINED e sem qr_code.
+        setUpWithToken("valid-token");
+        mockServer.expect(requestTo(BASE_URL + "/orders"))
+                .andRespond(withSuccess("""
+                        {
+                          "id": "ORDE_RECUSADA",
+                          "charges": [{
+                            "status": "DECLINED",
+                            "payment_response": {"code": "10000", "message": "NAO AUTORIZADO PELO PAGSEGURO"}
+                          }]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.createPixOrder(samplePayment(), "webhook-token", BASE_URL + "/webhook"));
+
+        assertTrue(ex.getMessage().contains("recusou"), "deve dizer que o PagBank recusou: " + ex.getMessage());
+        assertFalse(ex.getMessage().contains("NAO AUTORIZADO"), "não expõe o texto bruto do PSP");
+        assertFalse(ex.getMessage().contains("10000"));
+        mockServer.verify();
+    }
+
+    @Test
+    void createPixOrderSemQrCodeESemRecusaContinuaSendoRespostaInesperada() {
+        setUpWithToken("valid-token");
+        mockServer.expect(requestTo(BASE_URL + "/orders"))
+                .andRespond(withSuccess("{\"id\":\"ORDE_X\",\"charges\":[{\"status\":\"WAITING\"}]}", MediaType.APPLICATION_JSON));
+
+        assertThrows(PaymentGatewayException.class,
+                () -> service.createPixOrder(samplePayment(), "webhook-token", BASE_URL + "/webhook"));
     }
 
     @Test
