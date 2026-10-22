@@ -8,11 +8,13 @@ import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.ChargeAmountException;
 import com.portalcursos.ng02.model.ChargeAmountException.Status;
+import com.portalcursos.ng02.model.ChargePrice;
 import com.portalcursos.ng02.model.EAcademicLevel;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.repository.ChargeAmountExceptionRepository;
+import com.portalcursos.ng02.repository.ChargePriceRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
@@ -26,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Exceção controlada à regra "o valor vem da tabela": a secretária do curso do aluno (ou um administrador)
@@ -45,6 +49,7 @@ public class ChargeExceptionService {
     private final PostgradStudentRepository postgradStudentRepository;
     private final PaymentRepository paymentRepository;
     private final ChargeCatalogService catalogService;
+    private final ChargePriceRepository priceRepository;
     private final ChargePriceAccessService accessService;
     private final ChargePolicy policy;
     private final AuditService auditService;
@@ -148,7 +153,8 @@ public class ChargeExceptionService {
         repository.save(entity);
         logger.info("[CHARGE-EXCEPTION] pedido {} rejeitado por {}", id, access.actor());
         Student student = loadStudent(entity.getStudentId(), entity.getAcademicLevel());
-        return toDto(entity, student, null);
+        String procedureName = priceRepository.findById(entity.getChargePriceId()).map(ChargePrice::getName).orElse(null);
+        return toDto(entity, student, procedureName);
     }
 
     /** Administrador vê todos os pedidos; a secretária vê só os que ela fez. */
@@ -161,8 +167,13 @@ public class ChargeExceptionService {
         List<ChargeAmountException> rows = access.isAdmin()
                 ? repository.findAllByOrderByRequestedAtDesc()
                 : repository.findByRequestedByOrderByRequestedAtDesc(access.actor());
+        // Uma consulta só para os nomes dos procedimentos, em vez de uma por pedido.
+        Map<Long, String> names = priceRepository.findAllById(
+                        rows.stream().map(ChargeAmountException::getChargePriceId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(ChargePrice::getId, ChargePrice::getName, (a, b) -> a));
         return rows.stream()
-                .map(row -> toDto(row, loadStudentOrNull(row.getStudentId(), row.getAcademicLevel()), null))
+                .map(row -> toDto(row, loadStudentOrNull(row.getStudentId(), row.getAcademicLevel()),
+                        names.get(row.getChargePriceId())))
                 .toList();
     }
 
