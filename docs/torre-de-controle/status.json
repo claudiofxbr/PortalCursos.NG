@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr152-monitor",
+      "label": "#152 — fix(pos-graduacao): carrega o curso na lista e no detalhe de alunos de pós",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-22T11:53:28Z"
+  "updatedAt": "2026-10-22T12:01:47Z"
 }
