@@ -1,6 +1,8 @@
 package com.portalcursos.ng02.controller;
 
 import com.portalcursos.ng02.dto.ChargeCatalogDtos.CatalogItemDto;
+import com.portalcursos.ng02.dto.StudentSearchHit;
+import com.portalcursos.ng02.service.FinanceStudentSearchService;
 import com.portalcursos.ng02.exception.BusinessException;
 import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.EAcademicLevel;
@@ -29,6 +31,7 @@ import java.util.List;
 public class ChargeCatalogController {
 
     private final ChargeCatalogService catalogService;
+    private final FinanceStudentSearchService studentSearchService;
     private final StudentRepository studentRepository;
     private final PostgradStudentRepository postgradStudentRepository;
 
@@ -42,6 +45,13 @@ public class ChargeCatalogController {
                 : postgradStudentRepository.findById(studentId)
                         .orElseThrow(() -> new ResourceNotFoundException("Estudante de pós-graduação não encontrado"));
         return ResponseEntity.ok(catalogService.catalog(student, academicLevel));
+    }
+
+    /** Busca de aluno por nome ou CPF (mín. 3 caracteres, até 10 resultados, CPF mascarado) para o formulário de cobrança. */
+    @GetMapping("/students/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
+    public ResponseEntity<List<StudentSearchHit>> searchStudents(@RequestParam String q, @RequestParam String level) {
+        return ResponseEntity.ok(studentSearchService.search(q, parseLevel(level)));
     }
 
     private static EAcademicLevel parseLevel(String level) {
