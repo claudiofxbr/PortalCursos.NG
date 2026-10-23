@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit be7d6b2)",
+      "detail": "último run em main: success (commit a7ba0ba)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit be7d6b2)",
+      "detail": "último run em main: success (commit a7ba0ba)",
       "status": "active"
     },
     {
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr165-monitor",
-      "label": "#165 — fix(financeiro): seletor de situação da edição da fatura passa a funcionar",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T14:36:38Z"
+  "updatedAt": "2026-10-23T14:41:55Z"
 }
