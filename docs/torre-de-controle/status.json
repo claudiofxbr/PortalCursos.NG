@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr161-monitor",
+      "label": "#161 — feat(pix): verificação da configuração do Pix para produção",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T12:44:35Z"
+  "updatedAt": "2026-10-23T12:51:53Z"
 }
