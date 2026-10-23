@@ -46,7 +46,7 @@
       "category": "queue",
       "id": "pr162-monitor",
       "label": "#162 — feat(financeiro): exclusão e perdão de cobrança só com autorização de administrador",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -57,5 +57,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T13:33:54Z"
+  "updatedAt": "2026-10-23T13:37:32Z"
 }
