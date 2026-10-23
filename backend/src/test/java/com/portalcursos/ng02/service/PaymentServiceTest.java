@@ -357,6 +357,74 @@ public class PaymentServiceTest {
         verify(paymentRepository).save(existing);
     }
 
+    private Payment emAberto(EPaymentStatus status) {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(status).build();
+        lenient().when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        lenient().when(paymentRepository.save(existing)).thenReturn(existing);
+        return existing;
+    }
+
+    private ManualChargeRequest comStatus(EPaymentStatus status) {
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("100.00"));   // o valor não muda: só a situação está em teste
+        request.setStatus(status);
+        return request;
+    }
+
+    @Test
+    public void administradorDaBaixaManualEmCobrancaEmAberto() {
+        Payment existing = emAberto(EPaymentStatus.OVERDUE);
+
+        assertEquals(EPaymentStatus.PAID, paymentService.updateCharge(5L, comStatus(EPaymentStatus.PAID)).getStatus());
+        verify(adminGuard).require(org.mockito.ArgumentMatchers.contains("situação"));
+        assertEquals(new BigDecimal("100.00"), existing.getAmount());
+    }
+
+    @Test
+    public void administradorCancelaCobrancaPendente() {
+        emAberto(EPaymentStatus.PENDING);
+
+        assertEquals(EPaymentStatus.CANCELLED, paymentService.updateCharge(5L, comStatus(EPaymentStatus.CANCELLED)).getStatus());
+    }
+
+    @Test
+    public void naoAdministradorNaoMudaASituacao() {
+        actAsNonAdmin();
+        Payment existing = emAberto(EPaymentStatus.PENDING);
+
+        assertThrows(AccessDeniedException.class, () -> paymentService.updateCharge(5L, comStatus(EPaymentStatus.PAID)));
+
+        assertEquals(EPaymentStatus.PENDING, existing.getStatus());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void situacaoIgualAAtualNaoExigeAdministradorNemMuda() {
+        actAsNonAdmin();
+        Payment existing = emAberto(EPaymentStatus.PENDING);
+
+        assertEquals(EPaymentStatus.PENDING, paymentService.updateCharge(5L, comStatus(EPaymentStatus.PENDING)).getStatus());
+        assertEquals(EPaymentStatus.PENDING, existing.getStatus());
+    }
+
+    @Test
+    public void pendenteEAtrasadoSaoAutomaticosNaoSePodeEscolher() {
+        Payment existing = emAberto(EPaymentStatus.OVERDUE);
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, comStatus(EPaymentStatus.PENDING)));
+
+        assertEquals(EPaymentStatus.OVERDUE, existing.getStatus());
+    }
+
+    @Test
+    public void cobrancaPagaOuCanceladaNaoVoltaAtras() {
+        Payment paga = emAberto(EPaymentStatus.PAID);
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, comStatus(EPaymentStatus.CANCELLED)));
+
+        assertEquals(EPaymentStatus.PAID, paga.getStatus());
+    }
+
     @Test
     public void naoAdministradorNaoAlteraOValorDeCobrancaJaLancada() {
         actAsNonAdmin();

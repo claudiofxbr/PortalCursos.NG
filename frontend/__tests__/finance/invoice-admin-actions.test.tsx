@@ -92,5 +92,26 @@ describe('Cobranças: exclusão e alteração de valor só para administrador', 
     expect(body.amount).toBe(150.5);
     expect(body).not.toHaveProperty('totalAmount');
     expect(body.dueDate).toBe('2026-12-01');
+    expect(body.status).toBeUndefined();
+  });
+
+  test('o administrador dá baixa manual pela situação e ela é enviada ao servidor', async () => {
+    serve(POLICY({ canDecideException: true }));
+    const { default: api } = await import('@/app/services/api');
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    render(<FinancePage />);
+    await userEvent.click(await screen.findByText('Editar'));
+    await userEvent.selectOptions(screen.getByLabelText('Situação'), 'PAID');
+    await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+    expect((api.put as ReturnType<typeof vi.fn>).mock.calls[0][1].status).toBe('PAID');
+  });
+
+  test('quem não é administrador vê a situação travada', async () => {
+    serve(POLICY({ canDecideException: false }));
+    render(<FinancePage />);
+    await userEvent.click(await screen.findByText('Editar'));
+
+    expect((screen.getByLabelText('Situação') as HTMLSelectElement).disabled).toBe(true);
   });
 });
