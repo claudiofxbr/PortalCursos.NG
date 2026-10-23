@@ -203,6 +203,10 @@ class PostgresMigrationIntegrationTest {
                 .status(EPaymentStatus.PENDING)
                 .build());
 
+        // Excluir cobrança agora exige administrador autenticado (perdão de cobrança); o @AfterEach limpa o contexto.
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin-teste", null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))));
+
         assertDoesNotThrow(() -> paymentService.deleteCharge(saved.getId()));
 
         // deleteCharge usa paymentRepository.save() (flush implícito só no commit da
