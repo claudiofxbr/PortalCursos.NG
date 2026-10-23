@@ -22,6 +22,7 @@ import java.util.Map;
 public class HealthController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final com.portalcursos.ng02.service.PixConfigCheck pixConfigCheck;
 
     private static final String VERSION = "V30.9-SUPREME-FINAL";
 
@@ -60,6 +61,9 @@ public class HealthController {
         // Diagnósticos Supreme
         diagnostics.put("protocol", "OMEGA-SUPREME");
         diagnostics.put("cloud_provider", "RENDER/HOSTINGER/NEON");
+        // /api/health é público: só a situação em uma palavra (OK/ATENCAO/NAO_CONFIGURADO). O detalhe do que ajustar
+        // fica no log de inicialização e na rota de administrador /api/finance/pix-config.
+        diagnostics.put("pix", pixConfigCheck.check().status());
         
         HealthResponse response = HealthResponse.builder()
                 .status(status)
