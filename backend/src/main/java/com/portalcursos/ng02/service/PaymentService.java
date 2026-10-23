@@ -112,7 +112,10 @@ public class PaymentService {
                     && request.getAmount().compareTo(payment.getAmount()) != 0) {
                 throw new BusinessException(AMOUNT_LOCKED_MESSAGE);
             }
-        } else {
+        } else if (request.getAmount() != null) {
+            if (request.getAmount().signum() < 0) {
+                throw new BusinessException("O valor da cobrança não pode ser negativo");
+            }
             payment.setAmount(request.getAmount());
         }
         payment.setDueDate(request.getDueDate());
