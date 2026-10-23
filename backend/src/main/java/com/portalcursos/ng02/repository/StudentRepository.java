@@ -9,6 +9,15 @@ import java.util.Optional;
 
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
+    // Busca do formulário de cobrança. TYPE(s) = Student exclui os de pós (mesma tabela); o CPF é comparado só pelos dígitos.
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Student s WHERE TYPE(s) = Student AND LOWER(s.fullName) LIKE CONCAT('%', :name, '%') ORDER BY s.fullName")
+    java.util.List<Student> searchGraduationByName(@org.springframework.data.repository.query.Param("name") String name,
+                                                   org.springframework.data.domain.Pageable page);
+
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Student s WHERE TYPE(s) = Student AND REPLACE(REPLACE(s.cpf, '.', ''), '-', '') LIKE CONCAT(:digits, '%') ORDER BY s.fullName")
+    java.util.List<Student> searchGraduationByCpf(@org.springframework.data.repository.query.Param("digits") String digits,
+                                                  org.springframework.data.domain.Pageable page);
+
     Optional<Student> findByRegistrationNumber(String registrationNumber);
     Optional<Student> findByEmail(String email);
     Optional<Student> findByCpf(String cpf);

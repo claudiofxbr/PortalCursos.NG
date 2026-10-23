@@ -9,7 +9,16 @@ import java.util.List;
 
 @Repository
 public interface PostgradStudentRepository extends JpaRepository<PostgradStudent, Long> {
-    
+
+    // Busca do formulário de cobrança (ver StudentRepository); o CPF é comparado só pelos dígitos.
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM PostgradStudent p WHERE LOWER(p.fullName) LIKE CONCAT('%', :name, '%') ORDER BY p.fullName")
+    List<PostgradStudent> searchByName(@org.springframework.data.repository.query.Param("name") String name,
+                                       org.springframework.data.domain.Pageable page);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM PostgradStudent p WHERE REPLACE(REPLACE(p.cpf, '.', ''), '-', '') LIKE CONCAT(:digits, '%') ORDER BY p.fullName")
+    List<PostgradStudent> searchByCpf(@org.springframework.data.repository.query.Param("digits") String digits,
+                                      org.springframework.data.domain.Pageable page);
+
     @org.springframework.data.jpa.repository.Query("SELECT p FROM PostgradStudent p WHERE p.email = :email AND p.active = true")
     Optional<PostgradStudent> findByEmailAndActiveTrue(@org.springframework.data.repository.query.Param("email") String email);
 

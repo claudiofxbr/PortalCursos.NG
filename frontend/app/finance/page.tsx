@@ -11,6 +11,7 @@ import { cardPaymentsEnabled, cardCheckoutErrorMessage, isSafePayUrl, paymentIdF
 import Link from 'next/link';
 import { mayOpenPriceTable } from './prices/priceTable';
 import { ExceptionRequestModal } from './ExceptionRequestModal';
+import { StudentSearch } from './StudentSearch';
 import { DEFAULT_POLICY, normalizePolicy, type ChargePolicy } from './chargeExceptions';
 import {
   applyProcedure, buildChargePayload, catalogErrorMessage, clearProcedure, EMPTY_CHARGE, groupItems, optionLabel,
@@ -598,6 +599,7 @@ export default function FinancePage() {
                   </div>
                   
                   <form onSubmit={handleCreateCharge}>
+                      <StudentSearch level={activeTab} onPick={student => setNewCharge({...newCharge, studentId: String(student.id)})} />
                       <div style={{ marginBottom: '1.5rem' }}>
                           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '8px' }}>Identificação do Aluno ({activeTab})</label>
                           <input type="number" required value={newCharge.studentId} onChange={e => setNewCharge({...newCharge, studentId: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #eee', outline: 'none', transition: 'border-color 0.3s' }} placeholder="ID do Aluno no Sistema" />
