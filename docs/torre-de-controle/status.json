@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr167-monitor",
+      "label": "#167 — fix(financeiro): card do aluno no lançamento funciona para o perfil FINANCEIRO",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T15:49:38Z"
+  "updatedAt": "2026-10-23T16:01:27Z"
 }
