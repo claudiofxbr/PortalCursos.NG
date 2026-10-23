@@ -306,3 +306,56 @@ O filtro de escopo é aplicado na consulta (não se confia no que a tela envia).
 5. **O valor é por cobrança e curso** (ou global, quando o curso é "Todos"). Confirmar se o valor pode variar por curso.
 6. **Sem data de vigência:** a confirmação vale a partir do momento. Se for preciso vigência futura, acrescentar um campo de data.
 7. **Cobranças já emitidas não mudam** quando o valor da tabela muda; só valem para as novas.
+
+## 12. Fluxo ponta a ponta: valor da cobrança, perdão e Pix (estado implementado em 23/10/2026)
+
+Este capítulo descreve o que o sistema **faz hoje**, etapa por etapa. Tudo o que é regra de segurança é decidido **no servidor** (rota + serviço); a tela só esconde o que o servidor recusaria.
+
+### 12.1 Valor da cobrança vem da tabela (ativação automática)
+
+| Etapa | Regra | Se der errado |
+|---|---|---|
+| 1. Administrador preenche a tabela (`/finance/prices`) | Só ADMIN/ROOT_MASTER definem valor. Valor de 0,00 a 9.999.999,99, no máximo 2 casas; zero é permitido (procedimento gratuito); nulo e negativo são recusados. Toda alteração direta fica no histórico da linha. | Versão desatualizada: 400 "alterado por outra pessoa, recarregue". |
+| 2. Prontidão | A tabela está **pronta** quando existe ao menos uma linha global (sem curso) e **nenhuma está em branco**. A tela de valores mostra "em espera: faltam N valores" ou "Regra ativa". | Tabela vazia ou incompleta: a regra **fica em espera** (cobranças manuais continuam funcionando). |
+| 3. Entrada em vigor | Ao preencher o **último** valor global a regra passa a valer **sozinha**, sem deploy, sem configuração, sem ação de ninguém. O instante fica no log (`[REGRA-VALOR] ... ENTROU EM VIGOR`). Como a tabela recusa valor nulo, depois de pronta ela não volta atrás. | `CHARGES_ENFORCE_TABLE_PRICE=false` no `.env` do servidor desliga de vez (mudança de servidor). |
+| 4. Lançar cobrança (regra valendo) | Exige o procedimento. O servidor define valor, categoria e tipo de processo e **ignora** o valor enviado. Resolução: linha do curso do aluno com valor, senão a global do mesmo código. | Procedimento sem valor, de outro nível ou de outro curso: 400 com mensagem clara. |
+| 5. Editar fatura (regra valendo) | Valor travado para todos (inclusive administrador). Vencimento e descrição seguem editáveis. | Tentativa de mudar o valor: 400. |
+| 6. Valor diferente da tabela | **Exceção**: a secretária do curso do aluno (ou um administrador) pede valor + justificativa (mínimo 10 caracteres). Nada é cobrado enquanto pendente. Só um administrador **que não seja quem pediu** aprova; aprovado, a fatura nasce com o valor autorizado. Um pedido pendente por aluno e procedimento. | Fora do escopo do curso: 403. Valor igual ao da tabela: 400. Rejeitar exige motivo. |
+
+### 12.2 Exclusão e perdão de cobrança: só com administrador
+
+Perdão = excluir a cobrança, **reduzir ou zerar** o valor de uma cobrança já lançada, ou lançar cobrança manual de **valor zero**. Em qualquer desses casos o servidor exige administrador **antes** de consultar ou alterar qualquer coisa (`AdminGuard`, além do `@PreAuthorize` da rota). Quem não é administrador recebe **403** e a cobrança fica intacta.
+
+- Continua liberado a todos os perfis que já lançavam cobrança: valor positivo; editar vencimento/descrição sem mudar o valor; procedimento gratuito vindo da tabela (o valor foi definido pelo administrador). Valor manual **negativo**: recusado para todos.
+- Fatura de valor zero (da tabela, ou lançada/aprovada por administrador) **nasce paga** (`settleIfFree`), sem Pix.
+- A exclusão é *soft-delete* e fica registrada no log com valor, situação e autor.
+
+### 12.3 Pix, de ponta a ponta (do lançamento à baixa)
+
+| Etapa | Comportamento |
+|---|---|
+| 1. Gerar o Pix (`POST /finance/generate-pix/{id}`) | Pede ao PagBank um pedido Pix (valor em centavos, dados do aluno, URL de notificação). Grava `pspOrderId` e o código "copia e cola" na fatura; o QR é desenhado no navegador. Vale até o **vencimento + 1 dia**. |
+| 2. Pedir de novo | Havendo Pix vigente o servidor **reaproveita** o mesmo pedido (nunca cria outro, para não perder pagamento do QR original). Se o PagBank disser que já foi pago, baixa a fatura. Só cria novo se o anterior expirou ou foi encerrado. |
+| 3. Baixa por webhook | O PagBank avisa `/api/finance/pix/webhook/{id}/{token}` (token HMAC por fatura). O app **ignora o corpo**, reconsulta o pedido no PagBank e só então marca PAGA. Token inválido ou fatura inexistente: 404. Repetido: sem efeito. |
+| 4. Baixa automática de segurança (**sem depender do webhook**) | A cada 5 minutos o `PixReconciliationService` consulta o PagBank sobre as faturas com Pix pendente (vencimento até 3 dias atrás) e baixa as já pagas. Só **lê** o PagBank e só muda a situação para PAGA (nunca valor, nunca exclui). Idempotente (o `@Version` resolve concorrência com o webhook ou com outra instância). Falha de uma consulta não impede as demais; **3 falhas seguidas interrompem a rodada** (PagBank fora do ar) e a próxima tenta de novo. Não roda se o Pix não está configurado. Vem ligada; para desligar, `PIX_RECONCILE_ENABLED=false` (a variável precisa ser repassada no `docker-compose.prod.yml` e definida no `.env` da VPS). |
+| 5. Situação final | Fatura PAGA aparece no histórico e sai das pendentes. |
+
+### 12.4 Comportamento esperado em falhas, pendências e dados incompletos
+
+| Situação | Comportamento |
+|---|---|
+| Tabela de valores incompleta | Regra em espera; lançamento manual segue; aviso na tela de valores com a quantidade que falta. |
+| Linha de curso sem valor | Ignorada; o aluno usa o valor global do mesmo código. |
+| PagBank fora do ar ao gerar Pix | 502 "tente novamente"; a fatura continua pendente e nada é duplicado. |
+| PagBank recusa o Pix (`DECLINED`) | 400 "o PagBank recusou ... a cobrança continua pendente"; o texto bruto do PSP não vai ao cliente (só o código, no log). |
+| Pix com valor zero ou sem valor | 400; fatura de valor zero já nasce paga. |
+| Webhook não chega (deploy, rede) | A reconciliação automática baixa a fatura em até ~5 minutos. |
+| Aluno paga o QR antigo depois de pedir "de novo" | Não se perde: o pedido original é o mesmo (reaproveitado). |
+| Configuração do Pix incompleta ou incoerente | `/api/health` mostra `pix: ATENCAO` ou `NAO_CONFIGURADO`; `/api/finance/pix-config` (administrador) lista **qual variável** ajustar, sem mostrar valores; o log de inicialização repete. A reconciliação não roda enquanto estiver `NAO_CONFIGURADO`. |
+| Usuário sem permissão | 403 (logado) ou 401 (sem login), sem alterar nada. |
+
+### 12.5 O que **não** é automático (depende de pessoas ou de terceiros)
+
+1. O administrador **preencher os valores** da tabela (dado de negócio).
+2. Em produção: **token de produção do PagBank**, **homologação da conta** e **chave Pix** cadastrada (processo do PagBank). Segredos e variáveis do servidor (`PAGSEGURO_API_TOKEN`, `PAGSEGURO_API_BASE_URL=https://api.pagseguro.com`, `PAGSEGURO_WEBHOOK_SECRET` com 32+ caracteres, `PORTALCURSOS_PUBLIC_API_URL` pública em HTTPS, `PAGBANK_ENV=production`) ficam no `.env` da VPS e só mudam com autorização do responsável.
+3. Aprovar exceções de valor (decisão humana, por desenho).

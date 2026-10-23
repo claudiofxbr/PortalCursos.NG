@@ -38,6 +38,16 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.academicLevel = :level AND p.category = :category AND p.status IN :statuses")
     List<Payment> findByAcademicLevelAndCategoryAndStatusIn(@Param("level") EAcademicLevel level, @Param("category") EPaymentCategory category, @Param("statuses") List<EPaymentStatus> statuses);
 
+    /**
+     * Faturas com Pix gerado (pedido no PagBank gravado) que ainda não foram baixadas e cujo vencimento não é anterior a
+     * {@code since}. Alimenta a reconciliação automática do Pix; as mais novas primeiro.
+     */
+    @Query("SELECT p FROM Payment p WHERE p.method = com.portalcursos.ng02.model.EPaymentMethod.PIX "
+            + "AND p.pspOrderId IS NOT NULL AND p.status IN :statuses AND p.dueDate >= :since ORDER BY p.id DESC")
+    List<Payment> findPixAwaitingPayment(@Param("statuses") List<EPaymentStatus> statuses,
+                                         @Param("since") java.time.LocalDate since,
+                                         org.springframework.data.domain.Pageable pageable);
+
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.id = :id")
     java.util.Optional<Payment> findByIdWithCreatorAndStudent(@Param("id") Long id);
 }
