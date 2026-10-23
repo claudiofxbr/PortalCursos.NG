@@ -151,6 +151,26 @@ class ChargeRuleActivationIntegrationTest {
     }
 
     @Test
+    void oMomentoEmQueARegraEntraEmVigorFicaRegistradoNoLog() throws Exception {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(com.portalcursos.ng02.service.ChargePriceService.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender = new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            fill(rematriculaId, "150.00");
+            boolean antes = appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("ENTROU EM VIGOR"));
+            fill(nadaConstaId, "15.50");
+            boolean depois = appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("ENTROU EM VIGOR"));
+
+            org.junit.jupiter.api.Assertions.assertFalse(antes, "faltava um valor: a regra ainda não entrou em vigor");
+            org.junit.jupiter.api.Assertions.assertTrue(depois, "ao preencher o último valor, o log registra a entrada em vigor");
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
     void comARegraValendoEditarOValorDaFaturaEhRecusado() throws Exception {
         fill(rematriculaId, "150.00");
         fill(nadaConstaId, "15.50");
