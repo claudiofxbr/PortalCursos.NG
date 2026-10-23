@@ -26,6 +26,8 @@ interface StudentRef {
   fotoUrl?: string;
 }
 
+const STATUS_LABEL: Record<string, string> = { PENDING: 'Pendente', PAID: 'Pago', OVERDUE: 'Atrasado', CANCELLED: 'Cancelado' };
+
 /** Fatura como a API devolve (só os campos que esta tela usa). */
 interface Invoice {
   id: number;
@@ -81,6 +83,8 @@ export default function FinancePage() {
   
   // Estado para Edição
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  // Situação com que a fatura abriu na edição: só uma mudança real é enviada ao servidor.
+  const [editStatusFrom, setEditStatusFrom] = useState('');
 
   useEffect(() => {
     const searchStudent = async () => {
@@ -283,6 +287,7 @@ export default function FinancePage() {
         category: editingInvoice.category,
         secretaryProcessType: editingInvoice.secretaryProcessType,
         description: editingInvoice.description,
+        status: editingInvoice.status !== editStatusFrom ? editingInvoice.status : undefined,
       });
       setEditingInvoice(null);
       fetchFinanceData();
@@ -429,7 +434,7 @@ export default function FinancePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => setEditingInvoice(invoice)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '4px' }}>Editar</button>
+                        <button onClick={() => { setEditStatusFrom(invoice.status); setEditingInvoice(invoice); }} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '4px' }}>Editar</button>
                         {policy.canDecideException && (
                           <button onClick={() => handleDeleteInvoice(invoice.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#ffebee', color: '#c62828', border: 'none', borderRadius: '4px' }}>Excluir</button>
                         )}
@@ -723,11 +728,11 @@ export default function FinancePage() {
 
                       <div style={{ marginBottom: '1rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Status</label>
-                          <select value={editingInvoice.status} onChange={e => setEditingInvoice({...editingInvoice, status: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff' }}>
-                              <option value="PENDING">Pendente</option>
-                              <option value="PAID">Pago</option>
-                              <option value="OVERDUE">Atrasado</option>
-                              <option value="CANCELLED">Cancelado</option>
+                          {/* Pendente/Atrasado é calculado pelo sistema; só o administrador baixa ou cancela, e Pago/Cancelado são finais. */}
+                          <select aria-label="Situação" value={editingInvoice.status} disabled={!policy.canDecideException || !['PENDING', 'OVERDUE'].includes(editStatusFrom)} title={!policy.canDecideException ? 'Só um administrador baixa ou cancela uma cobrança' : undefined} onChange={e => setEditingInvoice({...editingInvoice, status: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff' }}>
+                              <option value={editStatusFrom}>{STATUS_LABEL[editStatusFrom] ?? editStatusFrom}</option>
+                              {['PENDING', 'OVERDUE'].includes(editStatusFrom) && <option value="PAID">Pago (baixa manual)</option>}
+                              {['PENDING', 'OVERDUE'].includes(editStatusFrom) && <option value="CANCELLED">Cancelado</option>}
                           </select>
                       </div>
 
