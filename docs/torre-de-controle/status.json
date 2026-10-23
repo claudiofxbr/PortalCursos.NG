@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr159-monitor",
+      "label": "#159 — feat(financeiro): regra \"valor sempre da tabela\" ligada, valendo só com a tabela pronta",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T10:46:11Z"
+  "updatedAt": "2026-10-23T12:25:55Z"
 }
