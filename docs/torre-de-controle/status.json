@@ -46,9 +46,9 @@
       "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
-      "detail": "CONFLITANTE com main. CI ok.",
+      "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T13:43:16Z"
+  "updatedAt": "2026-10-23T13:52:16Z"
 }
