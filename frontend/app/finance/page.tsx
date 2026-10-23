@@ -276,7 +276,14 @@ export default function FinancePage() {
     e.preventDefault();
     if (!editingInvoice) return;
     try {
-      await invoicesService.update(editingInvoice.id, editingInvoice);
+      // O backend lê `amount` (principal); `totalAmount` inclui juros e é só de exibição.
+      await invoicesService.update(editingInvoice.id, {
+        amount: Number.isFinite(editingInvoice.amount) ? editingInvoice.amount : undefined,
+        dueDate: editingInvoice.dueDate.split('T')[0],
+        category: editingInvoice.category,
+        secretaryProcessType: editingInvoice.secretaryProcessType,
+        description: editingInvoice.description,
+      });
       setEditingInvoice(null);
       fetchFinanceData();
     } catch (err) {
@@ -706,7 +713,7 @@ export default function FinancePage() {
                   <form onSubmit={handleUpdateInvoice}>
                       <div style={{ marginBottom: '1rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Valor (R$)</label>
-                          <input type="number" step="0.01" readOnly={policy.enforceTablePrice || !policy.canDecideException} title={!policy.canDecideException ? 'Só um administrador altera o valor de uma cobrança já lançada' : undefined} value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                          <input type="number" step="0.01" readOnly={policy.enforceTablePrice || !policy.canDecideException} title={!policy.canDecideException ? 'Só um administrador altera o valor de uma cobrança já lançada' : undefined} value={editingInvoice.amount} onChange={e => setEditingInvoice({...editingInvoice, amount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
                       </div>
 
                       <div style={{ marginBottom: '1rem' }}>

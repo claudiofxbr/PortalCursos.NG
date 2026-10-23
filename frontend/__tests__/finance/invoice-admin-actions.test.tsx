@@ -75,4 +75,22 @@ describe('Cobranças: exclusão e alteração de valor só para administrador', 
     await userEvent.click(await screen.findByText('Editar'));
     expect((document.querySelector('input[type="number"][step="0.01"]') as HTMLInputElement).readOnly).toBe(false);
   });
+
+  test('salvar a edição envia o valor no campo `amount` (principal), nunca o totalAmount com juros', async () => {
+    serve(POLICY({ canDecideException: true }));
+    const { default: api } = await import('@/app/services/api');
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    render(<FinancePage />);
+    await userEvent.click(await screen.findByText('Editar'));
+    const amount = document.querySelector('input[type="number"][step="0.01"]') as HTMLInputElement;
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '150.5');
+    await userEvent.click(screen.getByRole('button', { name: /salvar/i }));
+
+    const [url, body] = (api.put as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe('/finance/invoices/42');
+    expect(body.amount).toBe(150.5);
+    expect(body).not.toHaveProperty('totalAmount');
+    expect(body.dueDate).toBe('2026-12-01');
+  });
 });

@@ -136,6 +136,30 @@ public class PaymentServiceTest {
     }
 
     @Test
+    public void updateChargeSemValorNoPedidoMantemOValorDaCobranca() {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(existing)).thenReturn(existing);
+
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(null);
+
+        assertEquals(new BigDecimal("100.00"), paymentService.updateCharge(5L, request).getAmount());
+    }
+
+    @Test
+    public void updateChargeComValorNegativoEhRecusado() {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("-1.00"));
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, request));
+        assertEquals(new BigDecimal("100.00"), existing.getAmount());
+    }
+
+    @Test
     public void updateChargeInexistenteLanca404() {
         when(paymentRepository.findByIdWithCreatorAndStudent(404L)).thenReturn(Optional.empty());
 
