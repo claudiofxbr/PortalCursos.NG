@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr164-monitor",
+      "label": "#164 — fix(financeiro): corrige a edição do valor da fatura",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T13:56:05Z"
+  "updatedAt": "2026-10-23T14:14:35Z"
 }
