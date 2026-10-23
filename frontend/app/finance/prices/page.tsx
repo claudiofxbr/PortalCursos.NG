@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import api from '../../services/api';
+import { normalizePolicy, ruleBanner, type ChargePolicy } from '../chargeExceptions';
 import {
   courseLabel,
   formatMoney,
@@ -20,6 +21,7 @@ type ErrorLike = { response?: { status?: number; data?: { message?: unknown } } 
 
 export default function PriceTablePage() {
   const [table, setTable] = useState<PriceTable | null>(null);
+  const [policy, setPolicy] = useState<ChargePolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
@@ -31,6 +33,8 @@ export default function PriceTablePage() {
       const res = await api.get<PriceTable>('/finance/prices');
       setTable(res.data);
       setDenied(false);
+      // O aviso da regra é complementar: se a política não carregar, a tabela continua funcionando sem ele.
+      api.get('/finance/charge-policy').then((p) => setPolicy(normalizePolicy(p.data))).catch(() => setPolicy(null));
     } catch (err: unknown) {
       if ((err as ErrorLike)?.response?.status === 403) setDenied(true);
       else toast.error('Não foi possível carregar a tabela de valores.');
@@ -112,6 +116,17 @@ export default function PriceTablePage() {
           Seu perfil: <strong>{roleLabel(table.role)}</strong>. Faturas já emitidas não mudam quando um valor é alterado.
         </p>
       </header>
+
+      {policy && (() => {
+        const banner = ruleBanner(policy);
+        const colors = { waiting: ['#fff7e0', '#8a6100'], active: ['#e6f6ea', '#1e7a34'], off: ['#f0f0f0', '#555'] }[banner.tone];
+        return (
+          <section role="status" aria-label="Regra do valor da cobrança"
+            style={{ padding: '0.9rem 1rem', marginBottom: '1.5rem', borderRadius: 10, background: colors[0], color: colors[1], fontSize: '0.9rem' }}>
+            {banner.text}
+          </section>
+        );
+      })()}
 
       <section aria-label="Quem pode o quê" className="glass-panel" style={{ padding: '1rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
         <strong>Quem pode o quê</strong>
