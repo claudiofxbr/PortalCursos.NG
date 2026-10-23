@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit ecb8311)",
+      "detail": "último run em main: success (commit 738b7da)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit ecb8311)",
+      "detail": "último run em main: success (commit 738b7da)",
       "status": "active"
     },
     {
@@ -46,9 +46,9 @@
       "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
-      "detail": "CI ok.",
+      "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T13:52:16Z"
+  "updatedAt": "2026-10-23T13:56:05Z"
 }
