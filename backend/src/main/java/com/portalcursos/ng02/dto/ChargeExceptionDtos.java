@@ -28,9 +28,10 @@ public final class ChargeExceptionDtos {
     }
 
     /**
-     * O que a tela precisa saber: se a regra "valor sempre da tabela" já está ligada e o que o usuário pode
-     * fazer (pedir uma exceção, ou decidir os pedidos).
+     * O que a tela precisa saber: se a regra "valor sempre da tabela" está valendo agora, se a tabela já está pronta
+     * (e quantos valores globais faltam) e o que o usuário pode fazer (pedir uma exceção, ou decidir os pedidos).
      */
-    public record PolicyDto(boolean enforceTablePrice, boolean canRequestException, boolean canDecideException) {
+    public record PolicyDto(boolean enforceTablePrice, boolean canRequestException, boolean canDecideException,
+                            boolean tableReady, long blankValues) {
     }
 }

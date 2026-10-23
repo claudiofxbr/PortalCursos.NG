@@ -26,4 +26,11 @@ public interface ChargePriceRepository extends JpaRepository<ChargePrice, Long> 
     boolean existsByCodeAndCourseIdAndActiveTrue(String code, UUID courseId);
 
     Optional<ChargePrice> findByCodeAndCourseIdAndActiveTrue(String code, UUID courseId);
+
+    /** A linha global (sem curso) de um código, que serve de reserva quando a do curso está em branco. */
+    Optional<ChargePrice> findByCodeAndCourseIdIsNullAndActiveTrue(String code);
+
+    long countByActiveTrueAndCourseIdIsNull();
+
+    long countByActiveTrueAndCourseIdIsNullAndCurrentValueIsNull();
 }
