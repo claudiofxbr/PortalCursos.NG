@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +53,16 @@ public class ChargeCatalogController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
     public ResponseEntity<List<StudentSearchHit>> searchStudents(@RequestParam String q, @RequestParam String level) {
         return ResponseEntity.ok(studentSearchService.search(q, parseLevel(level)));
+    }
+
+    /**
+     * Identificação mínima do aluno escolhido (nome, CPF mascarado, matrícula). Existe para o financeiro, que lança cobrança
+     * mas não tem acesso ao cadastro completo do aluno.
+     */
+    @GetMapping("/students/{id}/summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
+    public ResponseEntity<StudentSearchHit> studentSummary(@PathVariable Long id, @RequestParam String level) {
+        return ResponseEntity.ok(studentSearchService.summary(id, parseLevel(level)));
     }
 
     private static EAcademicLevel parseLevel(String level) {

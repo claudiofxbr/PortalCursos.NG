@@ -2,7 +2,9 @@ package com.portalcursos.ng02.service;
 
 import com.portalcursos.ng02.dto.StudentSearchHit;
 import com.portalcursos.ng02.exception.BusinessException;
+import com.portalcursos.ng02.exception.ResourceNotFoundException;
 import com.portalcursos.ng02.model.EAcademicLevel;
+import com.portalcursos.ng02.model.PostgradStudent;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
@@ -52,7 +54,21 @@ public class FinanceStudentSearchService {
                 .toList();
     }
 
-    /** 12345678901 → ***.***.789-01: mostra o bastante para distinguir homônimos. */
+    /**
+     * Identificação mínima do aluno escolhido (card do formulário de cobrança): nome, CPF mascarado e matrícula.
+     * Graduação e pós ficam na mesma tabela; aluno do outro nível ou inativo é "não encontrado".
+     */
+    @Transactional(readOnly = true)
+    public StudentSearchHit summary(Long id, EAcademicLevel level) {
+        boolean postgrad = level == EAcademicLevel.POSTGRADUATE;
+        Student student = studentRepository.findById(id)
+                .filter(s -> (s instanceof PostgradStudent) == postgrad)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        postgrad ? "Estudante de pós-graduação não encontrado" : "Estudante de graduação não encontrado"));
+        return new StudentSearchHit(student.getId(), student.getFullName(), maskCpf(student.getCpf()), student.getRegistrationNumber());
+    }
+
+    /** 12345678901 →***.***.789-01: mostra o bastante para distinguir homônimos. */
     static String maskCpf(String cpf) {
         String digits = cpf == null ? "" : cpf.replaceAll("\\D", "");
         if (digits.length() != 11) {

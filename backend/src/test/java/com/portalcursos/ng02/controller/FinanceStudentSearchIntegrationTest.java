@@ -105,6 +105,42 @@ class FinanceStudentSearchIntegrationTest {
         search("ma_ia", "GRADUATION", "ADMIN").andExpect(jsonPath("$", hasSize(0)));
     }
 
+    private Long idOf(String registration) {
+        return studentRepository.findByRegistrationNumber(registration).orElseThrow().getId();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions summary(Long id, String level, String role) throws Exception {
+        return mockMvc.perform(get("/api/finance/students/" + id + "/summary").param("level", level).with(as(role)));
+    }
+
+    @Test
+    void financeiroVeSoNomeCpfMascaradoEMatriculaDoAluno() throws Exception {
+        summary(idOf("G-SRCH-1"), "GRADUATION", "FINANCEIRO")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Maria Silva Souza"))
+                .andExpect(jsonPath("$.cpfMasked").value("***.***.746-00"))
+                .andExpect(jsonPath("$.registrationNumber").value("G-SRCH-1"))
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(content().string(not(containsString("39012874600"))));
+    }
+
+    @Test
+    void resumoNaoMisturaNiveisNemEncontraIdInexistente() throws Exception {
+        summary(idOf("P-SRCH-1"), "GRADUATION", "ADMIN").andExpect(status().isNotFound());
+        summary(idOf("G-SRCH-1"), "POSTGRADUATE", "ADMIN").andExpect(status().isNotFound());
+        summary(idOf("P-SRCH-1"), "POSTGRADUATE", "ADMIN").andExpect(status().isOk());
+        summary(999999L, "GRADUATION", "ADMIN").andExpect(status().isNotFound());
+    }
+
+    @Test
+    void resumoSoParaQuemLancaCobranca() throws Exception {
+        Long id = idOf("G-SRCH-1");
+        summary(id, "GRADUATION", "ALUNO").andExpect(status().isForbidden());
+        summary(id, "GRADUATION", "ACADEMICO").andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/finance/students/" + id + "/summary").param("level", "GRADUATION"))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     void soQuemLancaCobrancaPodeBuscar() throws Exception {
         search("Maria", "GRADUATION", "ALUNO").andExpect(status().isForbidden());
