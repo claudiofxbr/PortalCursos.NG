@@ -32,12 +32,22 @@ public class PaymentService {
     private final AuditService auditService;
     private final ChargeCatalogService chargeCatalogService;
     private final ChargePolicy chargePolicy;
+    private final AdminGuard adminGuard;
 
     private static final String AMOUNT_LOCKED_MESSAGE =
             "O valor da cobrança vem da tabela de valores e não pode ser alterado aqui. "
             + "Para um valor diferente, a secretária do curso deve pedir uma exceção, aprovada por um administrador.";
 
     public Payment createManualCharge(ManualChargeRequest request) {
+        if (request.getChargePriceId() == null && request.getAmount() != null) {
+            if (request.getAmount().signum() < 0) {
+                throw new BusinessException("O valor da cobrança não pode ser negativo");
+            }
+            // Cobrança de valor zero digitado é perdão: quita a fatura sem passar pela tabela de valores.
+            if (request.getAmount().signum() == 0) {
+                adminGuard.require("lançar uma cobrança de valor zero (perdão de cobrança)");
+            }
+        }
         if (chargePolicy.enforceTablePrice() && request.getChargePriceId() == null) {
             throw new BusinessException("Escolha o procedimento: o valor da cobrança vem da tabela de valores. "
                     + "Para um valor diferente, a secretária do curso deve pedir uma exceção, aprovada por um administrador.");
@@ -90,6 +100,12 @@ public class PaymentService {
         Payment payment = paymentRepository.findByIdWithCreatorAndStudent(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
 
+        boolean amountChanges = request.getAmount() != null && payment.getAmount() != null
+                && request.getAmount().compareTo(payment.getAmount()) != 0;
+        if (amountChanges) {
+            // Reduzir ou zerar o valor de uma cobrança existente é perdoá-la (total ou parcialmente).
+            adminGuard.require("alterar o valor de uma cobrança já lançada (reduzir ou zerar é perdão de cobrança)");
+        }
         if (chargePolicy.enforceTablePrice()) {
             // O valor da cobrança só nasce da tabela (ou de uma exceção aprovada); editar não o altera.
             if (request.getAmount() != null && payment.getAmount() != null
@@ -112,8 +128,12 @@ public class PaymentService {
     }
 
     public void deleteCharge(Long id) {
+        // Excluir uma cobrança é perdoá-la: só com autorização explícita de administrador, antes de qualquer consulta.
+        adminGuard.require("excluir uma cobrança (perdão de cobrança)");
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
+        logger.info("[FINANCE] cobrança {} (valor={}, situação={}) excluída pelo administrador {}",
+                id, payment.getAmount(), payment.getStatus(), adminGuard.actor());
 
         // Soft-delete explícito (mesmo padrão de UserService.deleteUser) — não usa
         // paymentRepository.delete()/deleteById(), que dependia do @SQLDelete removido.

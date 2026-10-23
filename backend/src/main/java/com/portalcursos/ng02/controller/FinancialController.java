@@ -73,7 +73,7 @@ public class FinancialController {
     }
 
     @DeleteMapping("/invoices/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ROOT_MASTER')")
     public ResponseEntity<?> deleteCharge(@PathVariable Long id) {
         paymentService.deleteCharge(id);
         return ResponseEntity.ok(new MessageResponse("Cobrança removida com sucesso"));

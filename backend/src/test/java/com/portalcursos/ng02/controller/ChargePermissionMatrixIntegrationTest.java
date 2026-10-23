@@ -62,6 +62,7 @@ class ChargePermissionMatrixIntegrationTest {
 
     private static final UUID COURSE_A = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static final String JSON = MediaType.APPLICATION_JSON_VALUE;
+    private static final int ROUTE_COUNT = 10;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ChargePriceRepository priceRepository;
@@ -165,7 +166,8 @@ class ChargePermissionMatrixIntegrationTest {
                 new Route("aprovar exceção de valor", HttpMethod.POST,
                         "/api/finance/charge-exceptions/" + exceptionId + "/approve", null),
                 new Route("rejeitar exceção de valor", HttpMethod.POST,
-                        "/api/finance/charge-exceptions/" + exceptionId + "/reject", "{\"reason\":\"não\"}"));
+                        "/api/finance/charge-exceptions/" + exceptionId + "/reject", "{\"reason\":\"não\"}"),
+                new Route("excluir (perdoar) cobrança", HttpMethod.DELETE, "/api/finance/invoices/999999", null));
     }
 
     private int perform(Route route, RequestPostProcessor who) throws Exception {
@@ -183,7 +185,7 @@ class ChargePermissionMatrixIntegrationTest {
 
     static Stream<Arguments> profileAndRoute() {
         // As rotas dependem dos ids semeados; a lista é montada na hora do teste. Aqui só o produto perfil x índice.
-        return PROFILES.stream().flatMap(p -> java.util.stream.IntStream.range(0, 9).mapToObj(i -> Arguments.of(p, i)));
+        return PROFILES.stream().flatMap(p -> java.util.stream.IntStream.range(0, ROUTE_COUNT).mapToObj(i -> Arguments.of(p, i)));
     }
 
     @ParameterizedTest(name = "{0} x rota #{1}")
@@ -210,7 +212,7 @@ class ChargePermissionMatrixIntegrationTest {
     }
 
     static Stream<Arguments> allRouteIndexes() {
-        return java.util.stream.IntStream.range(0, 9).mapToObj(Arguments::of);
+        return java.util.stream.IntStream.range(0, ROUTE_COUNT).mapToObj(Arguments::of);
     }
 
     // --- Propor valor: a secretaria sugere, mas só a chefe do curso, e nada vira vigente ---

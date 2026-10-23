@@ -19,6 +19,7 @@ import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.PostgradStudentRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -52,6 +53,9 @@ public class PaymentServiceTest {
 
     @Mock
     private ChargePolicy chargePolicy;
+
+    @Mock
+    private AdminGuard adminGuard;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -297,6 +301,116 @@ public class PaymentServiceTest {
         request.setAmount(BigDecimal.ZERO);
 
         assertEquals(EPaymentStatus.PAID, paymentService.updateCharge(5L, request).getStatus());
+    }
+
+    // --- Exclusão e perdão de cobrança só com autorização explícita de administrador ---
+
+    /** Simula um usuário que NÃO é administrador: a guarda recusa qualquer ação protegida. */
+    private void actAsNonAdmin() {
+        // lenient: nos cenários em que a ação é permitida a guarda nem chega a ser chamada.
+        lenient().doThrow(new AccessDeniedException("Somente um administrador pode ..."))
+                .when(adminGuard).require(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    public void naoAdministradorNaoExcluiCobrancaENemConsultaOBanco() {
+        actAsNonAdmin();
+
+        assertThrows(AccessDeniedException.class, () -> paymentService.deleteCharge(5L));
+
+        verifyNoInteractions(paymentRepository);
+    }
+
+    @Test
+    public void administradorExcluiECobrancaFicaInativa() {
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(EPaymentStatus.PENDING).build();
+        when(paymentRepository.findById(5L)).thenReturn(Optional.of(existing));
+
+        paymentService.deleteCharge(5L);
+
+        assertFalse(existing.isActive());
+        verify(adminGuard).require(org.mockito.ArgumentMatchers.contains("excluir"));
+        verify(paymentRepository).save(existing);
+    }
+
+    @Test
+    public void naoAdministradorNaoAlteraOValorDeCobrancaJaLancada() {
+        actAsNonAdmin();
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(EPaymentStatus.PENDING).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("40.00"));
+
+        assertThrows(AccessDeniedException.class, () -> paymentService.updateCharge(5L, request));
+
+        assertEquals(new BigDecimal("100.00"), existing.getAmount());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void naoAdministradorNaoZeraACobrancaParaQuitala() {
+        actAsNonAdmin();
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(EPaymentStatus.PENDING).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(BigDecimal.ZERO);
+
+        assertThrows(AccessDeniedException.class, () -> paymentService.updateCharge(5L, request));
+
+        assertEquals(EPaymentStatus.PENDING, existing.getStatus());
+    }
+
+    @Test
+    public void naoAdministradorAindaEditaDescricaoComOMesmoValor() {
+        actAsNonAdmin();
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00")).status(EPaymentStatus.PENDING).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("100.0"));
+        request.setDescription("Só a descrição mudou");
+
+        assertEquals("Só a descrição mudou", paymentService.updateCharge(5L, request).getDescription());
+    }
+
+    @Test
+    public void naoAdministradorNaoLancaCobrancaManualDeValorZero() {
+        actAsNonAdmin();
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(BigDecimal.ZERO);
+
+        assertThrows(AccessDeniedException.class, () -> paymentService.createManualCharge(request));
+
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void valorManualNegativoEhRecusadoParaTodos() {
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setAmount(new BigDecimal("-1.00"));
+
+        assertThrows(BusinessException.class, () -> paymentService.createManualCharge(request));
+
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void naoAdministradorLancaProcedimentoGratuitoDaTabelaPoisOValorFoiDefinidoPeloAdministrador() {
+        actAsNonAdmin();
+        Student student = Student.builder().id(1L).build();
+        ChargePrice row = new ChargePrice();
+        row.setId(3L);
+        row.setName("Contrato e aceite");
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
+        when(chargeCatalogService.resolve(3L, student, EAcademicLevel.GRADUATION)).thenReturn(
+                new ChargeCatalogService.Resolved(row, BigDecimal.ZERO,
+                        com.portalcursos.ng02.dto.ChargeCatalogDtos.ValueSource.GLOBAL,
+                        EPaymentCategory.INTERNAL_PROCESS, ESecretaryProcessType.OTHER));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        ManualChargeRequest request = requestFor(EAcademicLevel.GRADUATION, 1L);
+        request.setChargePriceId(3L);
+
+        assertEquals(EPaymentStatus.PAID, paymentService.createManualCharge(request).getStatus());
     }
 
     // --- Regra "o valor vem sempre da tabela" (política ligada) ---
