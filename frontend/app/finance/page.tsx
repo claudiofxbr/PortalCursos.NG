@@ -423,7 +423,9 @@ export default function FinancePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     <div style={{ display: 'flex', gap: '4px' }}>
                         <button onClick={() => setEditingInvoice(invoice)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '4px' }}>Editar</button>
-                        <button onClick={() => handleDeleteInvoice(invoice.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#ffebee', color: '#c62828', border: 'none', borderRadius: '4px' }}>Excluir</button>
+                        {policy.canDecideException && (
+                          <button onClick={() => handleDeleteInvoice(invoice.id)} style={{ padding: '4px 8px', fontSize: '0.7rem', background: '#ffebee', color: '#c62828', border: 'none', borderRadius: '4px' }}>Excluir</button>
+                        )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => handleGeneratePayment(invoice.id, 'PIX')} className="glass-panel hover-lift" style={{ padding: '8px 12px', border: 'none', cursor: 'pointer', background: '#f0faff', color: '#0288d1', fontSize: '0.8rem' }}>Pix</button>
@@ -704,7 +706,7 @@ export default function FinancePage() {
                   <form onSubmit={handleUpdateInvoice}>
                       <div style={{ marginBottom: '1rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Valor (R$)</label>
-                          <input type="number" step="0.01" readOnly={policy.enforceTablePrice} value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                          <input type="number" step="0.01" readOnly={policy.enforceTablePrice || !policy.canDecideException} title={!policy.canDecideException ? 'Só um administrador altera o valor de uma cobrança já lançada' : undefined} value={editingInvoice.totalAmount} onChange={e => setEditingInvoice({...editingInvoice, totalAmount: parseFloat(e.target.value)})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
                       </div>
 
                       <div style={{ marginBottom: '1rem' }}>
