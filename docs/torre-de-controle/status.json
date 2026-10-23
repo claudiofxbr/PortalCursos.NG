@@ -46,7 +46,7 @@
       "category": "queue",
       "id": "pr159-monitor",
       "label": "#159 — feat(financeiro): regra \"valor sempre da tabela\" ligada, valendo só com a tabela pronta",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -57,5 +57,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T12:25:55Z"
+  "updatedAt": "2026-10-23T12:27:59Z"
 }
