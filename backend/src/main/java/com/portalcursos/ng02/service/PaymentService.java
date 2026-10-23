@@ -118,6 +118,7 @@ public class PaymentService {
             }
             payment.setAmount(request.getAmount());
         }
+        applyStatusChange(payment, request.getStatus());
         payment.setDueDate(request.getDueDate());
         payment.setCategory(request.getCategory());
         payment.setSecretaryProcessType(request.getSecretaryProcessType());
@@ -128,6 +129,26 @@ public class PaymentService {
         }
         auditService.injectCreator(payment);
         return paymentRepository.save(payment);
+    }
+
+    /**
+     * Baixa manual (PAID) e cancelamento (CANCELLED) de uma cobrança em aberto. Cancelar é perdoar e baixar sem
+     * pagamento também; por isso só administrador. Pendente/Atrasado é calculado pelo sistema e PAID/CANCELLED são finais.
+     */
+    private void applyStatusChange(Payment payment, EPaymentStatus target) {
+        if (target == null || target == payment.getStatus()) {
+            return;
+        }
+        adminGuard.require("alterar a situação de uma cobrança (baixa manual e cancelamento são perdão de cobrança)");
+        if (target != EPaymentStatus.PAID && target != EPaymentStatus.CANCELLED) {
+            throw new BusinessException("A situação Pendente/Atrasado é automática; só é possível marcar como Pago ou Cancelado");
+        }
+        if (payment.getStatus() != EPaymentStatus.PENDING && payment.getStatus() != EPaymentStatus.OVERDUE) {
+            throw new BusinessException("Esta cobrança já está encerrada e não pode mudar de situação");
+        }
+        logger.info("[FINANCE] cobrança {} mudou de {} para {} pelo administrador {}",
+                payment.getId(), payment.getStatus(), target, adminGuard.actor());
+        payment.setStatus(target);
     }
 
     public void deleteCharge(Long id) {

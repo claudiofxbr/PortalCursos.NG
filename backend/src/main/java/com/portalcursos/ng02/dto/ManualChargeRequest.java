@@ -2,6 +2,7 @@ package com.portalcursos.ng02.dto;
 
 import com.portalcursos.ng02.model.EAcademicLevel;
 import com.portalcursos.ng02.model.EPaymentCategory;
+import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.ESecretaryProcessType;
 
 import java.math.BigDecimal;
@@ -21,7 +22,10 @@ public class ManualChargeRequest {
     private ESecretaryProcessType secretaryProcessType;
     private String description;
     private Long chargePriceId;
+    private EPaymentStatus status;
 
+    public EPaymentStatus getStatus() { return status; }
+    public void setStatus(EPaymentStatus status) { this.status = status; }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
     public LocalDate getDueDate() { return dueDate; }
