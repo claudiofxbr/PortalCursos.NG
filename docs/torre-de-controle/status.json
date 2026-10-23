@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr162-monitor",
+      "label": "#162 — feat(financeiro): exclusão e perdão de cobrança só com autorização de administrador",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T12:55:54Z"
+  "updatedAt": "2026-10-23T13:33:54Z"
 }
