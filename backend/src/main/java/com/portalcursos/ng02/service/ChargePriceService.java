@@ -48,6 +48,7 @@ public class ChargePriceService {
     private final ChargePriceRepository priceRepository;
     private final ChargePriceChangeRepository changeRepository;
     private final StaffCourseScopeRepository scopeRepository;
+    private final ChargePolicy chargePolicy;
     private final CourseRepository courseRepository;
     private final StaffMemberRepository staffRepository;
     private final ChargePriceAccessService accessService;
@@ -94,6 +95,7 @@ public class ChargePriceService {
         if (!Objects.equals(price.getVersion(), request.version())) {
             throw new BusinessException("Este valor foi alterado por outra pessoa. Recarregue a tabela.");
         }
+        boolean wasReady = chargePolicy.tableReady();
         price.setCurrentValue(value);
         stamp(price, access);
         // saveAndFlush: a versão (@Version) só é incrementada no flush; sem ele a resposta traria a versão
@@ -106,6 +108,12 @@ public class ChargePriceService {
         });
         recordDirectChange(price, value, access, DIRECT_CHANGE_REASON);
         logger.info("[PRICES] valor alterado pelo administrador: priceId={} por={}", priceId, access.actor());
+        if (!wasReady && chargePolicy.tableReady()) {
+            // Momento em que o último valor global foi preenchido: fica registrado quando a regra passou a valer.
+            logger.info("[REGRA-VALOR] tabela de valores completa (último valor por {}): a regra \"valor sempre da tabela\" {}",
+                    access.actor(), chargePolicy.configured() ? "ENTROU EM VIGOR automaticamente"
+                            : "NÃO entrou em vigor (desligada na configuração do servidor)");
+        }
         return toRow(price, access, null, courseNames(List.of(price)));
     }
 
