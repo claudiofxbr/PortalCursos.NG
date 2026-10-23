@@ -49,7 +49,7 @@ function mockFinance(policy: unknown) {
   getMock.mockImplementation((url: string) => {
     if (url === '/finance/charge-policy') return Promise.resolve({ data: policy });
     if (url === '/finance/charge-catalog') return Promise.resolve({ data: CATALOG });
-    if (url.startsWith('v1/grad-students/')) return Promise.resolve({ data: { fullName: 'Maria Teste', cpf: '39012874600' } });
+    if (url.startsWith('/finance/students/')) return Promise.resolve({ data: { id: 1, fullName: 'Maria Teste', cpfMasked: '***.***.746-00' } });
     return Promise.resolve({ data: [] });
   });
 }
