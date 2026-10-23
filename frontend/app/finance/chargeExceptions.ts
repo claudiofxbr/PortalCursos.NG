@@ -7,10 +7,14 @@ import type { CatalogItem } from './chargeCatalog';
 export const MIN_REASON_LENGTH = 10;
 
 export interface ChargePolicy {
-  /** Regra "valor sempre da tabela" ligada no servidor. */
+  /** Regra "valor sempre da tabela" VALENDO agora (ligada e com a tabela pronta). */
   enforceTablePrice: boolean;
   canRequestException: boolean;
   canDecideException: boolean;
+  /** Todos os valores globais da tabela estão preenchidos. */
+  tableReady: boolean;
+  /** Quantos valores globais ainda faltam. */
+  blankValues: number;
 }
 
 /** Enquanto a política não chega (ou falha), a tela não oferece nada além do que já oferecia. */
@@ -18,6 +22,8 @@ export const DEFAULT_POLICY: ChargePolicy = {
   enforceTablePrice: false,
   canRequestException: false,
   canDecideException: false,
+  tableReady: false,
+  blankValues: 0,
 };
 
 /** Aceita só o formato esperado; qualquer outra coisa vira o padrão desligado (nunca libera nada por engano). */
@@ -28,7 +34,33 @@ export function normalizePolicy(data: unknown): ChargePolicy {
     enforceTablePrice: raw.enforceTablePrice === true,
     canRequestException: raw.canRequestException === true,
     canDecideException: raw.canDecideException === true,
+    tableReady: raw.tableReady === true,
+    blankValues: typeof raw.blankValues === 'number' && raw.blankValues >= 0 ? raw.blankValues : 0,
   };
+}
+
+export type RuleTone = 'waiting' | 'active' | 'off';
+
+/** Aviso da tela de valores: em que ponto está a ativação da regra "valor sempre da tabela". */
+export function ruleBanner(policy: ChargePolicy): { tone: RuleTone; text: string } {
+  if (!policy.tableReady) {
+    const missing = policy.blankValues > 0
+      ? `${policy.blankValues === 1 ? 'Falta 1 valor' : `Faltam ${policy.blankValues} valores`} (cobranças sem curso)`
+      : 'A tabela ainda não tem os valores cadastrados';
+    return {
+      tone: 'waiting',
+      text: `A regra "valor sempre da tabela" está em espera. ${missing}. Ao preencher todos, ela passa a valer sozinha; `
+        + 'até lá, o valor ainda pode ser digitado ao lançar uma cobrança.',
+    };
+  }
+  if (policy.enforceTablePrice) {
+    return {
+      tone: 'active',
+      text: 'Regra ativa: o valor de toda cobrança vem desta tabela. Um valor diferente só por pedido da secretária do curso, '
+        + 'aprovado por um administrador.',
+    };
+  }
+  return { tone: 'off', text: 'Tabela completa, mas a regra "valor sempre da tabela" está desligada na configuração do servidor.' };
 }
 
 export type ExceptionStatus ='PENDING' | 'APPROVED' | 'REJECTED';

@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import {
   buildExceptionPayload, DEFAULT_POLICY, EMPTY_EXCEPTION_FORM, exceptionErrorMessage, formatMoney, normalizePolicy,
-  statusLabel, validateExceptionRequest,
+  ruleBanner, statusLabel, validateExceptionRequest,
 } from '@/app/finance/chargeExceptions';
 import { EMPTY_CHARGE, validateCharge, type CatalogItem } from '@/app/finance/chargeCatalog';
 
@@ -13,7 +13,7 @@ const item: CatalogItem = {
 describe('normalizePolicy', () => {
   test('aceita o formato esperado', () => {
     expect(normalizePolicy({ enforceTablePrice: true, canRequestException: true, canDecideException: false }))
-      .toEqual({ enforceTablePrice: true, canRequestException: true, canDecideException: false });
+      .toEqual({ enforceTablePrice: true, canRequestException: true, canDecideException: false, tableReady: false, blankValues: 0 });
   });
 
   test('qualquer outra coisa vira o padrão desligado', () => {
@@ -94,5 +94,54 @@ describe('validateCharge com a regra "valor sempre da tabela" ligada', () => {
   test('regra desligada mantém o modo manual como antes', () => {
     expect(validateCharge(form, null, false, false)).toBeNull();
     expect(validateCharge(form, null, false)).toBeNull();
+  });
+});
+
+describe('normalizePolicy: prontidão da tabela', () => {
+  test('lê tableReady e blankValues', () => {
+    expect(normalizePolicy({ enforceTablePrice: true, canRequestException: false, canDecideException: true, tableReady: true, blankValues: 0 }))
+      .toMatchObject({ tableReady: true, blankValues: 0 });
+    expect(normalizePolicy({ tableReady: false, blankValues: 7 })).toMatchObject({ tableReady: false, blankValues: 7 });
+  });
+
+  test('blankValues inválido (texto, negativo) vira 0 e tableReady só com true', () => {
+    expect(normalizePolicy({ blankValues: '5', tableReady: 'true' })).toMatchObject({ tableReady: false, blankValues: 0 });
+    expect(normalizePolicy({ blankValues: -3 })).toMatchObject({ blankValues: 0 });
+  });
+});
+
+describe('ruleBanner', () => {
+  const policy = (over: Partial<typeof DEFAULT_POLICY>) => ({ ...DEFAULT_POLICY, ...over });
+
+  test('tabela incompleta: regra em espera, com a quantidade que falta', () => {
+    const b = ruleBanner(policy({ tableReady: false, blankValues: 24 }));
+    expect(b.tone).toBe('waiting');
+    expect(b.text).toMatch(/em espera/);
+    expect(b.text).toMatch(/Faltam 24 valores/);
+    expect(b.text).toMatch(/pode ser digitado/);
+  });
+
+  test('falta um só: singular', () => {
+    expect(ruleBanner(policy({ tableReady: false, blankValues: 1 })).text).toMatch(/Falta 1 valor/);
+  });
+
+  test('sem nenhuma linha cadastrada: não diz "faltam 0"', () => {
+    const b = ruleBanner(policy({ tableReady: false, blankValues: 0 }));
+    expect(b.tone).toBe('waiting');
+    expect(b.text).not.toMatch(/Faltam 0/);
+    expect(b.text).toMatch(/ainda não tem os valores/);
+  });
+
+  test('tabela pronta e regra valendo: ativa, e cita a exceção aprovada por administrador', () => {
+    const b = ruleBanner(policy({ tableReady: true, enforceTablePrice: true }));
+    expect(b.tone).toBe('active');
+    expect(b.text).toMatch(/Regra ativa/);
+    expect(b.text).toMatch(/aprovado por um administrador/);
+  });
+
+  test('tabela pronta mas desligada na configuração: avisa', () => {
+    const b = ruleBanner(policy({ tableReady: true, enforceTablePrice: false }));
+    expect(b.tone).toBe('off');
+    expect(b.text).toMatch(/desligada/);
   });
 });

@@ -48,6 +48,10 @@ public class ChargeCatalogService {
             if (!scopeMatches(row, level) || !courseMatches(row, courseId)) {
                 continue;
             }
+            // Linha do curso ainda sem valor não vale: o aluno cai no valor global do mesmo código.
+            if (row.getCourseId() != null && row.getCurrentValue() == null) {
+                continue;
+            }
             // A linha do curso do aluno vence a global do mesmo código.
             ChargePrice current = byCode.get(row.getCode());
             if (current == null || (current.getCourseId() == null && row.getCourseId() != null)) {
@@ -70,8 +74,12 @@ public class ChargeCatalogService {
             throw new BusinessException("O valor escolhido pertence a outro curso, diferente do curso do aluno");
         }
         ChargePrice effective = chosen;
-        if (chosen.getCourseId() == null && courseId != null) {
-            effective = priceRepository.findByCodeAndCourseIdAndActiveTrue(chosen.getCode(), courseId).orElse(chosen);
+        if (courseId != null) {
+            // Vale a linha do curso do aluno se tiver valor; em branco, vale a global do mesmo código.
+            effective = priceRepository.findByCodeAndCourseIdAndActiveTrue(chosen.getCode(), courseId)
+                    .filter(row -> row.getCurrentValue() != null)
+                    .orElseGet(() -> chosen.getCourseId() == null || chosen.getCurrentValue() != null ? chosen
+                            : priceRepository.findByCodeAndCourseIdIsNullAndActiveTrue(chosen.getCode()).orElse(chosen));
         }
         if (effective.getCurrentValue() == null) {
             throw new BusinessException("Valor ainda não definido na tabela de valores para \"" + effective.getName() + "\"");

@@ -57,7 +57,9 @@ public class ChargeExceptionService {
     @Transactional(readOnly = true)
     public PolicyDto policy() {
         ChargePriceAccessService.Access access = accessService.current();
-        return new PolicyDto(policy.enforceTablePrice(), access.hasAccess(), access.isAdmin());
+        long blank = policy.blankGlobalValues();
+        boolean ready = policy.tableReady();
+        return new PolicyDto(policy.configured() && ready, access.hasAccess(), access.isAdmin(), ready, blank);
     }
 
     @Transactional
