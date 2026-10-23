@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a7ba0ba)",
+      "detail": "último run em main: success (commit 25b953d)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit a7ba0ba)",
+      "detail": "último run em main: success (commit 25b953d)",
       "status": "active"
     },
     {
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr166-monitor",
-      "label": "#166 — feat(financeiro): busca de aluno por nome ou CPF no lançamento de cobrança",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-23T15:44:00Z"
+  "updatedAt": "2026-10-23T15:49:38Z"
 }
