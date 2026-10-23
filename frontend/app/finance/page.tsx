@@ -96,9 +96,9 @@ export default function FinancePage() {
         
         setIsSearchingStudent(true);
         try {
-            const prefix = activeTab === 'GRADUATION' ? 'v1/grad-students' : 'v1/postgrad-students';
-            const res = await api.get(`${prefix}/${newCharge.studentId}`);
-            setSelectedStudent(res.data);
+            // Rota do próprio financeiro: nome e CPF mascarado, sem exigir acesso ao cadastro completo do aluno.
+            const res = await api.get(`/finance/students/${newCharge.studentId}/summary`, { params: { level: activeTab } });
+            setSelectedStudent({ fullName: res.data.fullName, cpf: res.data.cpfMasked });
         } catch (e) {
             setSelectedStudent(null);
         } finally {
