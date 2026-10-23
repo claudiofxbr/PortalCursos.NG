@@ -152,6 +152,48 @@ class ChargeCatalogServiceTest {
     }
 
     @Test
+    void catalogoIgnoraALinhaDoCursoSemValorEUsaAGlobal() {
+        when(priceRepository.findAllActive()).thenReturn(List.of(
+                price(1, "REMATRICULA", ChargePrice.Scope.ALL, null, "100.00"),
+                price(2, "REMATRICULA", ChargePrice.Scope.ALL, COURSE_A, null)));
+
+        List<CatalogItemDto> items = service.catalog(studentOf(COURSE_A), EAcademicLevel.GRADUATION);
+
+        assertEquals(1, items.size());
+        assertEquals(ValueSource.GLOBAL, items.get(0).valueSource());
+        assertEquals(new BigDecimal("100.00"), items.get(0).value());
+    }
+
+    @Test
+    void resolveUsaAGlobalQuandoALinhaDoCursoDoAlunoEstaEmBranco() {
+        when(priceRepository.findActiveById(1L)).thenReturn(Optional.of(
+                price(1, "REMATRICULA", ChargePrice.Scope.ALL, null, "100.00")));
+        when(priceRepository.findByCodeAndCourseIdAndActiveTrue("REMATRICULA", COURSE_A)).thenReturn(Optional.of(
+                price(2, "REMATRICULA", ChargePrice.Scope.ALL, COURSE_A, null)));
+
+        ChargeCatalogService.Resolved r = service.resolve(1L, studentOf(COURSE_A), EAcademicLevel.GRADUATION);
+
+        assertEquals(1L, r.price().getId());
+        assertEquals(new BigDecimal("100.00"), r.value());
+        assertEquals(ValueSource.GLOBAL, r.source());
+    }
+
+    @Test
+    void resolveDeUmaLinhaDeCursoEmBrancoEscolhidaPeloIdCaiNaGlobal() {
+        when(priceRepository.findActiveById(2L)).thenReturn(Optional.of(
+                price(2, "REMATRICULA", ChargePrice.Scope.ALL, COURSE_A, null)));
+        when(priceRepository.findByCodeAndCourseIdAndActiveTrue("REMATRICULA", COURSE_A)).thenReturn(Optional.of(
+                price(2, "REMATRICULA", ChargePrice.Scope.ALL, COURSE_A, null)));
+        when(priceRepository.findByCodeAndCourseIdIsNullAndActiveTrue("REMATRICULA")).thenReturn(Optional.of(
+                price(1, "REMATRICULA", ChargePrice.Scope.ALL, null, "100.00")));
+
+        ChargeCatalogService.Resolved r = service.resolve(2L, studentOf(COURSE_A), EAcademicLevel.GRADUATION);
+
+        assertEquals(1L, r.price().getId());
+        assertEquals(new BigDecimal("100.00"), r.value());
+    }
+
+    @Test
     void resolveAceitaValorZeroParaProcedimentoGratuito() {
         when(priceRepository.findActiveById(1L)).thenReturn(Optional.of(
                 price(1, "NADA_CONSTA", ChargePrice.Scope.ALL, null, "0.00")));

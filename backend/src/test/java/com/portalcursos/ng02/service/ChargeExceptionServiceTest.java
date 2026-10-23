@@ -1,6 +1,7 @@
 package com.portalcursos.ng02.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -302,16 +303,45 @@ class ChargeExceptionServiceTest {
     }
 
     @Test
-    void politicaInformaARegraLigadaEOQueOUsuarioPodeFazer() {
-        when(policy.enforceTablePrice()).thenReturn(true);
+    void politicaInformaARegraValendoATabelaProntaEOQueOUsuarioPodeFazer() {
+        when(policy.configured()).thenReturn(true);
+        when(policy.tableReady()).thenReturn(true);
+        when(policy.blankGlobalValues()).thenReturn(0L);
 
         when(accessService.current()).thenReturn(admin("adm1"));
-        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, true, true), service.policy());
+        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, true, true, true, 0), service.policy());
 
         when(accessService.current()).thenReturn(secretaria("ana", COURSE));
-        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, true, false), service.policy());
+        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, true, false, true, 0), service.policy());
 
         when(accessService.current()).thenReturn(new Access(Level.NONE, Set.of(), Set.of(), "fin"));
-        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, false, false), service.policy());
+        assertEquals(new com.portalcursos.ng02.dto.ChargeExceptionDtos.PolicyDto(true, false, false, true, 0), service.policy());
+    }
+
+    @Test
+    void politicaComTabelaIncompletaNaoDizQueARegraEstaValendoEInformaQuantosValoresFaltam() {
+        when(policy.configured()).thenReturn(true);
+        when(policy.tableReady()).thenReturn(false);
+        when(policy.blankGlobalValues()).thenReturn(7L);
+        when(accessService.current()).thenReturn(admin("adm1"));
+
+        var result = service.policy();
+
+        assertFalse(result.enforceTablePrice(), "tabela incompleta: a regra ainda não vale");
+        assertFalse(result.tableReady());
+        assertEquals(7L, result.blankValues());
+    }
+
+    @Test
+    void politicaDesligadaNaConfiguracaoNaoValeMesmoComATabelaPronta() {
+        when(policy.configured()).thenReturn(false);
+        when(policy.tableReady()).thenReturn(true);
+        when(policy.blankGlobalValues()).thenReturn(0L);
+        when(accessService.current()).thenReturn(admin("adm1"));
+
+        var result = service.policy();
+
+        assertFalse(result.enforceTablePrice());
+        assertTrue(result.tableReady());
     }
 }
