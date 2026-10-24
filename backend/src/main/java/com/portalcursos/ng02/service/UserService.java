@@ -100,7 +100,7 @@ public class UserService {
                 staff.setActive(true);
                 
                 staffMemberRepository.saveAndFlush(staff);
-                logger.info("[V50.0] Ativação Institucional concluída para: {}", savedUser.getUsername());
+                logger.info("[V50.0] Ativação Institucional concluída para: {}", maskUsername(savedUser.getUsername()));
             }
         } catch (BusinessException e) {
             throw e;
@@ -138,7 +138,7 @@ public class UserService {
         studentRepository.deactivateByUserId(id);
 
         userRepository.deleteById(id);
-        logger.info("[V50.0] Usuário deletado por autoridade superior: {}", target.getUsername());
+        logger.info("[V50.0] Usuário deletado por autoridade superior: {}", maskUsername(target.getUsername()));
     }
 
     @Transactional
@@ -186,5 +186,9 @@ public class UserService {
         } catch (Exception e) {
             logger.warn("[V50.0-WARN] Falha na sincronização parcial: {}", e.getMessage());
         }
+    }
+
+    private static String maskUsername(String username) {
+        return username == null || username.length() <= 2 ? "***" : username.substring(0, 2) + "***";
     }
 }

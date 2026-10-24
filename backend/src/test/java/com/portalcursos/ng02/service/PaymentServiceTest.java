@@ -644,4 +644,17 @@ public class PaymentServiceTest {
         assertEquals("Mensalidade teste", result.getDescription());
         assertEquals(aberta.getDueDate(), result.getDueDate());
     }
+
+    // B6 da auditoria: aluno e nível são obrigatórios na cobrança manual (antes: NPE/ramo errado).
+    @Test
+    public void createManualChargeSemAlunoOuNivelLancaBusinessException() {
+        BusinessException semAluno = assertThrows(BusinessException.class,
+                () -> paymentService.createManualCharge(requestFor(EAcademicLevel.GRADUATION, null)));
+        assertEquals("Informe o aluno da cobrança", semAluno.getMessage());
+
+        BusinessException semNivel = assertThrows(BusinessException.class,
+                () -> paymentService.createManualCharge(requestFor(null, 1L)));
+        assertEquals("Informe o nível acadêmico da cobrança", semNivel.getMessage());
+        verify(paymentRepository, never()).save(any());
+    }
 }

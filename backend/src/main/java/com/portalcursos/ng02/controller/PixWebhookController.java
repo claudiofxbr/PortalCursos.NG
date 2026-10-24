@@ -67,6 +67,9 @@ public class PixWebhookController {
         try {
             String status = pagBankPixGatewayService.fetchOrderStatus(payment.getPspOrderId());
             if ("PAID".equals(status) && payment.getStatus() != EPaymentStatus.PAID) {
+                if (payment.getStatus() == EPaymentStatus.CANCELLED) {
+                    logger.error("[PIX WEBHOOK] Pagamento confirmado em fatura CANCELADA (paymentId={}); revisão manual", paymentId);
+                }
                 payment.setStatus(EPaymentStatus.PAID);
                 paymentRepository.save(payment);
                 logger.info("[PIX WEBHOOK] Pagamento confirmado via PagBank: paymentId={}", paymentId);
