@@ -11,7 +11,12 @@ import com.portalcursos.ng02.repository.TeacherRepository;
 import com.portalcursos.ng02.dto.StudentListDTO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
+import com.portalcursos.ng02.exception.BusinessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +38,21 @@ public class AcademicController {
 
     @GetMapping("/students")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
-    public ResponseEntity<?> getAllStudents() {
+    public ResponseEntity<?> getAllStudents(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        if (page != null || size != null) {
+            int p = page == null ? 0 : page;
+            int s = size == null ? 50 : size;
+            if (p < 0 || s < 1 || s > 200) {
+                throw new BusinessException("Paginação inválida: page >= 0 e size entre 1 e 200");
+            }
+            Page<Long> ids = studentRepository.findActiveStudentIds(PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "id")));
+            Map<Long, Student> byId = new HashMap<>();
+            if (!ids.isEmpty()) {
+                studentRepository.findAllWithCourseAndCreatorByIdIn(ids.getContent()).forEach(st -> byId.put(st.getId(), st));
+            }
+            List<StudentListDTO> body = ids.getContent().stream().map(byId::get).filter(java.util.Objects::nonNull).map(StudentListDTO::from).toList();
+            return ResponseEntity.ok().header("X-Total-Count", String.valueOf(ids.getTotalElements())).body(body);
+        }
         return ResponseEntity.ok(studentRepository.findAllWithCourseAndCreator().stream()
                 .map(StudentListDTO::from)
                 .toList());

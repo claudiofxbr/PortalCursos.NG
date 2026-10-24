@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import com.portalcursos.ng02.dto.ManualChargeRequest;
 import com.portalcursos.ng02.dto.MessageResponse;
 import com.portalcursos.ng02.dto.PaymentView;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 
 @RestController
@@ -36,12 +39,18 @@ public class FinancialController {
 
     @GetMapping("/invoices/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
-    public ResponseEntity<?> getInvoicesByLevel(@PathVariable String level) {
+    public ResponseEntity<?> getInvoicesByLevel(@PathVariable String level,
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
         if (!authorizationService.hasElevatedPrivileges()) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
         EAcademicLevel academicLevel = parseAcademicLevel(level);
+        Pageable pageable = optionalPageable(page, size);
+        if (pageable != null) {
+            return pagedResponse(paymentRepository.findByAcademicLevelAndStatusIn(
+                academicLevel, java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE), pageable));
+        }
         List<Payment> invoices = paymentRepository.findByAcademicLevelAndStatusIn(
             academicLevel,
             java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)
@@ -51,12 +60,17 @@ public class FinancialController {
 
     @GetMapping("/history/{level}")
     @PreAuthorize("hasAnyRole('ALUNO', 'ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
-    public ResponseEntity<?> getHistoryByLevel(@PathVariable String level) {
+    public ResponseEntity<?> getHistoryByLevel(@PathVariable String level,
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
         if (!authorizationService.hasElevatedPrivileges()) {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: use /api/finance/student/{studentId} para consultar seus próprios dados."));
         }
         EAcademicLevel academicLevel = parseAcademicLevel(level);
+        Pageable pageable = optionalPageable(page, size);
+        if (pageable != null) {
+            return pagedResponse(paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID, pageable));
+        }
         List<Payment> history = paymentRepository.findByAcademicLevelAndStatus(academicLevel, EPaymentStatus.PAID);
         return ResponseEntity.ok(history);
     }
@@ -91,6 +105,26 @@ public class FinancialController {
         return ResponseEntity.ok(paymentRepository.findByStudentId(studentId).stream().map(PaymentView::from).toList());
     }
 
+    private static final int MAX_PAGE_SIZE = 200;
+
+    /**
+     * Paginação opt-in: sem {@code page} nem {@code size} devolve null e a listagem segue completa
+     * (contrato atual da tela financeira). Com qualquer um dos dois, pagina (mais recentes primeiro).
+     */
+    private Pageable optionalPageable(Integer page, Integer size) {
+        if (page == null && size == null) return null;
+        int p = page == null ? 0 : page;
+        int s = size == null ? 50 : size;
+        if (p < 0 || s < 1 || s > MAX_PAGE_SIZE) {
+            throw new BusinessException("Paginação inválida: page >= 0 e size entre 1 e " + MAX_PAGE_SIZE);
+        }
+        return PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "id"));
+    }
+
+    private ResponseEntity<List<Payment>> pagedResponse(org.springframework.data.domain.Page<Payment> result) {
+        return ResponseEntity.ok().header("X-Total-Count", String.valueOf(result.getTotalElements())).body(result.getContent());
+    }
+
     /** Converte o parâmetro de rota em {@link EAcademicLevel}, traduzindo valor inválido em HTTP 400. */
     private EAcademicLevel parseAcademicLevel(String level) {
         try {
@@ -102,13 +136,21 @@ public class FinancialController {
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
-    public ResponseEntity<?> getInvoices() {
+    public ResponseEntity<?> getInvoices(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        Pageable pageable = optionalPageable(page, size);
+        if (pageable != null) {
+            return pagedResponse(paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE), pageable));
+        }
         return ResponseEntity.ok(paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING, EPaymentStatus.OVERDUE)));
     }
 
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'FINANCEIRO', 'ROOT_MASTER')")
-    public ResponseEntity<?> getHistory() {
+    public ResponseEntity<?> getHistory(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size) {
+        Pageable pageable = optionalPageable(page, size);
+        if (pageable != null) {
+            return pagedResponse(paymentRepository.findByStatus(EPaymentStatus.PAID, pageable));
+        }
         return ResponseEntity.ok(paymentRepository.findByStatus(EPaymentStatus.PAID));
     }
 

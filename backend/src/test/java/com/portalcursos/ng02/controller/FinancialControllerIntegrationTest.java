@@ -256,4 +256,47 @@ public class FinancialControllerIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Fatura não encontrada para gerar PIX"));
     }
+
+    // M9 da auditoria: paginação opt-in. Sem page/size a lista segue completa (contrato da tela financeira).
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testInvoicesSemParametrosContinuaDevolvendoListaCompleta() throws Exception {
+        when(paymentRepository.findByStatusIn(anyList())).thenReturn(Arrays.asList(paymentComCamposInternos(1L), paymentComCamposInternos(2L)));
+
+        mockMvc.perform(get("/api/finance/invoices"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Total-Count"))
+                .andExpect(jsonPath("$.size()").value(2));
+
+        verify(paymentRepository, never()).findByStatusIn(anyList(), any(org.springframework.data.domain.Pageable.class));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testInvoicesComPageESizeDevolvePaginaETotal() throws Exception {
+        org.springframework.data.domain.Page<Payment> pagina = new org.springframework.data.domain.PageImpl<>(
+                List.of(paymentComCamposInternos(3L)), org.springframework.data.domain.PageRequest.of(1, 1), 5);
+        when(paymentRepository.findByStatusIn(anyList(), any(org.springframework.data.domain.Pageable.class))).thenReturn(pagina);
+
+        mockMvc.perform(get("/api/finance/invoices").param("page", "1").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "5"))
+                .andExpect(jsonPath("$.size()").value(1));
+
+        org.mockito.ArgumentCaptor<org.springframework.data.domain.Pageable> captor =
+                org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        verify(paymentRepository).findByStatusIn(anyList(), captor.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(1, captor.getValue().getPageNumber());
+        org.junit.jupiter.api.Assertions.assertEquals(1, captor.getValue().getPageSize());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testPaginacaoInvalidaRetorna400() throws Exception {
+        for (String[] par : new String[][] {{"-1", "10"}, {"0", "0"}, {"0", "201"}}) {
+            mockMvc.perform(get("/api/finance/history").param("page", par[0]).param("size", par[1]))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(paymentRepository, never()).findByStatus(any(), any(org.springframework.data.domain.Pageable.class));
+    }
 }

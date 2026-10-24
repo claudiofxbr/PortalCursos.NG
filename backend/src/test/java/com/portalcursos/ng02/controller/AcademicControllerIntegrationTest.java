@@ -120,4 +120,43 @@ public class AcademicControllerIntegrationTest {
                 .andExpect(jsonPath("$[?(@.id=='M_11')].role").value("COORDENADOR"))
                 .andExpect(jsonPath("$[?(@.id=='M_12')].role").value("COLABORADOR"));
     }
+
+    // M9 da auditoria: paginação opt-in dos alunos em dois passos (ids paginados, depois fetch com documentos).
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAlunosPaginadosPreservamAOrdemDosIdsETotal() throws Exception {
+        Student a = Student.builder().id(20L).fullName("Aluno A").build();
+        Student b = Student.builder().id(10L).fullName("Aluno B").build();
+        when(studentRepository.findActiveStudentIds(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(
+                        Arrays.asList(20L, 10L), org.springframework.data.domain.PageRequest.of(0, 2), 7));
+        when(studentRepository.findAllWithCourseAndCreatorByIdIn(anyCollection())).thenReturn(Arrays.asList(b, a));
+
+        mockMvc.perform(get("/api/academic/students").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "7"))
+                .andExpect(jsonPath("$[0].id").value(20))
+                .andExpect(jsonPath("$[1].id").value(10));
+
+        verify(studentRepository, never()).findAllWithCourseAndCreator();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAlunosSemParametrosSeguemSemPaginacao() throws Exception {
+        when(studentRepository.findAllWithCourseAndCreator()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/academic/students"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Total-Count"));
+
+        verify(studentRepository, never()).findActiveStudentIds(any());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAlunosPaginacaoInvalidaRetorna400() throws Exception {
+        mockMvc.perform(get("/api/academic/students").param("size", "500"))
+                .andExpect(status().isBadRequest());
+    }
 }

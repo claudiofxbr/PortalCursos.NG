@@ -45,6 +45,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.course LEFT JOIN FETCH s.creator LEFT JOIN FETCH s.documents WHERE s.active = true AND TYPE(s) = Student")
     java.util.List<Student> findAllWithCourseAndCreator();
 
+    // Paginacao em dois passos: JOIN FETCH de colecao (documents) com Pageable paginaria em memoria.
+    @org.springframework.data.jpa.repository.Query(value = "SELECT s.id FROM Student s WHERE s.active = true AND TYPE(s) = Student",
+            countQuery = "SELECT count(s) FROM Student s WHERE s.active = true AND TYPE(s) = Student")
+    org.springframework.data.domain.Page<Long> findActiveStudentIds(org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.course LEFT JOIN FETCH s.creator LEFT JOIN FETCH s.documents WHERE s.id IN :ids")
+    java.util.List<Student> findAllWithCourseAndCreatorByIdIn(@org.springframework.data.repository.query.Param("ids") java.util.Collection<Long> ids);
+
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.course WHERE s.active = true AND TYPE(s) = Student")
     java.util.List<Student> findAllWithCourse();
 
