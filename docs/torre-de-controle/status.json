@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit 36052ce)",
+      "detail": "último run em main: success (commit 6ac87cc)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit 36052ce)",
+      "detail": "último run em main: success (commit 6ac87cc)",
       "status": "active"
     },
     {
@@ -44,13 +44,6 @@
     },
     {
       "category": "queue",
-      "id": "pr169-monitor",
-      "label": "#169 — fix(docker): atualiza brotli-libs no runtime (CVE-2026-111497)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr168-monitor",
       "label": "#168 — fix: achados A1, A2, M6 e M7 da auditoria",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -64,5 +57,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T14:31:35Z"
+  "updatedAt": "2026-10-24T14:38:17Z"
 }
