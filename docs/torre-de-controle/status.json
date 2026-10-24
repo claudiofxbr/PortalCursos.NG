@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr168-monitor",
+      "label": "#168 — fix: achados A1, A2, M6 e M7 da auditoria",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T10:02:39Z"
+  "updatedAt": "2026-10-24T14:19:19Z"
 }
