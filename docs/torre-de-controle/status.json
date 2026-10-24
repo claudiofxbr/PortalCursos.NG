@@ -18,14 +18,14 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit eacf6d8)",
+      "detail": "último run em main: success (commit e4318e3)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit eacf6d8)",
+      "detail": "último run em main: success (commit e4318e3)",
       "status": "active"
     },
     {
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr177-monitor",
-      "label": "#177 — fix: itens de baixa prioridade da auditoria (B1, B2, B4, B5, B6, B9)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T19:30:47Z"
+  "updatedAt": "2026-10-24T19:34:48Z"
 }
