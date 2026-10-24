@@ -21,6 +21,10 @@ public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> 
     @Modifying
     @Query("UPDATE StaffMember s SET s.active = false WHERE s.id = :id AND s.active = true")
     int deactivateById(@Param("id") Long id);
+    /** Pares (id do colaborador, role) dos colaboradores ativos; evita carregar User.roles (LAZY) fora de transação. */
+    @Query("SELECT s.id, r.name FROM StaffMember s JOIN s.user u JOIN u.roles r WHERE s.active = true")
+    java.util.List<Object[]> findActiveStaffRoles();
+
     @Query("SELECT s FROM StaffMember s LEFT JOIN FETCH s.creator WHERE s.active = true")
     java.util.List<StaffMember> findAllByActiveTrue();
 

@@ -101,4 +101,23 @@ public class AcademicControllerIntegrationTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("SECRET123"))));
     }
+
+    // M8 da auditoria: o papel do colaborador vem das roles reais, não de um rótulo fixo "SECRETARIA".
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAcademicUsersUsaORoleRealDoColaborador() throws Exception {
+        com.portalcursos.ng02.model.StaffMember coord = com.portalcursos.ng02.model.StaffMember.builder()
+                .id(11L).fullName("Coord Teste").position("Coordenador").department("Cursos").build();
+        com.portalcursos.ng02.model.StaffMember semRole = com.portalcursos.ng02.model.StaffMember.builder()
+                .id(12L).fullName("Sem Role").position("Apoio").department("Geral").build();
+        when(staffMemberRepository.findAllByActiveTrue()).thenReturn(Arrays.asList(coord, semRole));
+        when(staffMemberRepository.findActiveStaffRoles()).thenReturn(Arrays.asList(
+                new Object[] {11L, com.portalcursos.ng02.model.Role.ERole.ROLE_SECRETARIA},
+                new Object[] {11L, com.portalcursos.ng02.model.Role.ERole.ROLE_COORDENADOR}));
+
+        mockMvc.perform(get("/api/academic/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='M_11')].role").value("COORDENADOR"))
+                .andExpect(jsonPath("$[?(@.id=='M_12')].role").value("COLABORADOR"));
+    }
 }
