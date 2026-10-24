@@ -158,14 +158,21 @@ export default function FinancePage() {
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
+      // Cada lista falha isolada (a outra continua carregando), mas a falha é sinalizada ao usuário.
+      let partialFailure = false;
+      const loadList = (url: string) =>
+        api.get(url).then(r => r.data).catch(() => { partialFailure = true; return []; });
       const [invoicesData, historyData] = await Promise.all([
-        api.get(`/finance/invoices/${activeTab}`).then(r => r.data).catch(() => []),
-        api.get(`/finance/history/${activeTab}`).then(r => r.data).catch(() => [])
+        loadList(`/finance/invoices/${activeTab}`),
+        loadList(`/finance/history/${activeTab}`),
       ]);
-      
+
       setInvoices(invoicesData);
       setHistory(historyData);
       setError(null);
+      if (partialFailure) {
+        toast.error("Não foi possível carregar parte dos dados financeiros. Tente novamente ou verifique suas permissões.");
+      }
     } catch (err) {
       console.error("Erro financeiro:", err);
       toast.error("Não foi possível carregar os dados financeiros.");
@@ -725,7 +732,7 @@ export default function FinancePage() {
 
                       <div style={{ marginBottom: '1rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Data de Vencimento</label>
-                          <input type="date" value={editingInvoice.dueDate.split('T')[0]} onChange={e => setEditingInvoice({...editingInvoice, dueDate: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                          <input type="date" disabled={!['PENDING', 'OVERDUE'].includes(editStatusFrom)} value={editingInvoice.dueDate.split('T')[0]} onChange={e => setEditingInvoice({...editingInvoice, dueDate: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
                       </div>
 
                       <div style={{ marginBottom: '1rem' }}>
@@ -740,7 +747,7 @@ export default function FinancePage() {
 
                       <div style={{ marginBottom: '1.5rem' }}>
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#666', marginBottom: '4px' }}>Descrição</label>
-                          <textarea rows={3} value={editingInvoice.description} onChange={e => setEditingInvoice({...editingInvoice, description: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                          <textarea rows={3} disabled={!['PENDING', 'OVERDUE'].includes(editStatusFrom)} value={editingInvoice.description} onChange={e => setEditingInvoice({...editingInvoice, description: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd' }} />
                       </div>
 
                       <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

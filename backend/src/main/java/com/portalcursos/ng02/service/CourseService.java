@@ -97,7 +97,8 @@ public class CourseService {
     @Transactional
     public void deleteCourse(UUID id) {
         Course course = getCourseById(id);
-        // Soft Delete automatizado via Hibernate @SQLDelete
-        courseRepository.delete(course);
+        // Soft-delete explícito: delete() dependia de @SQLDelete, incompatível com @Version.
+        course.setActive(false);
+        courseRepository.save(course);
     }
 }

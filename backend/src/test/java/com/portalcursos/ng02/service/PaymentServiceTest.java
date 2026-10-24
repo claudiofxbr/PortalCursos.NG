@@ -578,4 +578,70 @@ public class PaymentServiceTest {
 
         assertEquals(new BigDecimal("120.00"), paymentService.updateCharge(5L, request).getAmount());
     }
+    // Regressão M6 (auditoria): updateCharge sobrescrevia dueDate/category/secretaryProcessType/
+    // description com null quando ausentes no pedido e deixava editar fatura PAID/CANCELLED.
+
+    @Test
+    public void updateChargeCamposAusentesNoPedidoNaoApagamOsExistentes() {
+        LocalDate vencimento = LocalDate.now().plusDays(3);
+        Payment existing = Payment.builder().id(5L).amount(new BigDecimal("100.00"))
+                .status(EPaymentStatus.PENDING).dueDate(vencimento).description("Original")
+                .category(com.portalcursos.ng02.model.EPaymentCategory.TUITION).build();
+        when(paymentRepository.findByIdWithCreatorAndStudent(5L)).thenReturn(Optional.of(existing));
+        when(paymentRepository.save(existing)).thenReturn(existing);
+        ManualChargeRequest request = new ManualChargeRequest();
+        request.setAmount(new BigDecimal("100.00"));
+
+        Payment result = paymentService.updateCharge(5L, request);
+
+        assertEquals(vencimento, result.getDueDate());
+        assertEquals("Original", result.getDescription());
+        assertEquals(com.portalcursos.ng02.model.EPaymentCategory.TUITION, result.getCategory());
+    }
+
+    @Test
+    public void faturaPagaNaoPermiteEditarVencimentoEDescricao() {
+        Payment paga = emAberto(EPaymentStatus.PAID);
+        paga.setDueDate(LocalDate.now().minusDays(5));
+        paga.setDescription("Original");
+        ManualChargeRequest request = comStatus(null);   // dueDate = hoje+10, description diferente
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, request));
+
+        assertEquals("Original", paga.getDescription());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    public void faturaCanceladaNaoPermiteEditarDescricao() {
+        Payment cancelada = emAberto(EPaymentStatus.CANCELLED);
+        cancelada.setDescription("Original");
+        ManualChargeRequest request = new ManualChargeRequest();
+        request.setDescription("Outra");
+
+        assertThrows(BusinessException.class, () -> paymentService.updateCharge(5L, request));
+
+        assertEquals("Original", cancelada.getDescription());
+    }
+
+    @Test
+    public void faturaPagaReenviadaSemMudancaNaoEhRecusada() {
+        Payment paga = emAberto(EPaymentStatus.PAID);
+        paga.setDueDate(LocalDate.now().plusDays(10));
+        paga.setDescription("Mensalidade teste");
+        ManualChargeRequest request = comStatus(EPaymentStatus.PAID);
+
+        assertEquals(EPaymentStatus.PAID, paymentService.updateCharge(5L, request).getStatus());
+    }
+
+    @Test
+    public void baixaManualDeFaturaEmAbertoAindaPodeAlterarOutrosCamposNaMesmaChamada() {
+        Payment aberta = emAberto(EPaymentStatus.PENDING);
+
+        Payment result = paymentService.updateCharge(5L, comStatus(EPaymentStatus.PAID));
+
+        assertEquals(EPaymentStatus.PAID, result.getStatus());
+        assertEquals("Mensalidade teste", result.getDescription());
+        assertEquals(aberta.getDueDate(), result.getDueDate());
+    }
 }

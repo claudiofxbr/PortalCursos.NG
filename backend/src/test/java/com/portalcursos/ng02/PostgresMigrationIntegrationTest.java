@@ -2,6 +2,7 @@ package com.portalcursos.ng02;
 
 import com.portalcursos.ng02.controller.RepairController;
 import com.portalcursos.ng02.controller.StaffMemberController;
+import com.portalcursos.ng02.model.Course;
 import com.portalcursos.ng02.model.DataDeletionRequest;
 import com.portalcursos.ng02.model.EPaymentStatus;
 import com.portalcursos.ng02.model.Payment;
@@ -10,6 +11,7 @@ import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.User;
+import com.portalcursos.ng02.repository.CourseRepository;
 import com.portalcursos.ng02.repository.DataDeletionRequestRepository;
 import com.portalcursos.ng02.repository.PaymentRepository;
 import com.portalcursos.ng02.repository.RepairRepository;
@@ -17,6 +19,7 @@ import com.portalcursos.ng02.repository.RoleRepository;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.UserRepository;
+import com.portalcursos.ng02.service.CourseService;
 import com.portalcursos.ng02.service.PaymentService;
 import com.portalcursos.ng02.service.UserDetailsImpl;
 import com.portalcursos.ng02.service.UserService;
@@ -106,6 +109,12 @@ class PostgresMigrationIntegrationTest {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CourseService courseService;
+
+    @Autowired
+    private CourseRepository courseRepository;
 
     @Autowired
     private RoleRepository roleRepository;
@@ -471,6 +480,31 @@ class PostgresMigrationIntegrationTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM staff_members WHERE id = ? AND active = false", Integer.class, id);
         assertEquals(1, count, "O colaborador deve continuar na tabela, só marcado como inativo (soft-delete real)");
+    }
+
+    // Regressão do achado A2 (auditoria): DELETE /api/v1/courses/{id} chamava
+    // courseRepository.delete(course), que dependia de @SQLDelete sem o parâmetro de @Version
+    // (mesmo bug de Payment/RepairTicket/StaffMember). Corrigido trocando para
+    // setActive(false) + save(). Course não tem @SQLRestriction, então findById ainda enxerga
+    // o curso; as listagens/consultas de catálogo é que filtram active = true.
+    @Test
+    void deleteCourseDesativaCursoSemErroContraPostgresReal() {
+        Course saved = courseRepository.saveAndFlush(Course.builder()
+                .codigoIes("IES-DEL-PG")
+                .denominacaoCurso("Curso Para Excluir PG")
+                .build());
+        java.util.UUID id = saved.getId();
+
+        assertDoesNotThrow(() -> courseService.deleteCourse(id));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM courses WHERE id = ? AND active = false", Integer.class, id);
+        assertEquals(1, count, "O curso deve continuar na tabela, só marcado como inativo (soft-delete real)");
+        assertTrue(courseService.getAllCourses().stream().noneMatch(c -> id.equals(c.getId())),
+                "A listagem de catálogo não deve mostrar o curso excluído");
     }
 
     // Regressão do achado: userRepository.deleteById() (hard delete, usado por

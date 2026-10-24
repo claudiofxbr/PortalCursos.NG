@@ -118,17 +118,31 @@ public class PaymentService {
             }
             payment.setAmount(request.getAmount());
         }
+        boolean wasClosed = payment.getStatus() == EPaymentStatus.PAID || payment.getStatus() == EPaymentStatus.CANCELLED;
         applyStatusChange(payment, request.getStatus());
-        payment.setDueDate(request.getDueDate());
-        payment.setCategory(request.getCategory());
-        payment.setSecretaryProcessType(request.getSecretaryProcessType());
-        payment.setDescription(request.getDescription());
+        if (wasClosed && changesDescriptiveFields(payment, request)) {
+            throw new BusinessException("Cobrança já encerrada (paga ou cancelada): vencimento, categoria e descrição não podem ser alterados");
+        }
+        // Só aplica o que veio no pedido: campo ausente (null) mantém o valor atual.
+        if (request.getDueDate() != null) payment.setDueDate(request.getDueDate());
+        if (request.getCategory() != null) payment.setCategory(request.getCategory());
+        if (request.getSecretaryProcessType() != null) payment.setSecretaryProcessType(request.getSecretaryProcessType());
+        if (request.getDescription() != null) payment.setDescription(request.getDescription());
 
         if (payment.settleIfFree()) {
             logger.info("[FINANCE] fatura {} editada para valor zero e quitada automaticamente", payment.getId());
         }
         auditService.injectCreator(payment);
         return paymentRepository.save(payment);
+    }
+
+    private boolean changesDescriptiveFields(Payment payment, ManualChargeRequest request) {
+        return (request.getDueDate() != null && !request.getDueDate().equals(payment.getDueDate()))
+                || (request.getCategory() != null && request.getCategory() != payment.getCategory())
+                || (request.getSecretaryProcessType() != null
+                        && request.getSecretaryProcessType() != payment.getSecretaryProcessType())
+                || (request.getDescription() != null
+                        && !request.getDescription().equals(java.util.Objects.toString(payment.getDescription(), "")));
     }
 
     /**

@@ -13,8 +13,6 @@ import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
-import org.hibernate.annotations.SQLDelete;
-
 @Entity
 @DiscriminatorValue("POSTGRAD")
 @Data
