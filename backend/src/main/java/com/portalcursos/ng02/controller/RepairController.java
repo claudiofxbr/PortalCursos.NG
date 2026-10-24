@@ -148,23 +148,17 @@ public class RepairController {
         }
     }
 
+    // Só administrador exclui. O soft-delete preserva o histórico, então as fotos (evidência) ficam: apagá-las do
+    // disco tornaria a exclusão irreversível e deixaria o registro inativo sem a prova que o justifica.
     @DeleteMapping("/{id}")
     @Transactional
-    @PreAuthorize(AUTHORIZED_ROLES)
+    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
     public ResponseEntity<?> deleteTicket(@PathVariable @NonNull Long id) {
         RepairTicket ticket = repairRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Chamado não localizado ou inativo."));
-        
-        // Limpeza de arquivos relacionados antes de deletar o registro
-        if (ticket.getMainPhotoUrl() != null) {
-            storageService.delete(ticket.getMainPhotoUrl());
-        }
-        if (ticket.getPhotoUrls() != null) {
-            ticket.getPhotoUrls().forEach(storageService::delete);
-        }
 
         ticket.setActive(false);
         repairRepository.save(ticket);
-        return ResponseEntity.ok(new MessageResponse("Chamado removido e evidências deletadas. Protocolo OMEGA."));
+        return ResponseEntity.ok(new MessageResponse("Chamado removido. As evidências foram preservadas."));
     }
 }

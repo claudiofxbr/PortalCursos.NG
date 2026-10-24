@@ -120,6 +120,40 @@ public class RepairControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
+    // M2 da auditoria: só administrador exclui chamado, e a exclusão preserva as fotos (evidência).
+
+    @Test
+    public void testSomenteAdministradorExcluiChamado() throws Exception {
+        when(repairRepository.findByIdAndActiveTrue(101L)).thenReturn(java.util.Optional.of(activeTicket));
+
+        for (String role : new String[] {"PROFESSOR", "COORDENADOR", "SECRETARIA", "FINANCEIRO", "ACADEMICO"}) {
+            mockMvc.perform(delete("/api/repairs/101").with(
+                            org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                                    .user("u-" + role).roles(role)))
+                    .andExpect(status().isForbidden());
+        }
+
+        verify(repairRepository, never()).save(any());
+        verify(storageService, never()).delete(anyString());
+        org.junit.jupiter.api.Assertions.assertTrue(activeTicket.isActive());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAdministradorExcluiChamadoSemApagarAsFotos() throws Exception {
+        activeTicket.setMainPhotoUrl("repairs-main/foto-principal.png");
+        activeTicket.getPhotoUrls().add("repairs-gallery/evidencia-1.png");
+        when(repairRepository.findByIdAndActiveTrue(101L)).thenReturn(java.util.Optional.of(activeTicket));
+
+        mockMvc.perform(delete("/api/repairs/101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Chamado removido. As evidências foram preservadas."));
+
+        org.junit.jupiter.api.Assertions.assertFalse(activeTicket.isActive());
+        verify(repairRepository).save(activeTicket);
+        verify(storageService, never()).delete(anyString());
+    }
+
     // Regressão: falha de storage no upload não deve vazar detalhes internos
     // (path de arquivo, stacktrace) na resposta ao cliente.
     @Test
