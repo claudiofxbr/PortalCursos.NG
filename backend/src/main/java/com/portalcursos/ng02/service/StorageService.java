@@ -40,6 +40,32 @@ public class StorageService {
         "documents", "repairs"
     );
 
+    /** Confere os primeiros bytes (magic bytes) com a extensão: impede, p.ex., um executável renomeado para .pdf. */
+    static boolean matchesSignature(MultipartFile file, String extension) throws IOException {
+        byte[] head = new byte[8];
+        int read;
+        try (java.io.InputStream in = file.getInputStream()) {
+            read = in.readNBytes(head, 0, head.length);
+        }
+        switch (extension) {
+            case ".pdf": return startsWith(head, read, 0x25, 0x50, 0x44, 0x46);
+            case ".png": return startsWith(head, read, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
+            case ".jpg":
+            case ".jpeg": return startsWith(head, read, 0xFF, 0xD8, 0xFF);
+            case ".docx": return startsWith(head, read, 0x50, 0x4B, 0x03, 0x04);
+            case ".doc": return startsWith(head, read, 0xD0, 0xCF, 0x11, 0xE0);
+            default: return false;
+        }
+    }
+
+    private static boolean startsWith(byte[] head, int read, int... expected) {
+        if (read < expected.length) return false;
+        for (int i = 0; i < expected.length; i++) {
+            if ((head[i] & 0xFF) != expected[i]) return false;
+        }
+        return true;
+    }
+
     public String store(MultipartFile file, String subfolder) throws IOException {
         if (file == null || file.isEmpty()) {
             return null;
@@ -61,6 +87,11 @@ public class StorageService {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             logger.error("[SECURITY-ALERT] Tentativa de upload de arquivo não permitido: {}", extension);
             throw new IOException("Tipo de arquivo não permitido. Apenas PDF, Imagens e Word são aceitos.");
+        }
+
+        if (!matchesSignature(file, extension)) {
+            logger.error("[SECURITY-ALERT] Conteúdo do arquivo não corresponde à extensão {}", extension);
+            throw new IOException("O conteúdo do arquivo não corresponde ao tipo informado.");
         }
 
         // 3. Preparação do Caminho
