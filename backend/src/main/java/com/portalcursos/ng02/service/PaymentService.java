@@ -53,6 +53,13 @@ public class PaymentService {
                     + "Para um valor diferente, a secretária do curso deve pedir uma exceção, aprovada por um administrador.");
         }
 
+        if (request.getStudentId() == null) {
+            throw new BusinessException("Informe o aluno da cobrança");
+        }
+        if (request.getAcademicLevel() == null) {
+            throw new BusinessException("Informe o nível acadêmico da cobrança");
+        }
+
         Payment payment = Payment.builder()
                 .amount(request.getAmount())
                 .dueDate(request.getDueDate())
