@@ -1,4 +1,0 @@
-#!/bin/bash
-# PortalCursos.NG - Atalho Oi para Git Bash / Linux
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$DIR/Oi.ps1"
