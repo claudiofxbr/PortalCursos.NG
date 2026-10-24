@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr170-monitor",
+      "label": "#170 — fix: M3 (aluno recebe PaymentView) e M4 (índices de FK, V28)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T15:07:22Z"
+  "updatedAt": "2026-10-24T15:48:24Z"
 }
