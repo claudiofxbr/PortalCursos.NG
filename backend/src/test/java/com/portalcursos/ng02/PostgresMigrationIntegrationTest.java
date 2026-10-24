@@ -39,6 +39,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -145,6 +146,20 @@ class PostgresMigrationIntegrationTest {
         Integer applied = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = true", Integer.class);
         assertTrue(applied != null && applied > 0, "Deve haver ao menos uma migration aplicada");
+    }
+
+    // V28: índices das FKs de charge_prices, staff_course_scope e charge_amount_exceptions.
+    @Test
+    void v28CriaIndicesDasFksDeValoresEExcecoes() {
+        List<String> expected = List.of(
+                "idx_charge_prices_course", "idx_staff_course_scope_course", "idx_charge_amount_exceptions_student",
+                "idx_charge_amount_exceptions_price", "idx_charge_amount_exceptions_payment");
+        String inList = expected.stream().map(name -> "'" + name + "'").collect(java.util.stream.Collectors.joining(", "));
+        List<String> found = jdbcTemplate.queryForList(
+                "SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND indexname IN (" + inList + ")",
+                String.class);
+        assertEquals(expected.stream().sorted().toList(), found.stream().sorted().toList(),
+                "Todos os índices de FK da V28 devem existir");
     }
 
     // Soft-delete via setActive(false) + save(), não via repository.delete()/deleteById():
