@@ -44,6 +44,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    // Mensagem unica: nao revela se o conflito foi no usuario ou no e-mail (enumeracao de contas).
+    private static final String SIGNUP_CONFLICT_MESSAGE = "Erro: Nome de usuário ou e-mail já cadastrado.";
+
 
     private static final String PRIVACY_POLICY_VERSION = "1.0";
 
@@ -192,11 +195,11 @@ public class AuthService {
         }
 
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            throw new SignupConflictException("Erro: Nome de usuário já está em uso.");
+            throw new SignupConflictException(SIGNUP_CONFLICT_MESSAGE);
         }
 
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            throw new SignupConflictException("Erro: E-mail já está em uso.");
+            throw new SignupConflictException(SIGNUP_CONFLICT_MESSAGE);
         }
 
         User user = User.builder()

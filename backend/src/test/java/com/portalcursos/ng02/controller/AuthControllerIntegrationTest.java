@@ -195,7 +195,7 @@ public class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Erro: Nome de usuário já está em uso."))
+                .andExpect(jsonPath("$.message").value("Erro: Nome de usuário ou e-mail já cadastrado."))
                 .andExpect(jsonPath("$.timestamp").doesNotExist());
     }
 
@@ -214,7 +214,7 @@ public class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Erro: E-mail já está em uso."))
+                .andExpect(jsonPath("$.message").value("Erro: Nome de usuário ou e-mail já cadastrado."))
                 .andExpect(jsonPath("$.timestamp").doesNotExist());
     }
 
