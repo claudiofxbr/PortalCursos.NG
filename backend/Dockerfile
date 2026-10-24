@@ -9,7 +9,8 @@ RUN mvn dependency:go-offline -q
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a34312f858bd2c67dd01e732e6b682
+# JDK 21 no runtime = o mesmo do build e do CI (deploy.yml); evita rodar em producao uma versao nunca testada.
+FROM eclipse-temurin:21-jre-alpine@sha256:b48e02e0ea88d7bfb305335df94923bdef394905f4147dccd52e873cf17b1088
 # apk upgrade: a imagem base ainda nao incorporou patches do Alpine upstream
 # para libexpat (CVE-2026-56131/56407/56408), p11-kit/p11-kit-trust
 # (CVE-2026-2100), libssl3/libcrypto3 (CVE-2026-14456) e sqlite-libs

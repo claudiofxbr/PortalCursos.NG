@@ -60,6 +60,14 @@ for VAR in APP_JWT_SECRET SPRING_DATASOURCE_URL SPRING_DATASOURCE_PASSWORD CORS_
     [ -n "$val" ] || fail "Variavel critica $VAR nao definida no .env"
 done
 
+# Pix so e exigido quando o token do PSP esta configurado: sem o secret do webhook o backend
+# falha ao gerar cobranca; descobrir isso aqui evita um deploy "verde" com Pix quebrado.
+env_val() { grep "^$1=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true; }
+if [ -n "$(env_val PAGSEGURO_API_TOKEN)" ]; then
+    [ "$(env_val PAGSEGURO_WEBHOOK_SECRET | wc -c)" -gt 32 ] || fail "PAGSEGURO_API_TOKEN definido, mas PAGSEGURO_WEBHOOK_SECRET ausente ou com menos de 32 caracteres"
+    case "$(env_val PAGBANK_ENV)" in sandbox|production) ;; *) fail "PAGSEGURO_API_TOKEN definido, mas PAGBANK_ENV deve ser sandbox ou production" ;; esac
+fi
+
 DEPLOY_STRATEGY=$(grep "^DEPLOY_STRATEGY=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true)
 DEPLOY_STRATEGY=${DEPLOY_STRATEGY:-recreate}
 ok "Variaveis validadas — DEPLOY_STRATEGY=$DEPLOY_STRATEGY"
@@ -198,15 +206,20 @@ fi
 # ── 9. Validacao final ───────────────────────────────────────────
 log "=== FASE 9: Validacao de producao ==="
 sleep 5
-HEALTH=$(curl -sk https://xavierbr-vps.tech/api/health 2>/dev/null || true)
-if echo "$HEALTH" | grep -q '"status":"UP"'; then
+EXTERNAL_UP=0
+for _ in 1 2 3 4 5 6; do
+    HEALTH=$(curl -sk https://xavierbr-vps.tech/api/health 2>/dev/null || true)
+    if echo "$HEALTH" | grep -q '"status":"UP"'; then EXTERNAL_UP=1; break; fi
+    sleep 5
+done
+if [ "$EXTERNAL_UP" -eq 1 ]; then
     ok "API health externo: UP"
 else
-    warn "Health externo inconclusivo — checando interno (porta ${ACTIVE_BE_PORT})..."
-    curl -sf "http://127.0.0.1:${ACTIVE_BE_PORT}/api/health" 2>/dev/null | grep -q '"status":"UP"' && ok "API health interno: OK" || warn "API health interno tambem inconclusivo"
+    curl -sf "http://127.0.0.1:${ACTIVE_BE_PORT}/api/health" 2>/dev/null | grep -q '"status":"UP"' && warn "API interna UP (porta ${ACTIVE_BE_PORT})" || true
+    fail "Health externo nao ficou UP apos o deploy — dominio publico fora do ar ou roteamento quebrado"
 fi
 FE_CODE=$(curl -sk -o /dev/null -w "%{http_code}" https://xavierbr-vps.tech/portalcursos.ng 2>/dev/null || echo "000")
-[ "$FE_CODE" = "200" ] && ok "Frontend HTTP $FE_CODE: OK" || warn "Frontend HTTP $FE_CODE (pode ser redirect normal)"
+case "$FE_CODE" in 200|302|308) ok "Frontend HTTP $FE_CODE: OK" ;; *) fail "Frontend HTTP $FE_CODE apos o deploy" ;; esac
 
 log "=========================================="
 log "Deploy concluido ($DEPLOY_STRATEGY): $(git log --oneline -1)"
