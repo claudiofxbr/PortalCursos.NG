@@ -29,8 +29,10 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    // Criar, mudar roles e excluir usuário são ações de governança: só administrador. A hierarquia de níveis
+    // (AuthorityHierarchyService) continua valendo entre eles. A listagem segue aberta a quem já a via.
     @PostMapping(consumes = {"multipart/form-data"})
-    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN', 'COORDENADOR', 'SECRETARIA')")
+    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
     public ResponseEntity<?> createUser(
             @RequestParam("username") String username,
             @RequestParam("email") String email,
@@ -57,13 +59,13 @@ public class UserController {
     }
 
     @PutMapping("/{id}/roles")
-    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN', 'COORDENADOR', 'SECRETARIA')")
+    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
     public ResponseEntity<?> updateUserRoles(@PathVariable Long id, @RequestBody Set<String> roles) {
         return ResponseEntity.ok(userService.updateUserRoles(id, roles));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN', 'COORDENADOR', 'SECRETARIA')")
+    @PreAuthorize("hasAnyRole('ROOT_MASTER', 'ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(new MessageResponse("Usuário removido com sucesso"));

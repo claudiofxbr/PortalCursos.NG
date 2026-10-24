@@ -96,6 +96,9 @@ export default function RepairsPage() {
     ['ROLE_ROOT_MASTER', 'ROLE_ADMIN', 'ROLE_SECRETARIA', 'ROLE_FINANCEIRO', 'ROLE_ACADEMICO', 'ROLE_COORDENADOR', 'ROLE_PROFESSOR'].includes(r)
   );
 
+  // Só administrador exclui chamado (o servidor recusa os demais perfis).
+  const isAdmin = user?.roles?.some((r: string) => ['ROLE_ROOT_MASTER', 'ROLE_ADMIN'].includes(r));
+
   if (!authLoading && isAuthenticated && !isAuthorized && !loading) {
     return (
       <div style={{ padding: '5rem', textAlign: 'center' }}>
@@ -416,13 +419,15 @@ export default function RepairsPage() {
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                      <button 
+                      {isAdmin && (
+                      <button
                         onClick={() => handleDelete(ticket.id)}
                         style={{ background: 'rgba(211, 47, 47, 0.05)', color: '#d32f2f', border: '1px solid rgba(211, 47, 47, 0.2)', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}
                         title="Remover Chamado"
                       >
                         🗑️
                       </button>
+                      )}
                       <button 
                         onClick={() => setSelectedTicket(ticket)}
                         style={{ background: '#f8f9fa', border: '1px solid #eee', padding: '10px', borderRadius: '10px', cursor: 'pointer' }}

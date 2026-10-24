@@ -421,7 +421,7 @@ class PostgresMigrationIntegrationTest {
                 .build());
         Long id = saved.getId();
 
-        // RepairController.deleteTicket tem @PreAuthorize(AUTHORIZED_ROLES) — chamar o bean
+        // RepairController.deleteTicket tem @PreAuthorize (ADMIN/ROOT_MASTER) — chamar o bean
         // gerenciado diretamente (não via MockMvc) ainda passa pelo interceptor de method
         // security, então precisa de um Authentication válido no contexto (mesmo padrão da
         // regressão de deleteUser mais abaixo nesta classe).

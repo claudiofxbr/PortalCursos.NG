@@ -107,6 +107,9 @@ const renderRoleOptions = (getRoleLevel: (rk: string) => number, opLevel: number
     });
 };
 
+/** Nível mínimo (ADMIN) para criar, mudar roles e excluir usuários; igual à restrição de UserController. */
+const ADMIN_LEVEL = 90;
+
 const LABEL_STYLE = {
     display: 'block',
     fontSize: '0.75rem',
@@ -260,7 +263,8 @@ export default function UsersManagementPage() {
                     </h1>
                     <p style={{ opacity: 'var(--dim-4)', fontWeight: 700, letterSpacing: '2px', fontSize: '0.8rem' }}>PROTOCOL V50.0 // HIERARCHICAL ENGINE</p>
                 </div>
-                {opLevel >= 40 && (
+                {/* Criar, mudar roles e excluir usuário: só administrador (o servidor recusa os demais perfis). */}
+                {opLevel >= ADMIN_LEVEL && (
                     <button 
                         onClick={() => setShowForm(true)}
                         style={{
@@ -292,7 +296,7 @@ export default function UsersManagementPage() {
                             <tr><td colSpan={3} style={{ padding: '4rem', textAlign: 'center', opacity: 'var(--dim-3)' }}>Sincronizando registros da nuvem...</td></tr>
                         ) : users.map(user => {
                             const userLevel = getMaxLevel(user);
-                            const canManage = (opLevel > userLevel || opLevel === 100) && user.username !== 'rootmaster' && user.username !== currentUser?.username;
+                            const canManage = opLevel >= ADMIN_LEVEL && (opLevel > userLevel || opLevel === 100) && user.username !== 'rootmaster' && user.username !== currentUser?.username;
                             
                             return (
                                 <tr key={user.id} style={TR_STYLE}>

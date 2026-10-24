@@ -77,6 +77,49 @@ public class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Usuário não encontrado."));
     }
 
+    // M1 da auditoria: criar, mudar roles e excluir usuário são só de administrador; a listagem segue aberta.
+
+    private static final String[] NAO_ADMINISTRADORES = {"COORDENADOR", "SECRETARIA", "FINANCEIRO", "PROFESSOR", "ACADEMICO"};
+
+    @Test
+    public void testSomenteAdministradorCriaMudaRolesOuExcluiUsuario() throws Exception {
+        for (String role : NAO_ADMINISTRADORES) {
+            org.springframework.test.web.servlet.request.RequestPostProcessor as =
+                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                            .user("u-" + role).roles(role);
+
+            mockMvc.perform(multipart("/api/v1/users")
+                            .param("username", "novo-" + role).param("email", role + "@example.com")
+                            .param("password", "SenhaForte123!").param("roles", "ALUNO").with(as))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(put("/api/v1/users/1/roles").contentType(MediaType.APPLICATION_JSON)
+                            .content("[\"ALUNO\"]").with(as))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(delete("/api/v1/users/999999").with(as))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    public void testCoordenadorESecretariaAindaPassamPelaBarreiraDaListagem() throws Exception {
+        // O usuário simulado não existe no banco, então a regra de negócio da listagem pode falhar depois da
+        // barreira de role; o que este teste garante é que a role continua autorizada (não é 403).
+        for (String role : new String[] {"COORDENADOR", "SECRETARIA"}) {
+            int httpStatus = mockMvc.perform(get("/api/v1/users").with(
+                            org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                                    .user("u-" + role).roles(role)))
+                    .andReturn().getResponse().getStatus();
+            org.junit.jupiter.api.Assertions.assertNotEquals(403, httpStatus, "A listagem segue aberta a " + role);
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testAdministradorSegueAlcancandoAsAcoesDeGovernanca() throws Exception {
+        // Passa da barreira de role (não é 403): o usuário 999999 não existe, então a regra de negócio responde 404.
+        mockMvc.perform(delete("/api/v1/users/999999")).andExpect(status().isNotFound());
+    }
+
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     public void testClearAllBlocksAccessDeniedForAdmin() throws Exception {
