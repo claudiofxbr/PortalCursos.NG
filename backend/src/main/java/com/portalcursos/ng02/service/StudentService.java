@@ -55,7 +55,7 @@ public class StudentService {
 
     @Transactional(rollbackFor = Exception.class)
     public Student enroll(Student student, MultipartFile foto3x4, List<DocEntry> otherDocs) throws IOException {
-        log.info("[SERVICE-GRAD] Iniciando matrícula para: {}", student.getFullName());
+        log.info("[SERVICE-GRAD] Iniciando matrícula");
         
         student.setCpf(sanitizeNumber(student.getCpf()));
         student.setPhone(sanitizeNumber(student.getPhone()));

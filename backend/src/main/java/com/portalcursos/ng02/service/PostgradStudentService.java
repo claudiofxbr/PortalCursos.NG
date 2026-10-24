@@ -42,7 +42,7 @@ public class PostgradStudentService {
                                 MultipartFile academicTranscriptFile, 
                                 MultipartFile foto3x4File) {
         
-        log.info("[SERVICE-POSTGRAD] Iniciando processo de matrícula para: {}", student.getFullName());
+        log.info("[SERVICE-POSTGRAD] Iniciando processo de matrícula");
         
         student.setCpf(sanitizeNumber(student.getCpf()));
         student.setPhone(sanitizeNumber(student.getPhone()));
