@@ -629,4 +629,36 @@ class PostgresMigrationIntegrationTest {
                 .cpf(cpf)
                 .build();
     }
+
+    // M9: as queries paginadas (JPQL com JOIN FETCH + countQuery, e a paginação de alunos em dois passos) rodam no Postgres real.
+    @Test
+    void listagensPaginadasRodamContraPostgresReal() {
+        for (int i = 0; i < 3; i++) {
+            paymentRepository.saveAndFlush(Payment.builder()
+                    .amount(new java.math.BigDecimal("100.00"))
+                    .dueDate(java.time.LocalDate.now().plusDays(5))
+                    .status(EPaymentStatus.PENDING)
+                    .academicLevel(com.portalcursos.ng02.model.EAcademicLevel.GRADUATION)
+                    .build());
+        }
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 2,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
+
+        var porStatus = paymentRepository.findByStatusIn(java.util.List.of(EPaymentStatus.PENDING), pageable);
+        var porNivel = paymentRepository.findByAcademicLevelAndStatusIn(com.portalcursos.ng02.model.EAcademicLevel.GRADUATION, java.util.List.of(EPaymentStatus.PENDING), pageable);
+
+        assertEquals(2, porStatus.getContent().size());
+        assertTrue(porStatus.getTotalElements() >= 3);
+        assertEquals(2, porNivel.getContent().size());
+        assertTrue(porNivel.getContent().get(0).getId() > porNivel.getContent().get(1).getId(), "mais recentes primeiro");
+        assertEquals(0, paymentRepository.findByStatus(EPaymentStatus.PAID, pageable).getContent().stream()
+                .filter(p -> p.getStatus() != EPaymentStatus.PAID).count());
+
+        Student s1 = studentRepository.saveAndFlush(buildStudent("11111111111", "pag1@example.com", "PAG-1"));
+        Student s2 = studentRepository.saveAndFlush(buildStudent("22222222222", "pag2@example.com", "PAG-2"));
+        var ids = studentRepository.findActiveStudentIds(org.springframework.data.domain.PageRequest.of(0, 10,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")));
+        assertTrue(ids.getContent().containsAll(java.util.List.of(s1.getId(), s2.getId())));
+        assertEquals(2, studentRepository.findAllWithCourseAndCreatorByIdIn(java.util.List.of(s1.getId(), s2.getId())).size());
+    }
 }

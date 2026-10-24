@@ -1,6 +1,8 @@
 package com.portalcursos.ng02.repository;
 
 import com.portalcursos.ng02.model.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -50,4 +52,22 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.id = :id")
     java.util.Optional<Payment> findByIdWithCreatorAndStudent(@Param("id") Long id);
+
+    // Variantes paginadas (opt-in no FinancialController): a ordenacao vem do Pageable; o count e explicito
+    // porque o derivado quebra com JOIN FETCH.
+    @Query(value = "SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.status IN :statuses",
+            countQuery = "SELECT count(p) FROM Payment p WHERE p.status IN :statuses")
+    Page<Payment> findByStatusIn(@Param("statuses") List<EPaymentStatus> statuses, Pageable pageable);
+
+    @Query(value = "SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.status = :status",
+            countQuery = "SELECT count(p) FROM Payment p WHERE p.status = :status")
+    Page<Payment> findByStatus(@Param("status") EPaymentStatus status, Pageable pageable);
+
+    @Query(value = "SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.academicLevel = :level AND p.status IN :statuses",
+            countQuery = "SELECT count(p) FROM Payment p WHERE p.academicLevel = :level AND p.status IN :statuses")
+    Page<Payment> findByAcademicLevelAndStatusIn(@Param("level") EAcademicLevel level, @Param("statuses") List<EPaymentStatus> statuses, Pageable pageable);
+
+    @Query(value = "SELECT p FROM Payment p LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.student WHERE p.academicLevel = :level AND p.status = :status",
+            countQuery = "SELECT count(p) FROM Payment p WHERE p.academicLevel = :level AND p.status = :status")
+    Page<Payment> findByAcademicLevelAndStatus(@Param("level") EAcademicLevel level, @Param("status") EPaymentStatus status, Pageable pageable);
 }
