@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.portalcursos.ng02.dto.ManualChargeRequest;
 import com.portalcursos.ng02.dto.MessageResponse;
+import com.portalcursos.ng02.dto.PaymentView;
 import java.util.List;
 
 @RestController
@@ -86,7 +87,8 @@ public class FinancialController {
             return ResponseEntity.status(403)
                 .body(new MessageResponse("Acesso negado: Você só pode visualizar seus próprios dados financeiros."));
         }
-        return ResponseEntity.ok(paymentRepository.findByStudentId(studentId));
+        // O aluno também chega aqui: só PaymentView, nunca a entidade (ids do PSP, versão, auditoria).
+        return ResponseEntity.ok(paymentRepository.findByStudentId(studentId).stream().map(PaymentView::from).toList());
     }
 
     /** Converte o parâmetro de rota em {@link EAcademicLevel}, traduzindo valor inválido em HTTP 400. */
@@ -165,6 +167,6 @@ public class FinancialController {
                 .body(new MessageResponse("Acesso negado: esta fatura não pertence a você."));
         }
 
-        return ResponseEntity.ok(paymentCodeGenerationService.generateBoleto(p));
+        return ResponseEntity.ok(PaymentView.from(paymentCodeGenerationService.generateBoleto(p)));
     }
 }

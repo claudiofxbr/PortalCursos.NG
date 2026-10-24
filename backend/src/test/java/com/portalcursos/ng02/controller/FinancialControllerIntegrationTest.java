@@ -191,6 +191,62 @@ public class FinancialControllerIntegrationTest {
                         "https://portalcursos.edu.br/financeiro/boletos/download/SIM-12-2026-12-01"));
     }
 
+    // M3 da auditoria: o aluno nunca recebe a entidade Payment (ids do PSP, versão, auditoria).
+
+    private static Payment paymentComCamposInternos(long id) {
+        Payment payment = Payment.builder()
+                .id(id)
+                .amount(new BigDecimal("500.00"))
+                .dueDate(LocalDate.of(2026, 12, 1))
+                .status(EPaymentStatus.PENDING)
+                .description("Mensalidade")
+                .pspOrderId("ORDE_SEGREDO")
+                .pspCheckoutId("CHEC_SEGREDO")
+                .chargedAmountCents(50000L)
+                .chargePriceId(7L)
+                .lastModifiedBy("secretaria.interna")
+                .version(3L)
+                .build();
+        return payment;
+    }
+
+    @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testFaturasDoAlunoNaoExpoemCamposDoPspNemDeAuditoria() throws Exception {
+        when(paymentRepository.findByStudentId(55L)).thenReturn(List.of(paymentComCamposInternos(21L)));
+
+        mockMvc.perform(get("/api/finance/student/55").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(21))
+                .andExpect(jsonPath("$[0].amount").value(500.00))
+                .andExpect(jsonPath("$[0].totalAmount").value(500.00))
+                .andExpect(jsonPath("$[0].description").value("Mensalidade"))
+                .andExpect(jsonPath("$[0].pspOrderId").doesNotExist())
+                .andExpect(jsonPath("$[0].pspCheckoutId").doesNotExist())
+                .andExpect(jsonPath("$[0].chargedAmountCents").doesNotExist())
+                .andExpect(jsonPath("$[0].chargePriceId").doesNotExist())
+                .andExpect(jsonPath("$[0].lastModifiedBy").doesNotExist())
+                .andExpect(jsonPath("$[0].version").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
+    public void testBoletoGeradoNaoExpoeCamposDoPsp() throws Exception {
+        Payment payment = paymentComCamposInternos(13L);
+        when(paymentRepository.findByIdWithCreatorAndStudent(13L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        mockMvc.perform(post("/api/finance/generate-boleto/13").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.method").value("BOLETO"))
+                .andExpect(jsonPath("$.totalAmount").value(500.00))
+                .andExpect(jsonPath("$.paymentCode").exists())
+                .andExpect(jsonPath("$.pspOrderId").doesNotExist())
+                .andExpect(jsonPath("$.pspCheckoutId").doesNotExist())
+                .andExpect(jsonPath("$.chargedAmountCents").doesNotExist())
+                .andExpect(jsonPath("$.version").doesNotExist());
+    }
+
     @Test
     @WithMockUser(username = "financeiro", roles = {"FINANCEIRO"})
     public void testGeneratePixFaturaInexistenteRetorna404() throws Exception {
