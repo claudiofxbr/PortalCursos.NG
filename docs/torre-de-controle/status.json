@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr174-monitor",
+      "label": "#174 — fix(seguranca): Next.js 16.4.3 e scan de bibliotecas bloqueante (A3)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T18:13:31Z"
+  "updatedAt": "2026-10-24T18:23:02Z"
 }
