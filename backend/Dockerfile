@@ -13,8 +13,8 @@ FROM eclipse-temurin:25-jre-alpine@sha256:3137541deb3cac6626b5d9a4a2187bc0d6a343
 # apk upgrade: a imagem base ainda nao incorporou patches do Alpine upstream
 # para libexpat (CVE-2026-56131/56407/56408), p11-kit/p11-kit-trust
 # (CVE-2026-2100), libssl3/libcrypto3 (CVE-2026-14456) e sqlite-libs
-# (CVE-2026-11822/11824) — corrigidas aqui em vez de esperar nova build do Temurin.
-RUN apk add --no-cache wget && apk upgrade --no-cache libexpat p11-kit p11-kit-trust libssl3 libcrypto3 sqlite-libs && addgroup -S app && adduser -S app -G app
+# (CVE-2026-11822/11824) e brotli-libs (CVE-2026-111497) — corrigidas aqui em vez de esperar nova build do Temurin.
+RUN apk add --no-cache wget && apk upgrade --no-cache libexpat p11-kit p11-kit-trust libssl3 libcrypto3 sqlite-libs brotli-libs && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build --chown=app:app /app/target/portalcursos-backend.jar app.jar
 # Volume nomeado novo montado em /app/uploads herda dono root do diretório
