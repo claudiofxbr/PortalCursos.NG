@@ -11,8 +11,6 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import org.hibernate.annotations.SQLDelete;
-
 @Entity
 @Table(name = "courses")
 @Data
@@ -20,7 +18,9 @@ import org.hibernate.annotations.SQLDelete;
 @AllArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper=true)
-@SQLDelete(sql = "UPDATE courses SET active = false WHERE id = ?")
+// @SQLDelete removido (mesmo achado do Payment/RepairTicket/StaffMember): o SQL customizado
+// não incluía o parâmetro de @Version (BaseAuditEntity) e o delete() lançava erro sempre.
+// Soft-delete é explícito: CourseService.deleteCourse faz setActive(false) + save().
 // Sem @SQLRestriction: Course é entidade de referência apontada por FKs de
 // registros históricos (Student.course). Esconder cursos inativos globalmente
 // fazia student.getCourse() lançar EntityNotFoundException. O filtro active=true
