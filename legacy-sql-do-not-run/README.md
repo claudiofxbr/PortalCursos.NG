@@ -31,3 +31,8 @@ Foram movidos para cá pela auditoria de banco de dados de 2026-08 porque:
 Qualquer correção de schema necessária deve virar uma nova migration Flyway
 numerada em `backend/src/main/resources/db/migration/`, nunca um script solto
 rodado manualmente contra o Neon de produção.
+
+## Subpastas
+
+- `raiz/`: `setup-indexes.sql` que ficava na raiz do projeto.
+- `backend-docs-legacy/`: correções manuais antigas (V32 a V39) que ficavam em `backend/docs/sql/legacy/`.
