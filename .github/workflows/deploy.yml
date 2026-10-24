@@ -63,15 +63,12 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /portalcursos.ng
         run: npm run build
 
-  # vuln-type: os — escaneia apenas pacotes do sistema operacional (Alpine).
-  # CVEs de dependências Java/npm (pom.xml, package.json) NÃO bloqueiam o
-  # deploy aqui: tentamos ampliar para 'os,library' em ago/2026 e o scan
-  # real acusou 37 vulnerabilidades só no backend (31 HIGH/6 CRITICAL,
-  # a maior parte exigindo upgrade de Jackson/Spring Boot) — upgrade de
-  # dependência core é um projeto à parte (risco de regressão, precisa de
-  # testes dedicados), não algo a resolver ad-hoc num gate de CI. Ver PR
-  # #25 para o levantamento completo de CVEs de aplicação pendentes
-  # (backlog a priorizar). Vale para os dois jobs de scan abaixo.
+  # Dois escaneamentos por componente, ambos bloqueiam o deploy (CRITICAL/HIGH, ignore-unfixed):
+  #  - imagem (vuln-type: os): pacotes do Alpine;
+  #  - bibliotecas (scan fs do pom.xml / package-lock.json): CVEs de Java/npm.
+  # O backlog de 37 CVEs de aplicacao citado em ago/2026 (PR #25) foi zerado pelo Dependabot;
+  # em out/2026 o backend esta com 0 e o frontend ficou com 0 apos subir o Next para 16.4.3.
+  # Excecao consciente: .trivyignore na raiz, com a CVE e o motivo.
   #
   # backend e frontend viraram jobs de scan separados: antes rodavam em série
   # dentro de um job só, com continue-on-error manual pra garantir que os dois
@@ -95,6 +92,16 @@ jobs:
         with:
           image-ref: portalcursos-backend:scan
           vuln-type: 'os'
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Trivy scan — backend (bibliotecas Java, CRITICAL/HIGH falha o build)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: './backend'
+          scanners: 'vuln'
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
@@ -123,27 +130,15 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-  # Job SÓ INFORMATIVO: varre dependências Java do backend (pom.xml) por CVEs
-  # HIGH/CRITICAL. NÃO-BLOQUEANTE (continue-on-error + exit-code 0) e fora da
-  # cadeia de needs do deploy — existe backlog conhecido de CVEs de aplicação
-  # (ver PR #25), então aqui é só visibilidade, não gate.
-  security-scan-deps-backend:
-    name: Scan de Dependências (Trivy) — Backend (informativo)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Trivy scan — dependências backend (não-bloqueante)
+      - name: Trivy scan — frontend (bibliotecas npm, CRITICAL/HIGH falha o build)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
-          scan-ref: './backend'
+          scan-ref: './frontend'
           scanners: 'vuln'
           severity: CRITICAL,HIGH
-          exit-code: '0'
+          exit-code: '1'
+          ignore-unfixed: true
 
   deploy:
     name: Deploy → VPS Hostinger
