@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr173-monitor",
+      "label": "#173 — fix: /academic/users devolve o papel real do colaborador (M8)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T17:40:47Z"
+  "updatedAt": "2026-10-24T18:09:19Z"
 }
