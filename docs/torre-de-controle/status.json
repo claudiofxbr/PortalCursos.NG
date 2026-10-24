@@ -32,8 +32,8 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: success (commit d90dc15)",
-      "status": "active"
+      "detail": "último run em main: failure (commit 47ef94e)",
+      "status": "failed"
     },
     {
       "category": "auto",
@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr171-monitor",
+      "label": "#171 — fix: M1 (gestão de usuários só admin) e M2 (excluir chamado só admin)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T15:53:03Z"
+  "updatedAt": "2026-10-24T16:47:46Z"
 }
