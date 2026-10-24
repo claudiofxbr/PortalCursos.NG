@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr169-monitor",
+      "label": "#169 — fix(docker): atualiza brotli-libs no runtime (CVE-2026-111497)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr168-monitor",
       "label": "#168 — fix: achados A1, A2, M6 e M7 da auditoria",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -57,5 +64,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T14:19:19Z"
+  "updatedAt": "2026-10-24T14:31:35Z"
 }
