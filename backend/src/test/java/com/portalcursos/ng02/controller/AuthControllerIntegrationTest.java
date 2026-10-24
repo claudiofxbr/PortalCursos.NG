@@ -118,6 +118,68 @@ public class AuthControllerIntegrationTest {
         assertTrue(userRepository.existsByUsername("novacoordenadora"));
     }
 
+    // Regressão A1 (auditoria): ADMIN não pode criar conta de nível igual/superior ao seu
+    // (mesma regra de UserService.createUser via AuthorityHierarchyService.validateRoleAssignment).
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testSignupAdminNaoPodeCriarRootMaster() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.5")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signupPayload("escalacaoroot", "root_master")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
+
+        assertFalse(userRepository.existsByUsername("escalacaoroot"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    public void testSignupAdminNaoPodeCriarOutroAdmin() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.6")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signupPayload("escalacaoadmin", "admin")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.timestamp").doesNotExist());
+
+        assertFalse(userRepository.existsByUsername("escalacaoadmin"));
+    }
+
+    @Test
+    @WithMockUser(username = "rootmaster", roles = {"ROOT_MASTER"})
+    public void testSignupRootMasterAindaPodeCriarAdmin() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.7")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signupPayload("novoadminpelaroot", "admin")))
+                .andExpect(status().isOk());
+
+        assertTrue(userRepository.existsByUsername("novoadminpelaroot"));
+    }
+
+    @Test
+    public void testSignupPublicoDeAlunoContinuaFuncionando() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                .header("X-Real-IP", "10.10.30.8")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(signupPayload("alunopublico", "aluno")))
+                .andExpect(status().isOk());
+
+        assertTrue(userRepository.existsByUsername("alunopublico"));
+    }
+
+    private static String signupPayload(String username, String role) {
+        return "{"
+                + "\"username\":\"" + username + "\","
+                + "\"email\":\"" + username + "@example.com\","
+                + "\"password\":\"senha123\","
+                + "\"role\":[\"" + role + "\"],"
+                + "\"privacyConsentAccepted\":true"
+                + "}";
+    }
+
     @Test
     public void testSignupComUsernameJaExistenteRetorna400() throws Exception {
         String payload = "{"

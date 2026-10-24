@@ -19,11 +19,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -53,6 +55,7 @@ public class AuthService {
     private final CookieService cookieService;
     private final PasswordEncoder encoder;
     private final RoleResolver roleResolver;
+    private final AuthorityHierarchyService authorityService;
 
     /**
      * @throws AccountLockedException IP bloqueado por força bruta (HTTP 423 — ver AuthController).
@@ -155,6 +158,7 @@ public class AuthService {
      * @throws SignupConflictException  username ou e-mail já em uso (HTTP 400 — ver AuthController).
      * @throws BusinessException        role desconhecida (HTTP 400, formato padrão do GlobalExceptionHandler).
      */
+    @Transactional
     public void signup(SignupRequest signUpRequest) {
         Set<String> requestedRoles = signUpRequest.getRole();
         // Qualquer role que não seja ALUNO ou CANDIDATO exige autenticação com privilégios elevados
@@ -176,6 +180,14 @@ public class AuthService {
 
             if (!hasElevatedPrivileges) {
                 throw new SignupPrivilegeException("Apenas administradores podem registrar contas privilegiadas.");
+            }
+
+            // Elevado não basta: o operador só atribui roles de nível inferior ao seu (ADMIN não
+            // cria ADMIN/ROOT_MASTER), mesma regra de UserService.createUser.
+            try {
+                authorityService.validateRoleAssignment(authorityService.getCurrentUser(), requestedRoles);
+            } catch (AccessDeniedException e) {
+                throw new SignupPrivilegeException(e.getMessage());
             }
         }
 
