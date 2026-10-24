@@ -74,7 +74,7 @@ public class ChargePriceService {
     public List<HistoryDto> history(Long priceId) {
         Access access = requireAccess();
         ChargePrice price = findVisible(priceId, access);
-        return changeRepository.findByChargePriceIdOrderByProposedAtDesc(price.getId()).stream()
+        return changeRepository.findByChargePriceIdOrderByProposedAtDescIdDesc(price.getId()).stream()
                 .map(c -> new HistoryDto(c.getId(), c.getProposedValue(), c.getStatus().name(), c.getProposedBy(),
                         c.getProposedAt(), c.getReason(), c.getDecidedBy(), c.getDecidedAt(), c.getDecisionReason()))
                 .toList();

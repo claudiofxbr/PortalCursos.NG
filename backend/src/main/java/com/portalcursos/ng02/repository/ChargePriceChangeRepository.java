@@ -17,7 +17,7 @@ public interface ChargePriceChangeRepository extends JpaRepository<ChargePriceCh
 
     List<ChargePriceChange> findByChargePriceIdInAndStatus(Collection<Long> chargePriceIds, ChargePriceChange.Status status);
 
-    List<ChargePriceChange> findByChargePriceIdOrderByProposedAtDesc(Long chargePriceId);
+    List<ChargePriceChange> findByChargePriceIdOrderByProposedAtDescIdDesc(Long chargePriceId);
 
     /** Trava a proposta para duas decisões simultâneas não a aplicarem duas vezes. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
