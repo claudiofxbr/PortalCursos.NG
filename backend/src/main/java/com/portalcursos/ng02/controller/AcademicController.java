@@ -3,7 +3,9 @@ package com.portalcursos.ng02.controller;
 import com.portalcursos.ng02.model.StaffMember;
 import com.portalcursos.ng02.model.Student;
 import com.portalcursos.ng02.model.Teacher;
+import com.portalcursos.ng02.model.Role;
 import com.portalcursos.ng02.repository.StaffMemberRepository;
+import com.portalcursos.ng02.service.AuthorityHierarchyService;
 import com.portalcursos.ng02.repository.StudentRepository;
 import com.portalcursos.ng02.repository.TeacherRepository;
 import com.portalcursos.ng02.dto.StudentListDTO;
@@ -27,6 +29,7 @@ public class AcademicController {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final StaffMemberRepository staffMemberRepository;
+    private final AuthorityHierarchyService authorityHierarchyService;
 
     @GetMapping("/students")
     @PreAuthorize("hasAnyRole('ADMIN', 'SECRETARIA', 'ACADEMICO', 'ROOT_MASTER')")
@@ -73,13 +76,20 @@ public class AcademicController {
             allUsers.add(u);
         });
 
+        Map<Long, Role.ERole> highestRoleByStaff = new HashMap<>();
+        for (Object[] row : staffMemberRepository.findActiveStaffRoles()) {
+            highestRoleByStaff.merge((Long) row[0], (Role.ERole) row[1],
+                    (a, b) -> authorityHierarchyService.getRoleLevel(b) > authorityHierarchyService.getRoleLevel(a) ? b : a);
+        }
+
         staffMemberRepository.findAllByActiveTrue().forEach(sm -> {
             Map<String, Object> u = new HashMap<>();
             u.put("id", "M_" + sm.getId());
             u.put("name", sm.getFullName());
             u.put("doc", sm.getPosition());
             u.put("course", sm.getDepartment());
-            u.put("role", "SECRETARIA");
+            Role.ERole role = highestRoleByStaff.get(sm.getId());
+            u.put("role", role != null ? role.name().replaceFirst("^ROLE_", "") : "COLABORADOR");
             allUsers.add(u);
         });
 
