@@ -62,7 +62,7 @@ done
 
 # Pix so e exigido quando o token do PSP esta configurado: sem o secret do webhook o backend
 # falha ao gerar cobranca; descobrir isso aqui evita um deploy "verde" com Pix quebrado.
-env_val() { grep "^$1=" "$ENV_FILE" | cut -d= -f2- | tr -d '' || true; }
+env_val() { grep "^$1=" "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true; }
 if [ -n "$(env_val PAGSEGURO_API_TOKEN)" ]; then
     [ "$(env_val PAGSEGURO_WEBHOOK_SECRET | wc -c)" -gt 32 ] || fail "PAGSEGURO_API_TOKEN definido, mas PAGSEGURO_WEBHOOK_SECRET ausente ou com menos de 32 caracteres"
     case "$(env_val PAGBANK_ENV)" in sandbox|production) ;; *) fail "PAGSEGURO_API_TOKEN definido, mas PAGBANK_ENV deve ser sandbox ou production" ;; esac
