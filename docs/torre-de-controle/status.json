@@ -46,7 +46,7 @@
       "category": "queue",
       "id": "pr168-monitor",
       "label": "#168 — fix: achados A1, A2, M6 e M7 da auditoria",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "detail": "CI ok.",
       "status": "queued"
     },
     {
@@ -57,5 +57,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-24T14:38:17Z"
+  "updatedAt": "2026-10-24T14:41:17Z"
 }
