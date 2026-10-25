@@ -117,7 +117,7 @@ public class WebSecurityConfig {
             "Access-Control-Request-Headers",
             "x-build-id"
         ));
-        configuration.setExposedHeaders(java.util.Arrays.asList("Set-Cookie"));
+        configuration.setExposedHeaders(java.util.Arrays.asList("Set-Cookie", "X-Total-Count"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
