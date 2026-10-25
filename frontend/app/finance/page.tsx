@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { mayOpenPriceTable } from './prices/priceTable';
 import { ExceptionRequestModal } from './ExceptionRequestModal';
 import { StudentSearch } from './StudentSearch';
+import { FinancePager } from './FinancePager';
 import { DEFAULT_POLICY, normalizePolicy, type ChargePolicy } from './chargeExceptions';
 import {
   applyProcedure, buildChargePayload, catalogErrorMessage, clearProcedure, EMPTY_CHARGE, groupItems, optionLabel,
@@ -49,11 +50,18 @@ interface Invoice {
   creatorPhotoUrl?: string;
 }
 
+// Tamanho da página das listas financeiras; alinhado ao limite de `size` aceito pelo backend (máx. 200).
+const FINANCE_PAGE_SIZE = 20;
+
 export default function FinancePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AcademicLevel>('GRADUATION');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [history, setHistory] = useState<Invoice[]>([]);
+  const [invoicePage, setInvoicePage] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,15 +168,19 @@ export default function FinancePage() {
       setLoading(true);
       // Cada lista falha isolada (a outra continua carregando), mas a falha é sinalizada ao usuário.
       let partialFailure = false;
-      const loadList = (url: string) =>
-        api.get(url).then(r => r.data).catch(() => { partialFailure = true; return []; });
+      const loadList = (url: string, page: number) =>
+        api.get(url, { params: { page, size: FINANCE_PAGE_SIZE } })
+          .then(r => ({ items: r.data as Invoice[], total: Number(r.headers?.['x-total-count'] ?? r.data.length) }))
+          .catch(() => { partialFailure = true; return { items: [] as Invoice[], total: 0 }; });
       const [invoicesData, historyData] = await Promise.all([
-        loadList(`/finance/invoices/${activeTab}`),
-        loadList(`/finance/history/${activeTab}`),
+        loadList(`/finance/invoices/${activeTab}`, invoicePage),
+        loadList(`/finance/history/${activeTab}`, historyPage),
       ]);
 
-      setInvoices(invoicesData);
-      setHistory(historyData);
+      setInvoices(invoicesData.items);
+      setInvoiceTotal(invoicesData.total);
+      setHistory(historyData.items);
+      setHistoryTotal(historyData.total);
       setError(null);
       if (partialFailure) {
         toast.error("Não foi possível carregar parte dos dados financeiros. Tente novamente ou verifique suas permissões.");
@@ -183,9 +195,9 @@ export default function FinancePage() {
 
   // Declarado depois de fetchFinanceData: o efeito chama a função, que não pode ser usada antes de existir.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga dos dados do servidor ao abrir e ao trocar de aba
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga dos dados do servidor ao abrir, ao trocar de aba e de página
     fetchFinanceData();
-  }, [activeTab]);
+  }, [activeTab, invoicePage, historyPage]);
 
   // Retorno do checkout de cartão do PagBank (?payment=<id>). A baixa só acontece pelo webhook; aqui apenas
   // acompanhamos o histórico por alguns instantes e avisamos, sem nunca afirmar pagamento sem confirmação.
@@ -349,7 +361,7 @@ export default function FinancePage() {
           paddingBottom: '10px'
       }}>
           <button 
-            onClick={() => setActiveTab('GRADUATION')}
+            onClick={() => { setInvoicePage(0); setHistoryPage(0); setActiveTab('GRADUATION'); }}
             style={{
                 padding: '10px 25px',
                 borderRadius: '8px',
@@ -362,7 +374,7 @@ export default function FinancePage() {
             }}
           >🎓 Graduação</button>
           <button 
-            onClick={() => setActiveTab('POSTGRADUATE')}
+            onClick={() => { setInvoicePage(0); setHistoryPage(0); setActiveTab('POSTGRADUATE'); }}
             style={{
                 padding: '10px 25px',
                 borderRadius: '8px',
@@ -393,7 +405,7 @@ export default function FinancePage() {
       {/* Grid de Mensalidades */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ fontSize: '1.2rem' }}>Pendentes em {activeTab === 'GRADUATION' ? 'Graduação' : 'Pós'}</h3>
-          <span style={{ fontSize: '0.9rem', color: '#666' }}>{invoices.length} faturas encontradas</span>
+          <span style={{ fontSize: '0.9rem', color: '#666' }}>{invoiceTotal} faturas encontradas</span>
       </div>
 
       <section style={{ 
@@ -473,6 +485,13 @@ export default function FinancePage() {
           </div>
         )}
       </section>
+      <FinancePager
+        page={invoicePage}
+        totalItems={invoiceTotal}
+        pageSize={FINANCE_PAGE_SIZE}
+        disabled={loading}
+        onPageChange={setInvoicePage}
+      />
 
       {/* Histórico Transacional */}
       <section className="glass-panel" style={{ padding: '2rem' }}>
@@ -502,6 +521,13 @@ export default function FinancePage() {
             </table>
             {history.length === 0 && <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Nenhum histórico disponível.</p>}
         </div>
+        <FinancePager
+          page={historyPage}
+          totalItems={historyTotal}
+          pageSize={FINANCE_PAGE_SIZE}
+          disabled={loading}
+          onPageChange={setHistoryPage}
+        />
       </section>
 
       {showExceptionModal && selectedItem && (
