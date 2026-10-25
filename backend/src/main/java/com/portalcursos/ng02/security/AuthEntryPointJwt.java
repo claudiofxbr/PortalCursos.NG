@@ -31,7 +31,8 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint {
         final Map<String, Object> body = new HashMap<>();
         body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
         body.put("error", "Unauthorized");
-        body.put("message", authException.getMessage());
+        // Mensagem fixa: a do Spring Security revela detalhes internos (ex.: tipo de falha de autenticacao).
+        body.put("message", "Não autenticado. Faça login para continuar.");
         body.put("path", request.getServletPath());
 
         final ObjectMapper mapper = new ObjectMapper();
