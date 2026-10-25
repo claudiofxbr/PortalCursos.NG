@@ -44,11 +44,18 @@
     },
     {
       "category": "queue",
+      "id": "pr179-monitor",
+      "label": "#179 — fix(seguranca): mensagem 401 generica (B8)",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-25T10:27:37Z"
+  "updatedAt": "2026-10-25T11:53:24Z"
 }
