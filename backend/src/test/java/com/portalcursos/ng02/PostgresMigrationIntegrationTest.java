@@ -162,6 +162,20 @@ class PostgresMigrationIntegrationTest {
                 "Todos os índices de FK da V28 devem existir");
     }
 
+    // V29 (B7): a busca por CPF usa o índice de expressão; sem ele o planner faz varredura da tabela.
+    @Test
+    void v29IndiceDeCpfNormalizadoAtendeABuscaPorPrefixo() {
+        List<String> plano = jdbcTemplate.queryForList(
+                "EXPLAIN SELECT id FROM students WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') LIKE '123%'",
+                String.class);
+        jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
+        List<String> planoSemSeqScan = jdbcTemplate.queryForList(
+                "EXPLAIN SELECT id FROM students WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') LIKE '123%'",
+                String.class);
+        assertTrue(planoSemSeqScan.stream().anyMatch(l -> l.contains("idx_students_cpf_digits")),
+                "V29: a busca por prefixo do CPF normalizado deve usar idx_students_cpf_digits. Plano: " + plano);
+    }
+
     // Soft-delete via setActive(false) + save(), não via repository.delete()/deleteById():
     // é assim que a aplicação real desativa Student (ver UserService.deleteUser). O
     // @SQLDelete de Student nunca é exercitado em produção (nenhum código chama
