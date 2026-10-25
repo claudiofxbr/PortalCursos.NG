@@ -18,15 +18,15 @@
       "category": "auto",
       "id": "auto-auto-update-pr-branches",
       "label": "Auto-update PR branches",
-      "detail": "último run em main: success (commit a3b5572)",
+      "detail": "último run em main: success (commit 496d49f)",
       "status": "active"
     },
     {
       "category": "auto",
       "id": "auto-cicd-portalcursosng",
       "label": "CI/CD PortalCursos.NG",
-      "detail": "último run em main: success (commit a3b5572)",
-      "status": "active"
+      "detail": "último run em main: in_progress (commit 496d49f)",
+      "status": "running"
     },
     {
       "category": "auto",
@@ -44,18 +44,11 @@
     },
     {
       "category": "queue",
-      "id": "pr181-monitor",
-      "label": "#181 — perf(alunos): indice para a busca por CPF (B7)",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
-      "detail": "CONFLITANTE com main. CI ok.",
+      "detail": "CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-25T12:56:04Z"
+  "updatedAt": "2026-10-25T12:59:15Z"
 }
