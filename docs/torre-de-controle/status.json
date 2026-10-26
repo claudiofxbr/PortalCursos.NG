@@ -32,8 +32,8 @@
       "category": "auto",
       "id": "auto-dependabot-updates",
       "label": "Dependabot Updates",
-      "detail": "último run em main: failure (commit 47ef94e)",
-      "status": "failed"
+      "detail": "último run em main: success (commit 810eda9)",
+      "status": "active"
     },
     {
       "category": "auto",
@@ -44,11 +44,67 @@
     },
     {
       "category": "queue",
+      "id": "pr190-monitor",
+      "label": "#190 — chore(deps-dev): Bump @vitejs/plugin-react from 6.1.1 to 6.1.2 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr189-monitor",
+      "label": "#189 — chore(deps-dev): Bump vitest from 4.1.12 to 5.0.5 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr188-monitor",
+      "label": "#188 — chore(deps): Bump lucide-react from 1.45.0 to 1.61.0 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr187-monitor",
+      "label": "#187 — chore(deps): Bump org.flywaydb:flyway-database-postgresql from 13.10.0 to 13.11.1 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr186-monitor",
+      "label": "#186 — chore(deps-dev): Bump @testing-library/dom from 10.4.1 to 10.4.2 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr185-monitor",
+      "label": "#185 — chore(deps): Bump org.springframework.boot:spring-boot-starter-parent from 4.1.1 to 4.1.2 in /backend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr184-monitor",
+      "label": "#184 — chore(deps-dev): Bump @testing-library/user-event from 14.6.7 to 14.6.8 in /frontend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr183-monitor",
+      "label": "#183 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.11.1 in /backend",
+      "detail": "CI ok.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr103-monitor",
       "label": "#103 — docs: registrar painel Multi-Agentes CVFacil.NG na Torre Multi-Agentes",
       "detail": "CONFLITANTE com main. CI ok.",
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-10-26T02:30:06Z"
+  "updatedAt": "2026-10-26T11:57:42Z"
 }
