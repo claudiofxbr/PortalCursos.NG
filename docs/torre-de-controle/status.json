@@ -46,7 +46,7 @@
       "category": "queue",
       "id": "pr192-monitor",
       "label": "#192 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.12.0 in /backend",
-      "detail": "CI ok.",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
     },
     {
@@ -106,5 +106,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-11-02T11:59:22Z"
+  "updatedAt": "2026-11-02T11:59:37Z"
 }
