@@ -44,23 +44,23 @@
     },
     {
       "category": "queue",
+      "id": "pr195-monitor",
+      "label": "#195 — chore(deps): Bump org.flywaydb:flyway-database-postgresql from 13.10.0 to 13.12.1 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr194-monitor",
+      "label": "#194 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.12.1 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr193-monitor",
       "label": "#193 — chore(deps): Bump follow-redirects from 1.16.1 to 1.16.2 in /frontend",
       "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr192-monitor",
-      "label": "#192 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.12.0 in /backend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr191-monitor",
-      "label": "#191 — chore(deps): Bump org.flywaydb:flyway-database-postgresql from 13.10.0 to 13.12.0 in /backend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
     },
     {
@@ -113,5 +113,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-11-09T03:51:39Z"
+  "updatedAt": "2026-11-09T11:58:14Z"
 }
