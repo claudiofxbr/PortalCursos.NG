@@ -44,6 +44,13 @@
     },
     {
       "category": "queue",
+      "id": "pr199-monitor",
+      "label": "#199 — chore(deps): Bump next from 16.4.3 to 16.4.5 in /frontend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr198-monitor",
       "label": "#198 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.12.2 in /backend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
@@ -120,5 +127,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-11-17T01:20:17Z"
+  "updatedAt": "2026-11-17T05:09:13Z"
 }
