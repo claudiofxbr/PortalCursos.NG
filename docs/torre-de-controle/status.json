@@ -44,29 +44,43 @@
     },
     {
       "category": "queue",
+      "id": "pr204-monitor",
+      "label": "#204 — chore(deps): Bump org.flywaydb:flyway-database-postgresql from 13.10.0 to 13.13.0 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr203-monitor",
+      "label": "#203 — chore(deps): Bump org.apache.maven:apache-maven from 3.10.0 to 3.10.2 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr202-monitor",
+      "label": "#202 — chore(deps): Bump org.springframework.boot:spring-boot-starter-parent from 4.1.1 to 4.2.0 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr201-monitor",
+      "label": "#201 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.13.0 in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
+      "id": "pr200-monitor",
+      "label": "#200 — chore(deps): Bump eclipse-temurin from 21-jre-alpine to 24-jre-alpine in /backend",
+      "detail": "CI com falha — requer investigação antes de mesclar.",
+      "status": "queued"
+    },
+    {
+      "category": "queue",
       "id": "pr199-monitor",
       "label": "#199 — chore(deps): Bump next from 16.4.3 to 16.4.5 in /frontend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr198-monitor",
-      "label": "#198 — chore(deps): Bump org.flywaydb:flyway-core from 13.10.0 to 13.12.2 in /backend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr197-monitor",
-      "label": "#197 — chore(deps): Bump org.apache.maven:apache-maven from 3.10.0 to 3.10.1 in /backend",
-      "detail": "CI com falha — requer investigação antes de mesclar.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
-      "id": "pr196-monitor",
-      "label": "#196 — chore(deps): Bump org.flywaydb:flyway-database-postgresql from 13.10.0 to 13.12.2 in /backend",
       "detail": "CI com falha — requer investigação antes de mesclar.",
       "status": "queued"
     },
@@ -107,13 +121,6 @@
     },
     {
       "category": "queue",
-      "id": "pr185-monitor",
-      "label": "#185 — chore(deps): Bump org.springframework.boot:spring-boot-starter-parent from 4.1.1 to 4.1.2 in /backend",
-      "detail": "CI ok.",
-      "status": "queued"
-    },
-    {
-      "category": "queue",
       "id": "pr184-monitor",
       "label": "#184 — chore(deps-dev): Bump @testing-library/user-event from 14.6.7 to 14.6.8 in /frontend",
       "detail": "CI ok.",
@@ -127,5 +134,5 @@
       "status": "queued"
     }
   ],
-  "updatedAt": "2026-11-23T04:56:32Z"
+  "updatedAt": "2026-11-23T11:58:40Z"
 }
