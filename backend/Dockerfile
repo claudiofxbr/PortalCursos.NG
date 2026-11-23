@@ -10,7 +10,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # JDK 21 no runtime = o mesmo do build e do CI (deploy.yml); evita rodar em producao uma versao nunca testada.
-FROM eclipse-temurin:21-jre-alpine@sha256:b48e02e0ea88d7bfb305335df94923bdef394905f4147dccd52e873cf17b1088
+FROM eclipse-temurin:24-jre-alpine@sha256:4044b6c87cb088885bcd0220f7dc7a8a4aab76577605fa471945d2e98270741f
 # apk upgrade: a imagem base ainda nao incorporou patches do Alpine upstream
 # para libexpat (CVE-2026-56131/56407/56408), p11-kit/p11-kit-trust
 # (CVE-2026-2100), libssl3/libcrypto3 (CVE-2026-14456) e sqlite-libs
